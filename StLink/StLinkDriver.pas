@@ -20,8 +20,9 @@ type
     procedure SimpTcpOnMsgReadProc(Sender: TObject);
     procedure SimpTcpOnConnectProc(Sender: TObject);
     procedure Log(s: string);
-    function GetCmdSum(cmd: AnsiString): byte;
-    function WriteCmd(cmd: AnsiString): TStatus;
+    function GetCmdSum(cmd: TBytes): byte;
+    function WriteCmd(cmd: TBytes): TStatus; overload;
+    function WriteCmd(cmd: AnsiString): TStatus; overload;
     procedure FlushRecive;
     function WaitPlusReplay(var txt: AnsiString; time: cardinal): TStatus;
     function WaitReplay(var txt: AnsiString; time: cardinal): TStatus;
@@ -34,10 +35,15 @@ type
     function Open(IP: string; Port: integer): TStatus;
     function close: TStatus;
     function ReadMem(adr, cnt: integer; var buf: TBytes): TStatus;
-    function RCommand(rcmd: string): TStatus;
+    function RCommand(rcmd: string; var repl : string; verbose: boolean): TStatus; overload;
+    function RCommand(rcmd: string): TStatus; overload;
+    function WriteMem(adr: cardinal; buf: TBytes): TStatus;
+
   end;
 
 function DumpBytes(Offset: integer; buf: TBytes): TStringList;
+function ParseArray(txt: string): TBytes;
+function StringToBytes(txt: AnsiString): TBytes;
 
 implementation
 
@@ -89,6 +95,42 @@ begin
   if txt <> '' then
     Result.add(txt);
 
+end;
+
+function ParseArray(txt: string): TBytes;
+var
+  SL: TStringList;
+  n, i: integer;
+  b: integer;
+begin
+  SL := TStringList.Create;
+  try
+    SL.Delimiter := ' ';
+    SL.DelimitedText := txt;
+    setlength(Result, SL.Count);
+    for i := 0 to SL.Count - 1 do
+    begin
+      if TryStrToInt('$' + SL.Strings[i], b) = false then
+      begin
+        setlength(Result, i);
+        break;
+      end;
+      Result[i] := byte(b);
+    end;
+  finally
+    SL.Free;
+  end;
+
+end;
+
+function StringToBytes(txt: AnsiString): TBytes;
+var
+  n: integer;
+begin
+  n := length(txt);
+  setlength(Result, n);
+  if n > 0 then
+    move(txt[1], Result[0], n);
 end;
 
 constructor TStLinkDrv.Create;
@@ -145,28 +187,44 @@ begin
   Result := SimpTcp.close;
 end;
 
-function TStLinkDrv.GetCmdSum(cmd: AnsiString): byte;
+function TStLinkDrv.GetCmdSum(cmd: TBytes): byte;
 var
   i, n: integer;
   sum: byte;
 begin
   n := length(cmd);
   sum := 0;
-  for i := 1 to n do
+  for i := 0 to n - 1 do
   begin
-    sum := sum + ord(cmd[i]);
+    sum := byte(sum + cmd[i]);
   end;
   Result := sum;
 end;
 
-function TStLinkDrv.WriteCmd(cmd: AnsiString): TStatus;
+function TStLinkDrv.WriteCmd(cmd: TBytes): TStatus;
+const
+  HexChar: array [0 .. 15] of char = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F');
 var
-  cmd2: AnsiString;
   sum: byte;
+  cmd2: TBytes;
+  i, n: integer;
 begin
+  FlushRecive;
   sum := GetCmdSum(cmd);
-  cmd2 := '$' + cmd + '#' + IntToHex(sum, 2);
-  Result := SimpTcp.Write_(cmd2);
+  n := length(cmd);
+  setlength(cmd2, 1 + n + 3);
+  for i := 0 to n - 1 do
+    cmd2[1 + i] := cmd[i];
+  cmd2[0] := ord('$');
+  cmd2[n + 1] := ord('#');
+  cmd2[n + 2] := ord(HexChar[sum shr 4]);
+  cmd2[n + 3] := ord(HexChar[sum and $0F]);
+  Result := SimpTcp.Write(cmd2);
+end;
+
+function TStLinkDrv.WriteCmd(cmd: AnsiString): TStatus;
+begin
+  Result := WriteCmd(StringToBytes(cmd));
 end;
 
 function TStLinkDrv.HexToBytes(var buf: TBytes; txt: AnsiString): boolean;
@@ -316,7 +374,6 @@ var
   st: TStatus;
   repl: AnsiString;
 begin
-  FlushRecive;
   st := WriteCmd(AnsiString(Format('m%x,%x', [adr, cnt])));
   if st = stOk then
   begin
@@ -333,16 +390,40 @@ end;
 
 function TStLinkDrv.RCommand(rcmd: string): TStatus;
 var
+  repl : string;
+begin
+  Result := RCommand(rcmd, repl, true);
+end;
+
+function TStLinkDrv.RCommand(rcmd: string; var repl : string; verbose: boolean): TStatus;
+var
   st: TStatus;
   txt: AnsiString;
 begin
-  FlushRecive;
   st := WriteCmd(AnsiString(rcmd));
   if st = stOk then
   begin
     st := WaitPlusReplay(txt, 500);
-    Log(Format('RCmd [%s]', [txt]));
+    if verbose then
+      Log(Format('RCmd [%s]', [txt]));
+    repl := String(txt);
   end;
+  Result := st;
+end;
+
+function TStLinkDrv.WriteMem(adr: cardinal; buf: TBytes): TStatus;
+var
+  buf2: TBytes;
+  n, n2: integer;
+  st: TStatus;
+begin
+  n := length(buf);
+  buf2 := StringToBytes(AnsiString(Format('X%x,%x:', [adr, n])));
+  n2 := length(buf2);
+  setlength(buf2, n2 + n);
+  move(buf[0], buf2[n2], n);
+  st := WriteCmd(buf2);
+
   Result := st;
 end;
 

@@ -1,8 +1,5 @@
 *.dcu
-.~1~
-StLink/__history/Main.dfm.~1~
-StLink/__history/Main.dfm.~2~
-StLink/__history/
 *.map
 *.db
 StLink/Win32/Debug/StLink.exe
+**/__history/*.*

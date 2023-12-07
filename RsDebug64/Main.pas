@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ActnList, StdCtrls,ComCtrls,ExtCtrls, Menus,ToolWin,IniFiles,
+  Dialogs, ActnList, StdCtrls, ComCtrls, ExtCtrls, Menus, ToolWin, IniFiles,
   DevStrEditUnit,
   SettingUnit,
   TypeDefEditUnit,
@@ -24,10 +24,10 @@ uses
   RfcUnit,
   About,
   Registry,
-  ExtGMemoUnit, ImgList;
-  
+  ExtGMemoUnit, ImgList, System.ImageList, System.Actions;
+
 type
-  TMainForm = class(TForm,IMainWinInterf)
+  TMainForm = class(TForm, IMainWinInterf)
     ActionList1: TActionList;
     OpenCloseDevAct: TAction;
     StatusBar1: TStatusBar;
@@ -149,8 +149,7 @@ type
     procedure RestoreActExecute(Sender: TObject);
     procedure RestoreAllActExecute(Sender: TObject);
     procedure RefreshComListActExecute(Sender: TObject);
-    procedure WinTabControlMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
+    procedure WinTabControlMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TerminalActUpdate(Sender: TObject);
     procedure TerminalActExecute(Sender: TObject);
     procedure MemoryWinActUpdate(Sender: TObject);
@@ -174,51 +173,51 @@ type
     procedure actRZ40EventReaderExecute(Sender: TObject);
     procedure RfcWinActExecute(Sender: TObject);
   private
-    function  GetDev : TCmmDevice;
-    function  GetCommThread : TCommThread;
-    procedure Msg(s :string);
-    function  FindIniDrvPrmSection( s : string) : string;
-    procedure LoadRsPorts(Coms : TStrings);
+    function GetDev: TCmmDevice;
+    function GetCommThread: TCommThread;
+    procedure Msg(s: string);
+    function FindIniDrvPrmSection(s: string): string;
+    procedure LoadRsPorts(Coms: TStrings);
     procedure LoadCommButtons;
   private
-    FirstTime : boolean;
-    FirstConnectBtn : TToolButton;
-    TerminalChecked : boolean;
-    TerminalValid   : boolean;
-    procedure OnWriteIniProc(Ini : TDotIniFile);
-    procedure OnActivateAplic(Sender : TObject);
-    procedure OnReadIniProc(Ini : TDotIniFile);
-    procedure OnReOpenClickProc(Sender :TObject);
-    procedure OnReloadedProc(Sender :TObject);
-    function  GetSName(N: integer):string;
-    procedure RestoreWinProc(Sender :TObject);
+    FirstTime: boolean;
+    FirstConnectBtn: TToolButton;
+    TerminalChecked: boolean;
+    TerminalValid: boolean;
+    procedure OnWriteIniProc(Ini: TDotIniFile);
+    procedure OnActivateAplic(Sender: TObject);
+    procedure OnReadIniProc(Ini: TDotIniFile);
+    procedure OnReOpenClickProc(Sender: TObject);
+    procedure OnReloadedProc(Sender: TObject);
+    function GetSName(N: Integer): string;
+    procedure RestoreWinProc(Sender: TObject);
     procedure BildConnectButtons;
     procedure SetDriverParamsFromIni;
     procedure CloseEditDrvParamsForm;
     procedure SetupWinTabs;
-    procedure ChgPortComProc(Sender : TObject);
-    function  ReplaceCom(DevStr : string):string;
-    function  ReOpenConnection : boolean;
+    procedure ChgPortComProc(Sender: TObject);
+    function ReplaceCom(DevStr: string): string;
+    function ReOpenConnection: boolean;
   public
-    Dev      : TCmmDevice;
-    CommThread : TCommThread;
-    GlDevStr   : string;
+    Dev: TCmmDevice;
+    CommThread: TCommThread;
+    GlDevStr: string;
 
-    procedure NL(s :string);
-    procedure ADL(s :string);
+    procedure NL(s: string);
+    procedure ADL(s: string);
     procedure ReloadMap;
 
-    procedure WMTypeDefChg(var Msg: TMessage);message      wm_TypeDefChg;
-    procedure WMSettingsChg(var Msg: TMessage);message      wm_SettingsChg;
-    procedure WMShowMemWin(var Msg: TMessage);message      wm_ShowmemWin;
-    procedure WMShowStruct(var Msg: TMessage);message      wm_ShowStruct;
-    procedure WMChildCaption(var Msg: TMessage);message      wm_ChildCaption;
-    procedure WMChildClosed(var Msg: TMessage);message      wm_ChildClosed;
+    procedure WMTypeDefChg(var Msg: TMessage); message wm_TypeDefChg;
+    procedure WMSettingsChg(var Msg: TMessage); message wm_SettingsChg;
+    procedure WMShowMemWin(var Msg: TMessage); message wm_ShowmemWin;
+    procedure WMShowStruct(var Msg: TMessage); message wm_ShowStruct;
+    procedure WMChildCaption(var Msg: TMessage); message wm_ChildCaption;
+    procedure WMChildClosed(var Msg: TMessage); message wm_ChildClosed;
 
   end;
 
 var
-  MainForm   : TMainForm;
+  MainForm: TMainForm;
 
 implementation
 
@@ -240,40 +239,39 @@ begin
   Application.OnActivate := OnActivateAplic;
   MapParser.OnReloaded := OnReloadedProc;
   GlDevStr := '';
-  Dev := TCmmDevice.Create(Handle,GlDevStr);
+  Dev := TCmmDevice.Create(Handle, GlDevStr);
   CommThread := TCommThread.Create(Dev);
 
 end;
 
-
-function GetComNr(s :string):integer;
+function GetComNr(s: string): Integer;
 begin
-  Result := StrToInt(copy(s,4,length(s)-3));
+  Result := StrToInt(copy(s, 4, length(s) - 3));
 end;
 
 function MyCompare(List: TStringList; Index1, Index2: Integer): Integer;
 var
-  nr1,nr2 : integer;
+  nr1, nr2: Integer;
 begin
-  nr1 := GetComNr(List.Strings[index1]);
-  nr2 := GetComNr(List.Strings[index2]);
-  Result :=0;
-  if nr1>nr2 then Result := 1;
-  if nr1<nr2 then Result := -1;
+  nr1 := GetComNr(List.Strings[Index1]);
+  nr2 := GetComNr(List.Strings[Index2]);
+  Result := 0;
+  if nr1 > nr2 then
+    Result := 1;
+  if nr1 < nr2 then
+    Result := -1;
 end;
 
-
-
-procedure TMainForm.LoadRsPorts(Coms : TStrings);
+procedure TMainForm.LoadRsPorts(Coms: TStrings);
 var
-  Reg : TRegistry;
-  SL  : TStringList;
-  SLC : TStringList;
+  Reg: TRegistry;
+  SL: TStringList;
+  SLC: TStringList;
 
-  s   : string;
-  i   : integer;
+  s: string;
+  i: Integer;
 begin
-  SL  := TStringList.Create;
+  SL := TStringList.Create;
   SLC := TStringList.Create;
   Reg := TRegistry.Create(KEY_READ);
   try
@@ -281,7 +279,7 @@ begin
     if Reg.OpenKeyReadOnly('\HARDWARE\DEVICEMAP\SERIALCOMM\') then
     begin
       Reg.GetValueNames(SL);
-      for i:=0 to SL.Count-1 do
+      for i := 0 to SL.Count - 1 do
       begin
         s := Reg.ReadString(SL.Strings[i]);
         SLC.Add(s);
@@ -299,34 +297,33 @@ end;
 
 procedure TMainForm.LoadCommButtons;
 var
-  SL     : TStringList;
-  Button : TToolButton;
-  i      : integer;
+  SL: TStringList;
+  Button: TToolButton;
+  i: Integer;
 begin
   SL := TStringList.Create;
   try
     LoadRsPorts(SL);
 
-    while ComBar.ButtonCount>0 do
+    while ComBar.ButtonCount > 0 do
     begin
       ComBar.Buttons[0].Free;
     end;
 
-
-    for i:=SL.Count-1 downto 0 do
+    for i := SL.Count - 1 downto 0 do
     begin
       Button := TToolButton.Create(ComBar);
       Button.Parent := ComBar;
 
-      Button.Name := Format('ComBtn%u',[i]);
-      Button.Caption := ' '+SL.Strings[i]+ ' ';
-      Button.Tag :=  GetComNr(SL.Strings[i]);
+      Button.Name := Format('ComBtn%u', [i]);
+      Button.Caption := ' ' + SL.Strings[i] + ' ';
+      Button.Tag := GetComNr(SL.Strings[i]);
 
       Button.AllowAllUp := false;
       Button.Style := tbsCheck;
       Button.Grouped := true;
-      if i=0 then
-        Button.Down:= true;
+      if i = 0 then
+        Button.Down := true;
       Button.OnClick := ChgPortComProc;
 
     end;
@@ -339,10 +336,10 @@ procedure TMainForm.FormActivate(Sender: TObject);
 begin
   if FirstTime then
   begin
-    FirstTime := False;
+    FirstTime := false;
     Caption := GetCurrentDir;
     ProgCfg.LoadMainCfg;
-    ProgCfg.ReOpenBaseList.Konfig(0,FilemapItem,OnReOpenClickProc);
+    ProgCfg.ReOpenBaseList.Konfig(0, FilemapItem, OnReOpenClickProc);
     BildConnectButtons;
     SetupWinTabs;
     ExtMemo.SetCharSet;
@@ -350,44 +347,44 @@ begin
   end
 end;
 
-procedure TMainForm.OnActivateAplic(Sender : TObject);
+procedure TMainForm.OnActivateAplic(Sender: TObject);
 begin
   ReloadMap;
 end;
 
-function TMainForm.GetDev : TCmmDevice;
+function TMainForm.GetDev: TCmmDevice;
 begin
   Result := Dev;
 end;
 
-function  TMainForm.GetCommThread : TCommThread;
+function TMainForm.GetCommThread: TCommThread;
 begin
   Result := CommThread;
 end;
 
-procedure TMainForm.Msg(s :string);
+procedure TMainForm.Msg(s: string);
 begin
   NL(s);
 end;
 
-function TMainForm.FindIniDrvPrmSection( s : string) : string;
+function TMainForm.FindIniDrvPrmSection(s: string): string;
 var
-  Ini : TIniFile;
-  SL  : TStringList;
-  i   : Integer;
+  Ini: TIniFile;
+  SL: TStringList;
+  i: Integer;
   Item: string;
 begin
   Result := '';
   Ini := TIniFile.Create(ProgCfg.MainIniFName);
-  SL  := TStringList.Create;
+  SL := TStringList.Create;
   try
     Ini.ReadSections(SL);
-    if s<>'' then
+    if s <> '' then
     begin
-      for i:=0 to SL.Count-1 do
+      for i := 0 to SL.Count - 1 do
       begin
-        Item := Ini.ReadString(SL.Strings[i],INI_PARAM_DEV_STR,'');
-        if Item=s then
+        Item := Ini.ReadString(SL.Strings[i], INI_PARAM_DEV_STR, '');
+        if Item = s then
         begin
           Result := SL.Strings[i];
           break;
@@ -396,11 +393,12 @@ begin
     end
     else
     begin
-      i:=1;
+      i := 1;
       while true do
       begin
-        Result := Format('DRV_PARAM_%u',[i]);
-        if SL.IndexOf(Result)=-1 then Break;
+        Result := Format('DRV_PARAM_%u', [i]);
+        if SL.IndexOf(Result) = -1 then
+          break;
         inc(i);
       end;
     end;
@@ -412,27 +410,27 @@ end;
 
 procedure TMainForm.SetDriverParamsFromIni;
 var
-  SecName    : string;
-  SL         : TStringList;
-  Ini        : TIniFile;
-  i          : integer;
-  pName,pVal : string;
+  SecName: string;
+  SL: TStringList;
+  Ini: TIniFile;
+  i: Integer;
+  pName, pVal: string;
 begin
   SecName := FindIniDrvPrmSection(Dev.ConnectStr);
-  if SecName<>'' then
+  if SecName <> '' then
   begin
     Ini := TIniFile.Create(ProgCfg.MainIniFName);
-    SL  := TStringList.Create;
+    SL := TStringList.Create;
     try
-      Ini.ReadSection(SecName,SL);
-      for i:=1 to SL.Count-1 do
+      Ini.ReadSection(SecName, SL);
+      for i := 1 to SL.Count - 1 do
       begin
-        pName := Sl.Strings[i];
-        if Sl.Strings[i]<>INI_PARAM_DEV_STR then
+        pName := SL.Strings[i];
+        if SL.Strings[i] <> INI_PARAM_DEV_STR then
         begin
-          pVal := Ini.ReadString(SecName,pName,'');
-          Dev.SetDrvParam(pName,pVal);
-        end;  
+          pVal := Ini.ReadString(SecName, pName, '');
+          Dev.SetDrvParam(pName, pVal);
+        end;
       end;
     finally
       Ini.Free;
@@ -443,9 +441,9 @@ end;
 
 procedure TMainForm.WMTypeDefChg(var Msg: TMessage);
 var
-  i : integer;
+  i: Integer;
 begin
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TChildForm then
     begin
@@ -457,28 +455,31 @@ end;
 procedure TMainForm.SetupWinTabs;
 begin
   case ProgCfg.WinTab of
-  wtOFF: begin
-           WinTabPanel.Visible := false;
-         end;
-  wtTOP: begin
-           WinTabPanel.Visible := true;
-           WinTabPanel.Align := alTop;
-           WinTabControl.TabPosition := tpTop;
-         end;
-  wtBOTTOM: begin
-           WinTabPanel.Visible := true;
-           WinTabPanel.Align := alBottom;
-           WinTabControl.TabPosition := tpBottom;
-         end;
+    wtOFF:
+      begin
+        WinTabPanel.Visible := false;
+      end;
+    wtTOP:
+      begin
+        WinTabPanel.Visible := true;
+        WinTabPanel.Align := alTop;
+        WinTabControl.TabPosition := tpTop;
+      end;
+    wtBOTTOM:
+      begin
+        WinTabPanel.Visible := true;
+        WinTabPanel.Align := alBottom;
+        WinTabControl.TabPosition := tpBottom;
+      end;
   end;
 end;
 
 procedure TMainForm.WMSettingsChg(var Msg: TMessage);
 var
-  i : integer;
+  i: Integer;
 begin
   SetupWinTabs;
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TChildForm then
     begin
@@ -487,27 +488,29 @@ begin
   end;
 end;
 
-
 procedure TMainForm.ReloadMap;
 var
-  q   : TYesNoAsk;
-  R   : integer;
-  s   : string;
+  q: TYesNoAsk;
+  R: Integer;
+  s: string;
 begin
-  if MapParser=nil then Exit;
+  if MapParser = nil then
+    Exit;
   if MapParser.NeedReload then
   begin
     q := ProgCfg.AutoRefreshMap;
-    if q=crASK then
+    if q = crASK then
     begin
-      s := 'Plik MAP ulegl zmianie.'+#13+'Cz za³adowaæ go ponownie ?';
-      R := Application.MessageBox(pchar(s),'OnActivate',mb_yesNo);
+      s := 'Plik MAP ulegl zmianie.' + #13 + 'Cz za³adowaæ go ponownie ?';
+      R := Application.MessageBox(pchar(s), 'OnActivate', mb_yesNo);
       case R of
-      idYes    : q :=crYES;
-      idNo     : q :=crNo;
+        idYes:
+          q := crYES;
+        idNo:
+          q := crNo;
       end;
     end;
-    if q=crYES then
+    if q = crYES then
     begin
       RefreshMapFileAct.Execute;
     end;
@@ -521,24 +524,27 @@ end;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 var
-  q      : TYesNoAsk;
-  R      : integer;
-  DoExit : boolean;
-  s      : string;
+  q: TYesNoAsk;
+  R: Integer;
+  DoExit: boolean;
+  s: string;
 begin
   Action := caFree;
   q := ProgCfg.AutoSaveCfg;
-  if q=crASK then
+  if q = crASK then
   begin
-    R := Application.MessageBox('Czy zapisaæ ustawienia ?','Zamknij',mb_yesNoCancel);
+    R := Application.MessageBox('Czy zapisaæ ustawienia ?', 'Zamknij', mb_yesNoCancel);
     case R of
-    idYes    : q :=crYES;
-    idNo     : q :=crNo;
-    idCancel : Action := caNone;
+      idYes:
+        q := crYES;
+      idNo:
+        q := crNo;
+      idCancel:
+        Action := caNone;
     end;
   end;
 
-  if (Action=caFree) and (q=crYES) then
+  if (Action = caFree) and (q = crYES) then
   begin
     repeat
       try
@@ -546,51 +552,50 @@ begin
         DoExit := true;
       except
         DoExit := false;
-        s := (ExceptObject as Exception).Message+#13+'Powtórzyæ ?';
-        if Application.MessageBox(pchar(s),'Error',MB_YESNO or MB_ICONHAND)=idNO then
+        s := (ExceptObject as Exception).Message + #13 + 'Powtórzyæ ?';
+        if Application.MessageBox(pchar(s), 'Error', mb_yesNo or MB_ICONHAND) = idNo then
         begin
           DoExit := true;
         end;
       end;
     until DoExit;
   end;
-  if (Action=caFree) and (Dev<>nil) then
+  if (Action = caFree) and (Dev <> nil) then
   begin
     Dev.CloseDev;
   end;
 end;
 
-
-procedure TMainForm.NL(s :string);
+procedure TMainForm.NL(s: string);
 begin
-  ExtMemo.Print(s+'\n');
+  ExtMemo.Print(s + '\n');
 end;
 
-procedure TMainForm.ADL(s :string);
+procedure TMainForm.ADL(s: string);
 begin
   ExtMemo.Print(s);
 end;
 
-procedure TMainForm.ChgPortComProc(Sender : TObject);
+procedure TMainForm.ChgPortComProc(Sender: TObject);
 begin
-  if Pos('%RS',GlDevStr)>0 then
+  if Pos('%RS', GlDevStr) > 0 then
   begin
     ReOpenConnection;
   end;
 end;
 
-function TMainForm.ReplaceCom(DevStr : string):string;
+function TMainForm.ReplaceCom(DevStr: string): string;
 var
-  x      : integer;
-  ComStr : string;
-  i      : integer;
+  X: Integer;
+  ComStr: string;
+  i: Integer;
 begin
   Result := DevStr;
-  x := Pos('%RS',DevStr);
-  if x>0 then
+  X := Pos('%RS', DevStr);
+  if X > 0 then
   begin
     ComStr := 'COM1';
-    for i:=0 to ComBar.ButtonCount-1 do
+    for i := 0 to ComBar.ButtonCount - 1 do
     begin
       if ComBar.Buttons[i].Down then
       begin
@@ -598,43 +603,44 @@ begin
         break;
       end;
     end;
-    Result := StringReplace(Result,'%RS',ComStr,[rfReplaceAll, rfIgnoreCase])
+    Result := StringReplace(Result, '%RS', ComStr, [rfReplaceAll, rfIgnoreCase])
   end;
 end;
 
-function TMainForm.ReOpenConnection : boolean;
+function TMainForm.ReOpenConnection: boolean;
 var
-  DevStr : string;
-  st     : TStatus;
-  i      : integer;
+  DevStr: string;
+  st: TStatus;
+  i: Integer;
 begin
   if Dev.IsDevStrOk then
   begin
-    NL(Format('CloseDev [%s]=%s',[Dev.ConnectStr,Dev.GetErrStr(Dev.CloseDev)]));
+    NL(Format('CloseDev [%s]=%s', [Dev.ConnectStr, Dev.GetErrStr(Dev.CloseDev)]));
   end;
   FreeAndNil(Dev);
 
   DevStr := ReplaceCom(GlDevStr);
 
-  Dev := TCmmDevice.Create(Handle,DevStr);
+  Dev := TCmmDevice.Create(Handle, DevStr);
   CommThread.SetDev(Dev);
+
   if Dev.IsDevStrOk then
   begin
     st := Dev.OpenDev;
-    NL(Format('OpenDev [%s]=%s',[Dev.ConnectStr,Dev.GetErrStr(st)]));
-    if st<>stOK then
+    NL(Format('OpenDev [%s]=%s', [Dev.ConnectStr, Dev.GetErrStr(st)]));
+    if st <> stOK then
     begin
       FreeAndNil(Dev);
-      Dev := TCmmDevice.Create(Handle,'');
+      Dev := TCmmDevice.Create(Handle, '');
       CommThread.SetDev(Dev);
-      for i:=0 to ConnectBar.ButtonCount-1 do
+      for i := 0 to ConnectBar.ButtonCount - 1 do
         ConnectBar.Buttons[i].Down := false;
     end
     else
     begin
       SetDriverParamsFromIni;
       CloseEditDrvParamsForm;
-      TerminalChecked:=false;
+      TerminalChecked := false;
       Dev.SetLoggerHandle(ExtMemo.PipeInHandle);
     end;
   end;
@@ -642,7 +648,7 @@ end;
 
 procedure TMainForm.OpenCloseDevActExecute(Sender: TObject);
 var
-  Btn    : TToolButton;
+  Btn: TToolButton;
 begin
   if Sender is TToolButton then
     Btn := Sender as TToolButton
@@ -655,7 +661,7 @@ begin
   if Assigned(Btn) then
   begin
     if Btn.Down then
-      GlDevStr := ProgCfg.DevStrings.Strings[Btn.Tag-1]
+      GlDevStr := ProgCfg.DevStrings.Strings[Btn.Tag - 1]
     else
       GlDevStr := '';
     ReOpenConnection;
@@ -664,45 +670,45 @@ end;
 
 procedure TMainForm.Exit1Click(Sender: TObject);
 begin
- Close;
+  Close;
 end;
 
 procedure TMainForm.BildConnectButtons;
 var
-  i      : integer;
-  s      : string;
-  Button : TToolButton;
-  W      : integer;
+  i: Integer;
+  s: string;
+  Button: TToolButton;
+  W: Integer;
 begin
-  for i:=ConnectBar.ButtonCount-1 downto 0 do
+  for i := ConnectBar.ButtonCount - 1 downto 0 do
   begin
     Button := ConnectBar.Buttons[i];
-    if copy(Button.Name,1,4) = 'CONN' then
+    if copy(Button.Name, 1, 4) = 'CONN' then
     begin
       Button.Free;
     end;
   end;
   FirstConnectBtn := nil;
-  for i:=ProgCfg.DevStrings.Count-1 downto 0 do
+  for i := ProgCfg.DevStrings.Count - 1 downto 0 do
   begin
     s := ProgCfg.DevStrings.Strings[i];
-    if s<>'' then
+    if s <> '' then
     begin
       Button := TToolButton.Create(ConnectBar);
       Button.Parent := ConnectBar;
-      Button.Name := Format('CONN_%u',[i]);
-      Button.Caption := '[ '+s+ ' ]';
-      Button.Hint:= s;
-      Button.Tag := i+1;
+      Button.Name := Format('CONN_%u', [i]);
+      Button.Caption := '[ ' + s + ' ]';
+      Button.Hint := s;
+      Button.Tag := i + 1;
       Button.AllowAllUp := true;
       Button.Style := tbsCheck;
       Button.Grouped := true;
-      Button.OnClick :=OpenCloseDevActExecute;
+      Button.OnClick := OpenCloseDevActExecute;
       FirstConnectBtn := Button;
     end;
   end;
   W := ConnectBar.ButtonWidth * ConnectBar.ButtonCount;
-  ConnectBar.Width := w;
+  ConnectBar.Width := W;
 end;
 
 procedure TMainForm.EditConnectionActUpdate(Sender: TObject);
@@ -715,18 +721,17 @@ begin
   (Sender as TAction).Enabled := Dev.Connected;
 end;
 
-
 procedure TMainForm.EditConnectionActExecute(Sender: TObject);
 var
-  Dlg    : TDevStrEditForm;
-  SL     : TStringList;
+  Dlg: TDevStrEditForm;
+  SL: TStringList;
 begin
   Dlg := TDevStrEditForm.Create(self);
-  SL  := TStringList.Create;
+  SL := TStringList.Create;
   try
     Dlg.SetHistoryDevStr(ProgCfg.HistDevStr);
     Dlg.SetDevStrings(ProgCfg.DevStrings);
-    if Dlg.ShowModal=mrOk then
+    if Dlg.ShowModal = mrOk then
     begin
       Dlg.GetDevStrings(SL);
       ProgCfg.SetDevStrings(SL);
@@ -740,110 +745,103 @@ end;
 
 procedure TMainForm.WMShowMemWin(var Msg: TMessage);
 var
-  Win : TMemForm;
-  AdrCpx1 : TAdrCpx;
+  Win: TMemForm;
+  AdrCpx1: TAdrCpx;
 begin
-  Win := TMemForm.CreateIterf(self,self);
+  Win := TMemForm.CreateIterf(self, self);
   AdrCpx1 := PAdrCpx(Msg.WParam)^;
   Win.ShowMem(AdrCpx1);
 end;
 
 procedure TMainForm.WMShowStruct(var Msg: TMessage);
 var
-  Win : TStructShowForm;
-  AdrCpx1 : TAdrCpx;
+  Win: TStructShowForm;
+  AdrCpx1: TAdrCpx;
 begin
-  Win := TStructShowForm.CreateIterf(self,self);
+  Win := TStructShowForm.CreateIterf(self, self);
   AdrCpx1 := PAdrCpx(Msg.WParam)^;
   Win.SetArea(AdrCpx1.AreaName);
-  Win.SetStruct(AdrCpx1.Adres,THType(Msg.LParam));
+  Win.SetStruct(AdrCpx1.Adres, THType(Msg.LParam));
 end;
 
 procedure TMainForm.WMChildCaption(var Msg: TMessage);
 var
-  Obj : TChildForm;
-  N   : integer;
+  Obj: TChildForm;
+  N: Integer;
 begin
   Obj := TChildForm(Msg.WParam);
-  N:=WinTabControl.Tabs.IndexOfObject(Obj);
-  if N<0 then
-    n:=WinTabControl.Tabs.AddObject(Obj.Caption,Obj)
+  N := WinTabControl.Tabs.IndexOfObject(Obj);
+  if N < 0 then
+    N := WinTabControl.Tabs.AddObject(Obj.Caption, Obj)
   else
-    WinTabControl.Tabs.Strings[n]:=Obj.Caption;
-  WinTabControl.TabIndex := n;
+    WinTabControl.Tabs.Strings[N] := Obj.Caption;
+  WinTabControl.TabIndex := N;
 end;
 
 procedure TMainForm.WMChildClosed(var Msg: TMessage);
 var
-  Obj : TChildForm;
-  N   : integer;
+  Obj: TChildForm;
+  N: Integer;
 begin
   Obj := TChildForm(Msg.WParam);
-  N:=WinTabControl.Tabs.IndexOfObject(Obj);
-  if N>=0 then
-    WinTabControl.Tabs.Delete(n);
+  N := WinTabControl.Tabs.IndexOfObject(Obj);
+  if N >= 0 then
+    WinTabControl.Tabs.Delete(N);
 end;
-
-
 
 procedure TMainForm.MemoryWinActExecute(Sender: TObject);
 begin
-  TMemForm.CreateIterf(self,self);
+  TMemForm.CreateIterf(self, self);
 end;
-
 
 procedure TMainForm.VarListWinActExecute(Sender: TObject);
 begin
-  TVarListForm.CreateIterf(self,self);
+  TVarListForm.CreateIterf(self, self);
 end;
-
 
 procedure TMainForm.StructWinActExecute(Sender: TObject);
 begin
-  TStructShowForm.CreateIterf(self,self);
+  TStructShowForm.CreateIterf(self, self);
 end;
 
 procedure TMainForm.GeneratorWinActExecute(Sender: TObject);
 begin
-  TWavGenForm.CreateIterf(self,self);
+  TWavGenForm.CreateIterf(self, self);
 end;
 
 procedure TMainForm.PictureWinActExecute(Sender: TObject);
 begin
-  TPictureViewForm.CreateIterf(self,self);
+  TPictureViewForm.CreateIterf(self, self);
 end;
 
 procedure TMainForm.UploadWinActExecute(Sender: TObject);
 begin
-  TUpLoadFileForm.CreateIterf(self,self);
+  TUpLoadFileForm.CreateIterf(self, self);
 end;
 
-
-
-function TMainForm.GetSName(N: integer):string;
+function TMainForm.GetSName(N: Integer): string;
 begin
-  Result := Format('Win_%u',[N]);
+  Result := Format('Win_%u', [N]);
 end;
 
-
-procedure TMainForm.OnWriteIniProc(Ini : TDotIniFile);
+procedure TMainForm.OnWriteIniProc(Ini: TDotIniFile);
 var
-  i   : integer;
-  N   : integer;
+  i: Integer;
+  N: Integer;
 begin
-  Ini.WriteInteger('MAIN','Top',Top);
-  Ini.WriteInteger('MAIN','Left',Left);
-  Ini.WriteInteger('MAIN','Width',Width);
-  Ini.WriteInteger('MAIN','Height',Height);
+  Ini.WriteInteger('MAIN', 'Top', Top);
+  Ini.WriteInteger('MAIN', 'Left', Left);
+  Ini.WriteInteger('MAIN', 'Width', Width);
+  Ini.WriteInteger('MAIN', 'Height', Height);
   UpLoadList.SaveToIni(Ini);
 
   N := 1;
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TChildForm then
     begin
       Ini.EraseSection(GetSName(N));
-      (MDIChildren[i] as TChildForm).SaveToIni(Ini,GetSName(N));
+      (MDIChildren[i] as TChildForm).SaveToIni(Ini, GetSName(N));
       inc(N);
     end;
   end;
@@ -852,67 +850,78 @@ begin
     Ini.EraseSection(GetSName(N));
     inc(N);
   end;
-  GlobTypeList.SaveToIni(ini);
+  GlobTypeList.SaveToIni(Ini);
 end;
 
-procedure TMainForm.OnReadIniProc(Ini : TDotIniFile);
+procedure TMainForm.OnReadIniProc(Ini: TDotIniFile);
 var
-  WinType : string;
-  Dlg     : TChildForm;
-  N       : integer;
+  WinType: string;
+  Dlg: TChildForm;
+  N: Integer;
 begin
-  if ProgCfg.WorkingMap<>'' then
+  if ProgCfg.WorkingMap <> '' then
     if MapParser.LoadMapFile(ProgCfg.WorkingMap) then
-      NL('Load map file :'+MapParser.FileName);
+      NL('Load map file :' + MapParser.FileName);
 
-  GlobTypeList.LoadfromIni(ini);
-  UpLoadList.LoadFromIni(Ini);
+  GlobTypeList.LoadfromIni(Ini);
+  UpLoadList.LoadfromIni(Ini);
 
-  Top := Ini.ReadInteger('MAIN','Top',Top);
-  Left := Ini.ReadInteger('MAIN','Left',Left);
-  Width :=Ini.ReadInteger('MAIN','Width',Width);
-  Height := Ini.ReadInteger('MAIN','Height',Height);
+  Top := Ini.ReadInteger('MAIN', 'Top', Top);
+  Left := Ini.ReadInteger('MAIN', 'Left', Left);
+  Width := Ini.ReadInteger('MAIN', 'Width', Width);
+  Height := Ini.ReadInteger('MAIN', 'Height', Height);
 
   N := 1;
   while Ini.SectionExists(GetSName(N)) do
   begin
-    WinType := Ini.ReadString(GetSName(N),'WinType','');
+    WinType := Ini.ReadString(GetSName(N), 'WinType', '');
     Dlg := nil;
-    if WinType='TMemForm'         then Dlg := TMemForm.CreateIterf(self,self);
-    if WinType='TVarListForm'     then Dlg := TVarListForm.CreateIterf(self,self);
-    if WinType='TStructShowForm'  then Dlg := TStructShowForm.CreateIterf(self,self);
-    if WinType='TWavGenForm'      then Dlg := TWavGenForm.CreateIterf(self,self);
-    if WinType='TWrtControlForm'  then Dlg := TWrtControlForm.CreateIterf(self,self);
-    if WinType='TTerminalForm'    then Dlg := TTerminalForm.CreateIterf(self,self);
-    if WinType='TPictureViewForm' then Dlg := TPictureViewForm.CreateIterf(self,self);
-    if WinType='TRegMemForm'      then Dlg := TRegMemForm.CreateIterf(self,self);
-    if WinType='TBinaryMemForm'   then Dlg := TBinaryMemForm.CreateIterf(self,self);
-    if WinType='TRz40EventsForm'  then Dlg := TRz40EventsForm.CreateIterf(self,self);
-    if WinType='TRfcForm'         then Dlg := TRfcForm.CreateIterf(self,self);
+    if WinType = 'TMemForm' then
+      Dlg := TMemForm.CreateIterf(self, self);
+    if WinType = 'TVarListForm' then
+      Dlg := TVarListForm.CreateIterf(self, self);
+    if WinType = 'TStructShowForm' then
+      Dlg := TStructShowForm.CreateIterf(self, self);
+    if WinType = 'TWavGenForm' then
+      Dlg := TWavGenForm.CreateIterf(self, self);
+    if WinType = 'TWrtControlForm' then
+      Dlg := TWrtControlForm.CreateIterf(self, self);
+    if WinType = 'TTerminalForm' then
+      Dlg := TTerminalForm.CreateIterf(self, self);
+    if WinType = 'TPictureViewForm' then
+      Dlg := TPictureViewForm.CreateIterf(self, self);
+    if WinType = 'TRegMemForm' then
+      Dlg := TRegMemForm.CreateIterf(self, self);
+    if WinType = 'TBinaryMemForm' then
+      Dlg := TBinaryMemForm.CreateIterf(self, self);
+    if WinType = 'TRz40EventsForm' then
+      Dlg := TRz40EventsForm.CreateIterf(self, self);
+    if WinType = 'TRfcForm' then
+      Dlg := TRfcForm.CreateIterf(self, self);
 
-    if Dlg<>nil then
+    if Dlg <> nil then
     begin
-      Dlg.LoadFromIni(Ini,GetSName(N));
+      Dlg.LoadfromIni(Ini, GetSName(N));
     end;
     inc(N);
   end;
 end;
 
-procedure TMainForm.OnReOpenClickProc(Sender :TObject);
+procedure TMainForm.OnReOpenClickProc(Sender: TObject);
 var
-  FName : string;
+  FName: string;
 begin
   FName := ProgCfg.ReOpenBaseList.GetFileName(Sender as TMenuItem);
   ProgCfg.ReOpenBaseList.AddFile(FName);
-  ProgCfg.WorkingMap := Fname;
-  MapParser.LoadMapFile(Fname);
+  ProgCfg.WorkingMap := FName;
+  MapParser.LoadMapFile(FName);
 end;
 
-procedure TMainForm.OnReloadedProc(Sender :TObject);
+procedure TMainForm.OnReloadedProc(Sender: TObject);
 var
-  i : integer;
+  i: Integer;
 begin
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TChildForm then
     begin
@@ -923,30 +932,30 @@ end;
 
 procedure TMainForm.OpenMapFileItemClick(Sender: TObject);
 var
-  Dlg   : TOpenDialog;
-  Fname : string;
+  Dlg: TOpenDialog;
+  FName: string;
 begin
-  Fname :='';
+  FName := '';
   Dlg := TOpenDialog.Create(self);
   try
     Dlg.DefaultExt := '.map';
     Dlg.Filter := 'Plik map|*.map|Keil 8051|*.m51';
     if Dlg.Execute then
-      Fname := Dlg.FileName;
+      FName := Dlg.FileName;
   finally
     Dlg.Free;
   end;
-  if Fname <>'' then
+  if FName <> '' then
   begin
     ProgCfg.ReOpenBaseList.AddFile(FName);
-    ProgCfg.WorkingMap := Fname;
-    MapParser.LoadMapFile(Fname);
+    ProgCfg.WorkingMap := FName;
+    MapParser.LoadMapFile(FName);
   end;
 end;
 
 procedure TMainForm.SettingsActExecute(Sender: TObject);
 var
-  Dlg : TSettingForm;
+  Dlg: TSettingForm;
 begin
   Dlg := TSettingForm.Create(self);
   try
@@ -964,7 +973,7 @@ end;
 procedure TMainForm.RefreshMapFileActExecute(Sender: TObject);
 begin
   if MapParser.LoadMapFile then
-    NL('Load map file :'+MapParser.FileName);
+    NL('Load map file :' + MapParser.FileName);
 end;
 
 procedure TMainForm.RefreshMapFileActUpdate(Sender: TObject);
@@ -972,13 +981,12 @@ begin
   (Sender as TAction).Enabled := MapParser.isLoaded;
 end;
 
-
 procedure TMainForm.DefTypesItemClick(Sender: TObject);
 var
-  W : TTypeDefEditForm;
-  i : integer;
+  W: TTypeDefEditForm;
+  i: Integer;
 begin
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TTypeDefEditForm then
     begin
@@ -990,18 +998,18 @@ begin
     end;
   end;
 
-  W := TTypeDefEditForm.CreateIterf(Self,self);
+  W := TTypeDefEditForm.CreateIterf(self, self);
   W.LoadTypeDefTree(GlobTypeList);
   W.Caption := 'Definicje typów';
 end;
 
 procedure TMainForm.ImportTypesItemClick(Sender: TObject);
 var
-  W     : TTypeDefEditForm;
-  H     : THTypeList;
-  Dlg   : TOpenDialog;
-  FName : string;
-  Ini   : TDotIniFile;
+  W: TTypeDefEditForm;
+  H: THTypeList;
+  Dlg: TOpenDialog;
+  FName: string;
+  Ini: TDotIniFile;
 begin
   FName := '';
   Dlg := TOpenDialog.Create(self);
@@ -1012,13 +1020,13 @@ begin
   finally
     Dlg.Free;
   end;
-  if FName<>'' then
+  if FName <> '' then
   begin
     H := THTypeList.CreateSys;
-    Ini := TDotIniFile.Create(Fname);
+    Ini := TDotIniFile.Create(FName);
     try
-      H.LoadFromIni(Ini);
-      W := TTypeDefEditForm.CreateIterf(Self,self);
+      H.LoadfromIni(Ini);
+      W := TTypeDefEditForm.CreateIterf(self, self);
       W.LoadTypeDefTree(H);
       W.Caption := FName;
     finally
@@ -1030,9 +1038,9 @@ end;
 
 procedure TMainForm.MinimizeAllActExecute(Sender: TObject);
 var
-  i : integer;
+  i: Integer;
 begin
-  for i:=MDIChildCount-1 downto 0 do
+  for i := MDIChildCount - 1 downto 0 do
   begin
     MDIChildren[i].WindowState := wsMinimized;
   end;
@@ -1040,9 +1048,9 @@ end;
 
 procedure TMainForm.RestoreAllActExecute(Sender: TObject);
 var
-  i : integer;
+  i: Integer;
 begin
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     MDIChildren[i].WindowState := wsNormal;
   end;
@@ -1050,9 +1058,9 @@ end;
 
 procedure TMainForm.CloseAllActExecute(Sender: TObject);
 var
-  i : integer;
+  i: Integer;
 begin
-  for i:=MDIChildCount-1 downto 0 do
+  for i := MDIChildCount - 1 downto 0 do
   begin
     MDIChildren[i].Close;
   end;
@@ -1060,46 +1068,46 @@ end;
 
 procedure TMainForm.MinimizeActExecute(Sender: TObject);
 var
-  N : integer;
-  Win : TChildForm;
+  N: Integer;
+  Win: TChildForm;
 begin
   N := WinTabControl.TabIndex;
-  Win :=WinTabControl.Tabs.Objects[n] as TChildForm;
+  Win := WinTabControl.Tabs.Objects[N] as TChildForm;
   Win.WindowState := wsMinimized;
 end;
 
 procedure TMainForm.CloseActExecute(Sender: TObject);
 var
-  N : integer;
-  Win : TChildForm;
+  N: Integer;
+  Win: TChildForm;
 begin
   N := WinTabControl.TabIndex;
-  Win :=WinTabControl.Tabs.Objects[n] as TChildForm;
+  Win := WinTabControl.Tabs.Objects[N] as TChildForm;
   Win.Close;
 end;
 
 procedure TMainForm.RestoreActExecute(Sender: TObject);
 var
-  N : integer;
-  Win : TChildForm;
+  N: Integer;
+  Win: TChildForm;
 begin
   N := WinTabControl.TabIndex;
-  Win :=WinTabControl.Tabs.Objects[n] as TChildForm;
+  Win := WinTabControl.Tabs.Objects[N] as TChildForm;
   Win.WindowState := wsNormal;
 end;
 
 procedure TMainForm.OknoItemClick(Sender: TObject);
 var
-  Item :TMenuItem;
-  i    : integer;
-  N    : integer;
+  Item: TMenuItem;
+  i: Integer;
+  N: Integer;
 begin
   N := OknoItem.IndexOf(SplitWindowitem);
-  for i:=OknoItem.Count-1 downto N+1 do
+  for i := OknoItem.Count - 1 downto N + 1 do
     OknoItem.Delete(i);
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
-    Item := TMenuItem.Create(Self);
+    Item := TMenuItem.Create(self);
     Item.Caption := MDIChildren[i].Caption;
     Item.Tag := cardinal(MDIChildren[i]);
     OknoItem.Add(Item);
@@ -1107,19 +1115,19 @@ begin
   end;
 end;
 
-procedure TMainForm.RestoreWinProc(Sender :TObject);
+procedure TMainForm.RestoreWinProc(Sender: TObject);
 var
-  F : TForm;
+  F: TForm;
 begin
   F := TForm((Sender as TMenuItem).Tag);
-  if F.WindowState=wsMinimized then
+  if F.WindowState = wsMinimized then
     F.WindowState := wsNormal;
   F.BringToFront;
 end;
 
 procedure TMainForm.ControlWinActExecute(Sender: TObject);
 begin
-  TWrtControlForm.CreateIterf(self,self);
+  TWrtControlForm.CreateIterf(self, self);
 end;
 
 procedure TMainForm.Oprogramie1Click(Sender: TObject);
@@ -1129,26 +1137,26 @@ end;
 
 procedure TMainForm.GetDrvParamsActExecute(Sender: TObject);
 var
-  s        : string;
-  ParValue : string;
-  SL       : TStringList;
-  i        : integer;
+  s: string;
+  ParValue: string;
+  SL: TStringList;
+  i: Integer;
 begin
   s := Dev.GetDrvParamList(false);
-  SL  := TStringList.Create;
+  SL := TStringList.Create;
   try
     SL.QuoteChar := '"';
     SL.Delimiter := ';';
     SL.DelimitedText := s;
-    for i:=0 to SL.Count-1 do
+    for i := 0 to SL.Count - 1 do
     begin
-      if Dev.GetDrvStatus(SL.Strings[i],ParValue)=stOk then
+      if Dev.GetDrvStatus(SL.Strings[i], ParValue) = stOK then
       begin
-        NL(Format('%s = %s',[SL.Strings[i],ParValue]));
+        NL(Format('%s = %s', [SL.Strings[i], ParValue]));
       end;
     end;
   finally
-    Sl.Free;
+    SL.Free;
   end;
 end;
 
@@ -1159,11 +1167,11 @@ end;
 
 procedure TMainForm.SetDrvParamsActExecute(Sender: TObject);
 var
-  i : integer;
-  Form : TEditDrvParamsForm;
+  i: Integer;
+  Form: TEditDrvParamsForm;
 begin
-  Form:=nil;
-  for i:=0 to MDIChildCount-1 do
+  Form := nil;
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TEditDrvParamsForm then
     begin
@@ -1171,21 +1179,21 @@ begin
       Form.BringToFront;
     end;
   end;
-  if Form=nil then
-    TEditDrvParamsForm.CreateIterf(self,self);
+  if Form = nil then
+    TEditDrvParamsForm.CreateIterf(self, self);
 end;
 
 procedure TMainForm.CloseEditDrvParamsForm;
 var
-  i : integer;
-  Form : TEditDrvParamsForm;
+  i: Integer;
+  Form: TEditDrvParamsForm;
 begin
-  for i:=0 to MDIChildCount-1 do
+  for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TEditDrvParamsForm then
     begin
       Form := MDIChildren[i] as TEditDrvParamsForm;
-      if Form.Caption<>Dev.ConnectStr then
+      if Form.Caption <> Dev.ConnectStr then
         Form.Close;
     end;
   end;
@@ -1196,32 +1204,31 @@ begin
   LoadCommButtons;
 end;
 
-procedure TMainForm.WinTabControlMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TMainForm.WinTabControlMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-  nr : integer;
-  Win : TChildForm;
+  nr: Integer;
+  Win: TChildForm;
 begin
-  if  Button=mbLeft then
+  if Button = mbLeft then
   begin
-    nr := WinTabControl.IndexOfTabAt(x,y);
-    if nr>=0 then
+    nr := WinTabControl.IndexOfTabAt(X, Y);
+    if nr >= 0 then
     begin
-      Win :=(Sender as TTabControl).Tabs.Objects[nr] as TChildForm;
-      if Win.WindowState=wsMinimized then
+      Win := (Sender as TTabControl).Tabs.Objects[nr] as TChildForm;
+      if Win.WindowState = wsMinimized then
       begin
-        Win.WindowState :=wsNormal;
+        Win.WindowState := wsNormal;
       end
       else
       begin
-        if Win=MDIChildren[0] then
+        if Win = MDIChildren[0] then
         begin
-          Win.WindowState:=wsMinimized;
+          Win.WindowState := wsMinimized;
         end;
       end;
       Win.BringToFront;
     end;
-  end;  
+  end;
 end;
 
 procedure TMainForm.TerminalActUpdate(Sender: TObject);
@@ -1235,68 +1242,64 @@ begin
       TerminalChecked := true;
     end;
   end;
-  (sender as Taction).Enabled := TerminalValid;
+  (Sender as TAction).Enabled := TerminalValid;
 end;
 
 procedure TMainForm.TerminalActExecute(Sender: TObject);
 begin
-  TTerminalForm.CreateIterf(self,self);
+  TTerminalForm.CreateIterf(self, self);
 end;
-
-
 
 procedure TMainForm.IsModbusStdActExecute(Sender: TObject);
 begin
- //  musi tak pozostaæ !
+  // musi tak pozostaæ !
 end;
 
 procedure TMainForm.IsModbusStdActUpdate(Sender: TObject);
 begin
-  (Sender as Taction).Enabled := Dev.isStdModbus;
+  (Sender as TAction).Enabled := Dev.isStdModbus;
 end;
 
 procedure TMainForm.MemBinaryInputActExecute(Sender: TObject);
 var
-  win : TBinaryMemForm;
+  Win: TBinaryMemForm;
 begin
-  win := TBinaryMemForm.CreateIterf(self,self);
-  win.SetMemType(bmBINARYINP);
+  Win := TBinaryMemForm.CreateIterf(self, self);
+  Win.SetMemType(bmBINARYINP);
 end;
 
 procedure TMainForm.MemCoilActExecute(Sender: TObject);
 var
-  win : TBinaryMemForm;
+  Win: TBinaryMemForm;
 begin
-  win := TBinaryMemForm.CreateIterf(self,self);
-  win.SetMemType(bmCOILS);
+  Win := TBinaryMemForm.CreateIterf(self, self);
+  Win.SetMemType(bmCOILS);
 end;
 
 procedure TMainForm.MemAnalogInputActExecute(Sender: TObject);
 var
-  win : TRegMemForm;
+  Win: TRegMemForm;
 begin
-  win := TRegMemForm.CreateIterf(self,self);
-  win.SetMemType(rmANALOGINP);
+  Win := TRegMemForm.CreateIterf(self, self);
+  Win.SetMemType(rmANALOGINP);
 end;
 
 procedure TMainForm.MemRegistersActExecute(Sender: TObject);
 var
-  win : TRegMemForm;
+  Win: TRegMemForm;
 begin
-  win := TRegMemForm.CreateIterf(self,self);
-  win.SetMemType(rmREGISTERS);
+  Win := TRegMemForm.CreateIterf(self, self);
+  Win.SetMemType(rmREGISTERS);
 end;
-
 
 procedure TMainForm.actRZ40EventReaderExecute(Sender: TObject);
 begin
-  TRz40EventsForm.CreateIterf(self,self);
+  TRz40EventsForm.CreateIterf(self, self);
 end;
 
 procedure TMainForm.RfcWinActExecute(Sender: TObject);
 begin
-  TRfcForm.CreateIterf(self,self);
+  TRfcForm.CreateIterf(self, self);
 end;
 
 end.
-

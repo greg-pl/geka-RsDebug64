@@ -3,7 +3,7 @@ object Form2: TForm2
   Top = 0
   Caption = 'Form2'
   ClientHeight = 583
-  ClientWidth = 854
+  ClientWidth = 895
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -18,7 +18,7 @@ object Form2: TForm2
   object Memo1: TMemo
     Left = 0
     Top = 112
-    Width = 854
+    Width = 895
     Height = 471
     Align = alBottom
     Anchors = [akLeft, akTop, akRight, akBottom]
@@ -30,18 +30,70 @@ object Form2: TForm2
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 0
+    ExplicitTop = 103
   end
   object Panel3: TPanel
-    Left = 489
+    Left = 577
     Top = 0
-    Width = 225
+    Width = 208
     Height = 112
     Align = alLeft
     BevelOuter = bvLowered
     TabOrder = 1
-    ExplicitLeft = 408
-    ExplicitTop = 59
-    ExplicitHeight = 193
+    ExplicitLeft = 488
+    ExplicitTop = -6
+    object Label5: TLabel
+      Left = 21
+      Top = 5
+      Width = 77
+      Height = 20
+      Caption = 'WriteMem'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -16
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object WriteMemAdrEdit: TComboBox
+      Left = 126
+      Top = 7
+      Width = 75
+      Height = 21
+      ItemIndex = 0
+      TabOrder = 0
+      Text = '20001000'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
+      Items.Strings = (
+        '20001000'
+        '20000000')
+    end
+    object WriteMemValueEdit: TComboBox
+      Left = 15
+      Top = 31
+      Width = 186
+      Height = 21
+      TabOrder = 1
+      Text = '40'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
+      Items.Strings = (
+        '40'
+        '80'
+        '100'
+        '200'
+        '400')
+    end
+    object WriteMemBtn: TButton
+      Left = 15
+      Top = 72
+      Width = 75
+      Height = 25
+      Caption = 'Send'
+      TabOrder = 2
+      OnClick = WriteMemBtnClick
+    end
   end
   object Panel4: TPanel
     Left = 177
@@ -78,29 +130,25 @@ object Form2: TForm2
       Top = 39
       Width = 115
       Height = 21
-      ItemIndex = 0
       TabOrder = 1
-      Text = 'jtag_reset'
+      Text = 'c'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
       Items.Strings = (
-        'jtag_reset'
-        'halt'
-        'resume'
-        'reset'
-        'semihosting enable'
-        'semihosting disable'
-        '')
+        'c'
+        's'
+        'g')
     end
   end
   object Panel5: TPanel
-    Left = 345
+    Left = 433
     Top = 0
     Width = 144
     Height = 112
     Align = alLeft
     BevelOuter = bvLowered
     TabOrder = 3
-    ExplicitLeft = 489
-    ExplicitTop = 8
+    ExplicitLeft = 345
     object Label3: TLabel
       Left = 13
       Top = 5
@@ -121,10 +169,14 @@ object Form2: TForm2
       Height = 21
       TabOrder = 0
       Text = '80004c0'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
       Items.Strings = (
         '08000000'
         '08000dc0'
-        '20000000')
+        '20000000'
+        '20001000'
+        '')
     end
     object ReadMemCntEdit: TComboBox
       Left = 95
@@ -133,6 +185,8 @@ object Form2: TForm2
       Height = 21
       TabOrder = 1
       Text = '40'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
       Items.Strings = (
         '40'
         '80'
@@ -140,14 +194,14 @@ object Form2: TForm2
         '200'
         '400')
     end
-    object SendTcpBtn: TButton
+    object ReadMemBtn: TButton
       Left = 14
       Top = 72
       Width = 75
       Height = 25
       Caption = 'Send'
       TabOrder = 2
-      OnClick = SendTcpBtnClick
+      OnClick = ReadMemBtnClick
     end
   end
   object Panel1: TPanel
@@ -158,9 +212,6 @@ object Form2: TForm2
     Align = alLeft
     BevelOuter = bvLowered
     TabOrder = 4
-    ExplicitLeft = 1
-    ExplicitTop = 1
-    ExplicitHeight = 191
     object Label1: TLabel
       Left = 46
       Top = 6
@@ -203,6 +254,8 @@ object Form2: TForm2
       Height = 21
       TabOrder = 1
       Text = '127.0.0.1'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
     end
     object OpenTcpBtn: TButton
       Left = 8
@@ -220,6 +273,44 @@ object Form2: TForm2
       Height = 21
       TabOrder = 3
       Text = '50001'
+      OnExit = IpBoxExit
+      OnKeyPress = IpBoxKeyPress
+    end
+  end
+  object Panel2: TPanel
+    Left = 345
+    Top = 0
+    Width = 88
+    Height = 112
+    Align = alLeft
+    BevelOuter = bvLowered
+    TabOrder = 5
+    object CmdSBtn: TButton
+      Left = 7
+      Top = 6
+      Width = 75
+      Height = 25
+      Caption = 'STOP'
+      TabOrder = 0
+      OnClick = CmdSBtnClick
+    end
+    object CmdCBtn: TButton
+      Left = 7
+      Top = 37
+      Width = 75
+      Height = 25
+      Caption = 'Continue'
+      TabOrder = 1
+      OnClick = CmdCBtnClick
+    end
+    object CmdGBtn: TButton
+      Left = 6
+      Top = 68
+      Width = 75
+      Height = 25
+      Caption = 'Show Reg'
+      TabOrder = 2
+      OnClick = CmdGBtnClick
     end
   end
 end

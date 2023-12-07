@@ -2,14 +2,14 @@
 <BorlandProject>
 	<Transactions>
     <Transaction>1899.12.30 00:00:00.000.676,=D:\!!Work\RsDebugGit\StLink\SimpSock_Tcp.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.045,D:\!!Work\P2P\TcpTest\Main.dfm=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.dfm</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.045,D:\!!Work\P2P\TcpTest\Main.pas=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.371,D:\!!Work\RsDebugGit\StLink\TcpTest.dproj=D:\!!Work\RsDebugGit\StLink\StLink.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.521,D:\!!Work\RsDebugGit\StLink\StLinkDriver.pas=D:\!!Work\RsDebugGit\StLink\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.045,C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.dfm=D:\!!Work\P2P\TcpTest\Main.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.500,C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Project1.dproj=D:\!!Work\P2P\TcpTest\TcpTest.dproj</Transaction>
     <Transaction>1899.12.30 00:00:00.000.387,=D:\!!Work\P2P\SimpSock_Tcp.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.521,D:\!!Work\RsDebugGit\StLink\Unit1.pas=D:\!!Work\RsDebugGit\StLink\StLinkDriver.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.516,=C:\Users\Grzegorz\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.500,D:\!!Work\P2P\TcpTest\TcpTest.dproj=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.371,D:\!!Work\RsDebugGit\StLink\StLink.dproj=D:\!!Work\RsDebugGit\StLink\TcpTest.dproj</Transaction>
     <Transaction>1899.12.30 00:00:00.000.884,=C:\Users\Grzegorz\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.516,=C:\Users\Grzegorz\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.045,C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.pas=D:\!!Work\P2P\TcpTest\Main.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.404,=D:\!!Work\RsDebugGit\StLink\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.943,=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
   </Transactions>

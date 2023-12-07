@@ -15,7 +15,7 @@ type
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
-    SendTcpBtn: TButton;
+    ReadMemBtn: TButton;
     OpenTcpBtn: TButton;
     CloseTcpBtn: TButton;
     Memo1: TMemo;
@@ -27,12 +27,26 @@ type
     Label4: TLabel;
     RCmdBtn: TButton;
     RCmdBox: TComboBox;
+    Label5: TLabel;
+    WriteMemAdrEdit: TComboBox;
+    WriteMemValueEdit: TComboBox;
+    WriteMemBtn: TButton;
+    Panel2: TPanel;
+    CmdSBtn: TButton;
+    CmdCBtn: TButton;
+    CmdGBtn: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure OpenTcpBtnClick(Sender: TObject);
     procedure CloseTcpBtnClick(Sender: TObject);
-    procedure SendTcpBtnClick(Sender: TObject);
+    procedure ReadMemBtnClick(Sender: TObject);
     procedure RCmdBtnClick(Sender: TObject);
+    procedure IpBoxExit(Sender: TObject);
+    procedure IpBoxKeyPress(Sender: TObject; var Key: Char);
+    procedure WriteMemBtnClick(Sender: TObject);
+    procedure CmdSBtnClick(Sender: TObject);
+    procedure CmdCBtnClick(Sender: TObject);
+    procedure CmdGBtnClick(Sender: TObject);
   private
     RecCnt: integer;
     StLinkDrv: TStLinkDrv;
@@ -64,6 +78,32 @@ begin
   StLinkDrv.Free;
 end;
 
+procedure TForm2.IpBoxExit(Sender: TObject);
+var
+  box: TComboBox;
+  txt: string;
+  n: integer;
+begin
+  box := Sender as TComboBox;
+  txt := box.Text;
+  n := box.Items.IndexOf(txt);
+  if n <> 0 then
+  begin
+    if n > 0 then
+    begin
+      box.Items.Delete(n);
+    end;
+    box.Items.Insert(0, txt);
+    box.ItemIndex := 0;
+  end;
+end;
+
+procedure TForm2.IpBoxKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then
+    IpBoxExit(Sender);
+end;
+
 procedure TForm2.Wr(s: string);
 begin
   Memo1.Lines.Add(s);
@@ -87,14 +127,13 @@ begin
   Wr(Format('Open, st=%d', [st]));
 end;
 
-
 procedure TForm2.CloseTcpBtnClick(Sender: TObject);
 begin
   StLinkDrv.close;
 
 end;
 
-procedure TForm2.SendTcpBtnClick(Sender: TObject);
+procedure TForm2.ReadMemBtnClick(Sender: TObject);
 var
   buf: TBytes;
   adr, cnt: integer;
@@ -121,5 +160,77 @@ begin
   Wr(Format('RCmd, st=%d', [st]));
 end;
 
+procedure TForm2.CmdCBtnClick(Sender: TObject);
+var
+  st: TStatus;
+begin
+  st := StLinkDrv.RCommand('c');
+  Wr(Format('Continue, st=%d', [st]));
+end;
+
+procedure TForm2.CmdSBtnClick(Sender: TObject);
+var
+  st: TStatus;
+begin
+  st := StLinkDrv.RCommand('s');
+  Wr(Format('Stop, st=%d', [st]));
+end;
+
+procedure TForm2.CmdGBtnClick(Sender: TObject);
+const
+  REG_CNT = 16;
+  RegName: array [0 .. REG_CNT - 1] of string = ( //
+    'r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9', 'r10', 'r11', 'r12', 'sp', 'lr', 'pc');
+var
+  st: TStatus;
+  repl: string;
+  n, i: integer;
+  vtxt: string;
+  name: string;
+  vv: cardinal;
+begin
+  st := StLinkDrv.RCommand('g', repl, false);
+  if st = stOk then
+  begin
+    n := length(repl) div 8;
+    for i := 0 to n - 1 do
+    begin
+      vtxt := copy(repl, 1 + 8 * i, 8);
+      if TryStrToUInt('$' + vtxt, vv) then
+      begin
+        if vv = 0 then
+          vtxt := '0'
+        else
+        begin
+          vv := Dswap(vv);
+          vtxt := Format('%.8X(%u)', [vv, vv]);
+        end;
+
+      end;
+      name := '??';
+      if i < REG_CNT then
+        name := RegName[i];
+      Wr(Format('%2d.%8s:%s', [i, name, vtxt]));
+    end;
+  end
+  else
+    Wr(Format('Registry, st=%d', [st]));
+end;
+
+procedure TForm2.WriteMemBtnClick(Sender: TObject);
+var
+  buf: TBytes;
+  adr, cnt: integer;
+  st: TStatus;
+  SL: TStringList;
+begin
+  adr := StrToInt('$' + WriteMemAdrEdit.Text);
+  buf := ParseArray(WriteMemValueEdit.Text);
+  if length(buf) > 0 then
+  begin
+    st := StLinkDrv.WriteMem(adr, buf);
+    Wr(Format('WriteMem %u bytes @ 0x%X, st=%d', [length(buf), adr, st]));
+  end;
+end;
 
 end.
