@@ -17,7 +17,6 @@ uses
   EditTypeItemUnit in 'Dialogs\EditTypeItemUnit.pas' {EditTypeItemForm},
   EditVarItemUnit in 'Dialogs\EditVarItemUnit.pas' {EditVarItemForm},
   EditDrvParamsUnit in 'Dialogs\EditDrvParamsUnit.pas' {EditDrvParamsForm},
-  DevStrEditUnit in 'Dialogs\DevStrEditUnit.pas' {DevStrEditForm},
   About in 'Dialogs\About.pas' {AboutForm},
   MemFrameUnit in 'Frames\MemFrameUnit.pas' {MemFrame: TFrame},
   AnalogFrameUnit in 'Frames\AnalogFrameUnit.pas' {AnalogFrame: TFrame},
@@ -38,7 +37,19 @@ uses
   UpLoadDefUnit in 'Tools\UpLoadDefUnit.pas',
   WavGenUnit in 'Forms\WavGenUnit.pas' {WavGenForm},
   VarListUnit in 'Forms\VarListUnit.pas' {VarListForm},
-  UpLoadFileUnit in 'Forms\UpLoadFileUnit.pas' {UpLoadFileForm};
+  UpLoadFileUnit in 'Forms\UpLoadFileUnit.pas' {UpLoadFileForm},
+  Rsd64Definitions in '..\Common\Rsd64Definitions.pas',
+  OpenConnectionDlgUnit in 'Dialogs\OpenConnectionDlgUnit.pas' {OpenConnectionDlg},
+  SttObjectDefUnit in '..\JSonSTT\SttObjectDefUnit.pas',
+  SttFrameUartUnit in '..\JSonSTT\SttFrameUartUnit.pas' {SttFrameUart},
+  SttFrameBaseUnit in '..\JSonSTT\SttFrameBaseUnit.pas' {SttFrameBase: TFrame},
+  SttFrameIntUnit in '..\JSonSTT\SttFrameIntUnit.pas' {SttFrameInt: TFrame},
+  SttFrameFloatUnit in '..\JSonSTT\SttFrameFloatUnit.pas' {SttFrameFloat: TFrame},
+  SttFrameSelectUnit in '..\JSonSTT\SttFrameSelectUnit.pas' {SttFrameSelect: TFrame},
+  SttFrameBoolUnit in '..\JSonSTT\SttFrameBoolUnit.pas' {SttFrameBool: TFrame},
+  SttFrameIpUnit in '..\JSonSTT\SttFrameIpUnit.pas' {SttFrameIp: TFrame},
+  SttFrameAddrIpUnit in '..\JSonSTT\SttFrameAddrIpUnit.pas' {SttFrameAddrIp: TFrame},
+  SttScrollBoxUnit in '..\JSonSTT\SttScrollBoxUnit.pas';
 
 {$R *.res}
 

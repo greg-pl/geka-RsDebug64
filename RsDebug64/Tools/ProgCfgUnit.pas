@@ -126,7 +126,7 @@ type
     ScalMemCnt     : cardinal;
     MaxVarSize     : cardinal;
     HistDevStr     : TStringList;
-    DevStrings     : TStringList;
+    DevString      : String;
     AreaDefList    : TAreaDefList;
     WinTab         : TWinTab;
 
@@ -138,7 +138,6 @@ type
     property    OnReadIni  : TIniIoProc read FOnReadIni  write FOnReadIni;
     property    OnWriteIni : TIniIoProc read FOnWriteIni write FOnWriteIni;
     property    MainIniFName : string read FIniFilename;
-    procedure   SetDevStrings(Sl :TStrings);
   end;
 
 var
@@ -527,7 +526,6 @@ begin
   inherited;
   ReOpenBaseList := TReopenList.Create('REOPEN_CFG',5);
   HistDevStr     := TStringList.Create;
-  DevStrings    := TStringList.Create;
   SelSections    := TStringList.Create;
   AreaDefList    := TAreaDefList.Create;
   FIniFilename   := IncludeTrailingPathDelimiter(GetCurrentDir)+
@@ -539,7 +537,6 @@ destructor TProgCfg.Destroy;
 begin
   SelSections.Free;
   HistDevStr.Free;
-  DevStrings.Free;
   ReOpenBaseList.Free;
   AreaDefList.Free;
   inherited;
@@ -553,10 +550,7 @@ var
 begin
   IniFile:= TDotIniFile.Create(MainIniFName);
   try
-    s := IniFile.ReadString('MAIN_CFG','DEVSTR','');
-    DevStrings.Delimiter := '"';
-    DevStrings.Delimiter := '|';
-    DevStrings.DelimitedText := s;
+    DevString := IniFile.ReadString('MAIN_CFG','DEVSTR','');
 
     s := IniFile.ReadString('MAIN_CFG','HISTSTR','');
     if s='' then
@@ -607,10 +601,7 @@ var
 begin
   IniFile:= TDotIniFile.Create(MainIniFName);
   try
-    DevStrings.Delimiter := '"';
-    DevStrings.Delimiter := '|';
-    s := DevStrings.DelimitedText;
-    IniFile.WriteString('MAIN_CFG','DEVSTR',s);
+    IniFile.WriteString('MAIN_CFG','DEVSTR',DevString);
 
     HistDevStr.Delimiter := '"';
     HistDevStr.Delimiter := '|';
@@ -642,21 +633,6 @@ begin
   end;
 end;
 
-procedure TProgCfg.SetDevStrings(SL :TStrings);
-var
-  i,N: integer;
-  s    : string;
-begin
-  DevStrings.Assign(SL);
-  for i:=0 to Sl.Count-1 do
-  begin
-    s := SL.Strings[i];
-    N := HistDevStr.IndexOf(S);
-    if N>=0 then
-      HistDevStr.Delete(N);
-    HistDevStr.Insert(0,S);
-  end;
-end;
 
 
 initialization

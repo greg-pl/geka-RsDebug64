@@ -5,7 +5,6 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ActnList, StdCtrls, ComCtrls, ExtCtrls, Menus, ToolWin, IniFiles,
-  DevStrEditUnit,
   SettingUnit,
   TypeDefEditUnit,
   ProgCfgUnit,
@@ -83,9 +82,7 @@ type
     RestoreAct: TAction;
     RestoreAllAct: TAction;
     RestoreAll1: TMenuItem;
-    ConnectBar: TToolBar;
     CoolBar1: TCoolBar;
-    ComBar: TToolBar;
     RefreshComListAct: TAction;
     N6: TMenuItem;
     OdwielistCOMw1: TMenuItem;
@@ -126,9 +123,10 @@ type
     Rz40EventReader1: TMenuItem;
     RfcWinAct: TAction;
     RfcExecute1: TMenuItem;
+    ConnectionconfigAct: TAction;
+    ToolButton5: TToolButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure OpenCloseDevActExecute(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormActivate(Sender: TObject);
@@ -139,7 +137,6 @@ type
     procedure CloseAllActExecute(Sender: TObject);
     procedure OknoItemClick(Sender: TObject);
     procedure Oprogramie1Click(Sender: TObject);
-    procedure EditConnectionActExecute(Sender: TObject);
     procedure EditConnectionActUpdate(Sender: TObject);
     procedure GetDrvParamsActExecute(Sender: TObject);
     procedure GetDrvParamsActUpdate(Sender: TObject);
@@ -148,7 +145,6 @@ type
     procedure CloseActExecute(Sender: TObject);
     procedure RestoreActExecute(Sender: TObject);
     procedure RestoreAllActExecute(Sender: TObject);
-    procedure RefreshComListActExecute(Sender: TObject);
     procedure WinTabControlMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TerminalActUpdate(Sender: TObject);
     procedure TerminalActExecute(Sender: TObject);
@@ -172,13 +168,15 @@ type
     procedure IsModbusStdActExecute(Sender: TObject);
     procedure actRZ40EventReaderExecute(Sender: TObject);
     procedure RfcWinActExecute(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure ConnectActExecute(Sender: TObject);
+    procedure ConnectionconfigActExecute(Sender: TObject);
+    procedure ConnectionconfigActUpdate(Sender: TObject);
   private
     function GetDev: TCmmDevice;
     function GetCommThread: TCommThread;
     procedure Msg(s: string);
     function FindIniDrvPrmSection(s: string): string;
-    procedure LoadRsPorts(Coms: TStrings);
-    procedure LoadCommButtons;
   private
     FirstTime: boolean;
     FirstConnectBtn: TToolButton;
@@ -191,17 +189,13 @@ type
     procedure OnReloadedProc(Sender: TObject);
     function GetSName(N: Integer): string;
     procedure RestoreWinProc(Sender: TObject);
-    procedure BildConnectButtons;
     procedure SetDriverParamsFromIni;
     procedure CloseEditDrvParamsForm;
     procedure SetupWinTabs;
-    procedure ChgPortComProc(Sender: TObject);
-    function ReplaceCom(DevStr: string): string;
     function ReOpenConnection: boolean;
   public
     Dev: TCmmDevice;
     CommThread: TCommThread;
-    GlDevStr: string;
 
     procedure NL(s: string);
     procedure ADL(s: string);
@@ -229,7 +223,13 @@ uses
   PictureView,
   TerminalUnit,
   RegMemUnit,
-  BinaryMemUnit;
+  BinaryMemUnit,
+  OpenConnectionDlgUnit;
+
+function GetComNr(s: string): Integer;
+begin
+  Result := StrToInt(copy(s, 4, length(s) - 3));
+end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
@@ -238,99 +238,11 @@ begin
   ProgCfg.OnWriteIni := OnWriteIniProc;
   Application.OnActivate := OnActivateAplic;
   MapParser.OnReloaded := OnReloadedProc;
-  GlDevStr := '';
-  Dev := TCmmDevice.Create(Handle, GlDevStr);
+  Dev := TCmmDevice.Create(Handle, ProgCfg.DevString);
   CommThread := TCommThread.Create(Dev);
 
 end;
 
-function GetComNr(s: string): Integer;
-begin
-  Result := StrToInt(copy(s, 4, length(s) - 3));
-end;
-
-function MyCompare(List: TStringList; Index1, Index2: Integer): Integer;
-var
-  nr1, nr2: Integer;
-begin
-  nr1 := GetComNr(List.Strings[Index1]);
-  nr2 := GetComNr(List.Strings[Index2]);
-  Result := 0;
-  if nr1 > nr2 then
-    Result := 1;
-  if nr1 < nr2 then
-    Result := -1;
-end;
-
-procedure TMainForm.LoadRsPorts(Coms: TStrings);
-var
-  Reg: TRegistry;
-  SL: TStringList;
-  SLC: TStringList;
-
-  s: string;
-  i: Integer;
-begin
-  SL := TStringList.Create;
-  SLC := TStringList.Create;
-  Reg := TRegistry.Create(KEY_READ);
-  try
-    Reg.RootKey := HKEY_LOCAL_MACHINE;
-    if Reg.OpenKeyReadOnly('\HARDWARE\DEVICEMAP\SERIALCOMM\') then
-    begin
-      Reg.GetValueNames(SL);
-      for i := 0 to SL.Count - 1 do
-      begin
-        s := Reg.ReadString(SL.Strings[i]);
-        SLC.Add(s);
-      end;
-    end;
-    SLC.CustomSort(MyCompare);
-    Coms.Clear;
-    Coms.AddStrings(SLC);
-  finally
-    Reg.Free;
-    SL.Free;
-    SLC.Free;
-  end;
-end;
-
-procedure TMainForm.LoadCommButtons;
-var
-  SL: TStringList;
-  Button: TToolButton;
-  i: Integer;
-begin
-  SL := TStringList.Create;
-  try
-    LoadRsPorts(SL);
-
-    while ComBar.ButtonCount > 0 do
-    begin
-      ComBar.Buttons[0].Free;
-    end;
-
-    for i := SL.Count - 1 downto 0 do
-    begin
-      Button := TToolButton.Create(ComBar);
-      Button.Parent := ComBar;
-
-      Button.Name := Format('ComBtn%u', [i]);
-      Button.Caption := ' ' + SL.Strings[i] + ' ';
-      Button.Tag := GetComNr(SL.Strings[i]);
-
-      Button.AllowAllUp := false;
-      Button.Style := tbsCheck;
-      Button.Grouped := true;
-      if i = 0 then
-        Button.Down := true;
-      Button.OnClick := ChgPortComProc;
-
-    end;
-  finally
-    SL.Free;
-  end;
-end;
 
 procedure TMainForm.FormActivate(Sender: TObject);
 begin
@@ -340,10 +252,8 @@ begin
     Caption := GetCurrentDir;
     ProgCfg.LoadMainCfg;
     ProgCfg.ReOpenBaseList.Konfig(0, FilemapItem, OnReOpenClickProc);
-    BildConnectButtons;
     SetupWinTabs;
     ExtMemo.SetCharSet;
-    LoadCommButtons;
   end
 end;
 
@@ -522,6 +432,12 @@ begin
   Dev.Free;
 end;
 
+procedure TMainForm.FormShow(Sender: TObject);
+begin
+  RsdSetLoggerHandle(ExtMemo.PipeInHandle);
+
+end;
+
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 var
   q: TYesNoAsk;
@@ -576,36 +492,13 @@ begin
   ExtMemo.Print(s);
 end;
 
-procedure TMainForm.ChgPortComProc(Sender: TObject);
+
+procedure TMainForm.ConnectActExecute(Sender: TObject);
 begin
-  if Pos('%RS', GlDevStr) > 0 then
-  begin
-    ReOpenConnection;
-  end;
+  ReOpenConnection;
+
 end;
 
-function TMainForm.ReplaceCom(DevStr: string): string;
-var
-  X: Integer;
-  ComStr: string;
-  i: Integer;
-begin
-  Result := DevStr;
-  X := Pos('%RS', DevStr);
-  if X > 0 then
-  begin
-    ComStr := 'COM1';
-    for i := 0 to ComBar.ButtonCount - 1 do
-    begin
-      if ComBar.Buttons[i].Down then
-      begin
-        ComStr := IntToStr(ComBar.Buttons[i].Tag);
-        break;
-      end;
-    end;
-    Result := StringReplace(Result, '%RS', ComStr, [rfReplaceAll, rfIgnoreCase])
-  end;
-end;
 
 function TMainForm.ReOpenConnection: boolean;
 var
@@ -619,7 +512,8 @@ begin
   end;
   FreeAndNil(Dev);
 
-  DevStr := ReplaceCom(GlDevStr);
+
+  DevStr := ProgCfg.DevString;
 
   Dev := TCmmDevice.Create(Handle, DevStr);
   CommThread.SetDev(Dev);
@@ -633,38 +527,13 @@ begin
       FreeAndNil(Dev);
       Dev := TCmmDevice.Create(Handle, '');
       CommThread.SetDev(Dev);
-      for i := 0 to ConnectBar.ButtonCount - 1 do
-        ConnectBar.Buttons[i].Down := false;
     end
     else
     begin
       SetDriverParamsFromIni;
       CloseEditDrvParamsForm;
       TerminalChecked := false;
-      Dev.SetLoggerHandle(ExtMemo.PipeInHandle);
     end;
-  end;
-end;
-
-procedure TMainForm.OpenCloseDevActExecute(Sender: TObject);
-var
-  Btn: TToolButton;
-begin
-  if Sender is TToolButton then
-    Btn := Sender as TToolButton
-  else
-  begin
-    Btn := FirstConnectBtn;
-    Btn.Down := not(Btn.Down);
-  end;
-
-  if Assigned(Btn) then
-  begin
-    if Btn.Down then
-      GlDevStr := ProgCfg.DevStrings.Strings[Btn.Tag - 1]
-    else
-      GlDevStr := '';
-    ReOpenConnection;
   end;
 end;
 
@@ -673,43 +542,6 @@ begin
   Close;
 end;
 
-procedure TMainForm.BildConnectButtons;
-var
-  i: Integer;
-  s: string;
-  Button: TToolButton;
-  W: Integer;
-begin
-  for i := ConnectBar.ButtonCount - 1 downto 0 do
-  begin
-    Button := ConnectBar.Buttons[i];
-    if copy(Button.Name, 1, 4) = 'CONN' then
-    begin
-      Button.Free;
-    end;
-  end;
-  FirstConnectBtn := nil;
-  for i := ProgCfg.DevStrings.Count - 1 downto 0 do
-  begin
-    s := ProgCfg.DevStrings.Strings[i];
-    if s <> '' then
-    begin
-      Button := TToolButton.Create(ConnectBar);
-      Button.Parent := ConnectBar;
-      Button.Name := Format('CONN_%u', [i]);
-      Button.Caption := '[ ' + s + ' ]';
-      Button.Hint := s;
-      Button.Tag := i + 1;
-      Button.AllowAllUp := true;
-      Button.Style := tbsCheck;
-      Button.Grouped := true;
-      Button.OnClick := OpenCloseDevActExecute;
-      FirstConnectBtn := Button;
-    end;
-  end;
-  W := ConnectBar.ButtonWidth * ConnectBar.ButtonCount;
-  ConnectBar.Width := W;
-end;
 
 procedure TMainForm.EditConnectionActUpdate(Sender: TObject);
 begin
@@ -719,28 +551,6 @@ end;
 procedure TMainForm.MemoryWinActUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled := Dev.Connected;
-end;
-
-procedure TMainForm.EditConnectionActExecute(Sender: TObject);
-var
-  Dlg: TDevStrEditForm;
-  SL: TStringList;
-begin
-  Dlg := TDevStrEditForm.Create(self);
-  SL := TStringList.Create;
-  try
-    Dlg.SetHistoryDevStr(ProgCfg.HistDevStr);
-    Dlg.SetDevStrings(ProgCfg.DevStrings);
-    if Dlg.ShowModal = mrOk then
-    begin
-      Dlg.GetDevStrings(SL);
-      ProgCfg.SetDevStrings(SL);
-      BildConnectButtons;
-    end
-  finally
-    Dlg.Free;
-    SL.Free;
-  end;
 end;
 
 procedure TMainForm.WMShowMemWin(var Msg: TMessage);
@@ -1125,6 +935,7 @@ begin
   F.BringToFront;
 end;
 
+
 procedure TMainForm.ControlWinActExecute(Sender: TObject);
 begin
   TWrtControlForm.CreateIterf(self, self);
@@ -1197,11 +1008,6 @@ begin
         Form.Close;
     end;
   end;
-end;
-
-procedure TMainForm.RefreshComListActExecute(Sender: TObject);
-begin
-  LoadCommButtons;
 end;
 
 procedure TMainForm.WinTabControlMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -1300,6 +1106,26 @@ end;
 procedure TMainForm.RfcWinActExecute(Sender: TObject);
 begin
   TRfcForm.CreateIterf(self, self);
+end;
+
+procedure TMainForm.ConnectionconfigActExecute(Sender: TObject);
+var
+  Dlg: TOpenConnectionDlg;
+begin
+  Dlg := TOpenConnectionDlg.Create(self);
+  try
+    Dlg.SetConfig(ProgCfg.DevString);
+    if Dlg.ShowModal = mrOk then
+      ProgCfg.DevString:= Dlg.GetConfig;
+  finally
+    Dlg.Free;
+  end;
+end;
+
+
+procedure TMainForm.ConnectionconfigActUpdate(Sender: TObject);
+begin
+  (Sender as TAction).Enabled := not Dev.Connected;
 end;
 
 end.

@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.038,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\CmmMain.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.768,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\MemoryAccessDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.824,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.728,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\CmmBaseDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.516,D:\!!Work\RsDebug64\Common\Rsd64Definitions.pas=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.155,=D:\!!Work\RsDebug64\CmmDrivers\Common\FileAccessDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.748,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\FileAccessDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.774,=D:\!!Work\RsDebug64\JSonSTT\SttObjectDefUnit.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.714,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\ComUnit.pas=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.718,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.788,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\StdModbusDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.890,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\GlobalMan.pas=</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.808,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\TerminalDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.027,=D:\!!Work\RsDebug64\CmmDrivers\Common\CmmBaseDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.848,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\LibUtils.pas=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.917,=D:\!!Work\RsDebug64\CmmDrivers\Common\TerminalDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.267,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.918,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\ModbusObj.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.241,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\ThRsdUnit.pas=</Transaction>
+    <Transaction>2023.12.20 21:38:00.682,D:\!!Work\RsDebug64\CmmDrivers\MbusCom2\MBusCom2.dproj=D:\!!Work\RsDebug64\CmmDrivers\MbusCom\MBusCom.dproj</Transaction>
+    <Transaction>2023.12.20 21:38:39.168,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\CmmMain.pas=</Transaction>
+    <Transaction>2023.12.20 21:38:39.211,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\ComUnit.pas=</Transaction>
+    <Transaction>2023.12.20 21:38:39.229,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\LibUtils.pas=</Transaction>
+    <Transaction>2023.12.20 21:38:39.246,D:\!!Work\RsDebug64\CmmDrivers\MbusCom\ModbusObj.pas=</Transaction>
+    <Transaction>2023.12.20 21:38:47.315,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom2\CmmMain.pas</Transaction>
+    <Transaction>2023.12.20 21:38:47.333,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom2\ComUnit.pas</Transaction>
+    <Transaction>2023.12.20 21:38:47.351,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom2\LibUtils.pas</Transaction>
+    <Transaction>2023.12.20 21:38:47.371,=D:\!!Work\RsDebug64\CmmDrivers\MbusCom2\ModbusObj.pas</Transaction>
+  </Transactions>
+</BorlandProject>
