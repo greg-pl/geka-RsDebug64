@@ -16,11 +16,13 @@ type
   protected
     FItemName: string;
   protected
-    class procedure LoadComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson; SttName: string);
-    class procedure LoadCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string);
-    class procedure LoadIntEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
-    class procedure LoadFloatEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
-    class procedure LoadIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
+    class procedure InitComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson; SttName: string);
+    class procedure InitCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string);
+    class function InitIntEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
+      : TSttIntObjectJson;
+    class function InitFloatEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
+      : TSttFloatObjectJson;
+    class procedure InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
   protected
     class function LoadValComboBoxJSon(obj: TJSONObject; Name: String; combo: TComboBox): boolean;
     class function LoadValCheckBoxJSon(obj: TJSONObject; Name: String; Box: TCheckBox): boolean;
@@ -32,7 +34,7 @@ type
     constructor Create(AOwner: TComponent; aItemName: string); virtual;
     procedure AddObjectsName(SL: TStrings); virtual;
     procedure LoadField(ParamList: TSttObjectListJson); virtual;
-    procedure getData(arr: TJSONObject); virtual;
+    function getData(arr: TJSONObject): boolean; virtual;
     procedure setData(arr: TJSONObject); virtual;
   end;
 
@@ -98,7 +100,7 @@ begin
 
 end;
 
-procedure TSttFrameBase.getData(arr: TJSONObject);
+function TSttFrameBase.getData(arr: TJSONObject): boolean;
 begin
 
 end;
@@ -108,7 +110,7 @@ begin
 
 end;
 
-class procedure TSttFrameBase.LoadComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson;
+class procedure TSttFrameBase.InitComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson;
   SttName: string);
 var
   stt: TSttObjectJson;
@@ -134,7 +136,7 @@ begin
     Box.Enabled := false;
 end;
 
-class procedure TSttFrameBase.LoadCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string);
+class procedure TSttFrameBase.InitCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string);
 var
   stt: TSttObjectJson;
 begin
@@ -149,22 +151,26 @@ begin
     Box.Enabled := false;
 end;
 
-class procedure TSttFrameBase.LoadIntEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
+class function TSttFrameBase.InitIntEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
+  : TSttIntObjectJson;
 var
   stt: TSttObjectJson;
 begin
+  Result := nil;
   stt := ParamList.FindSttObject(SttName);
   if Assigned(stt) then
   begin
     Box.Enabled := true;
     Box.EditLabel.Caption := stt.Description;
-    Box.Text := IntToStr((stt as TSttIntObjectJson).DefVal);
+    Result := stt as TSttIntObjectJson;
+    Box.Text := IntToStr(Result.DefVal);
   end
   else
     Box.Enabled := false;
 end;
 
-class procedure TSttFrameBase.LoadFloatEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
+class function TSttFrameBase.InitFloatEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
+  : TSttFloatObjectJson;
 var
   stt: TSttObjectJson;
   f_Stt: TSttFloatObjectJson;
@@ -181,7 +187,7 @@ begin
     Box.Enabled := false;
 end;
 
-class procedure TSttFrameBase.LoadIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
+class procedure TSttFrameBase.InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
 var
   stt: TSttObjectJson;
 begin

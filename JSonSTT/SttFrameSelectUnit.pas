@@ -18,7 +18,7 @@ type
     { Private declarations }
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    procedure getData(obj: TJSONObject); override;
+    function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
   end;
 
@@ -29,12 +29,13 @@ implementation
 procedure TSttFrameSelect.LoadField(ParamList: TSttObjectListJson);
 begin
   inherited;
-  LoadComboBoxItem(SttComboBox, SttLabel, ParamList, FItemName);
+  InitComboBoxItem(SttComboBox, SttLabel, ParamList, FItemName);
 end;
 
-procedure TSttFrameSelect.getData(obj: TJSONObject);
+function TSttFrameSelect.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, SttComboBox.Text));
+  Result :=true;
 end;
 
 procedure TSttFrameSelect.setData(obj: TJSONObject);

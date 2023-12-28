@@ -1,8 +1,6 @@
 inherited StructShowForm: TStructShowForm
   Left = 2155
   Top = 123
-  Width = 512
-  Height = 417
   Caption = 'StructShowForm'
   OldCreateOrder = True
   Position = poDefaultPosOnly
@@ -12,8 +10,8 @@ inherited StructShowForm: TStructShowForm
   object StructTreeView: TTreeView [0]
     Left = 0
     Top = 89
-    Width = 496
-    Height = 270
+    Width = 419
+    Height = 193
     Align = alClient
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
@@ -37,24 +35,19 @@ inherited StructShowForm: TStructShowForm
     OnGetSelectedIndex = StructTreeViewGetSelectedIndex
     OnKeyPress = StructTreeViewKeyPress
   end
-  inherited StatusBar: TStatusBar
-    Top = 359
-    Width = 496
-  end
   inherited ToolBar1: TToolBar
-    Width = 496
     object RdMemBtn: TToolButton
-      Left = 178
+      Left = 58
       Top = 0
       Action = ReadMemAct
     end
     object AutoRepBtn: TToolButton
-      Left = 201
+      Left = 81
       Top = 0
       Action = AutoReadAct
     end
     object ToolButton1: TToolButton
-      Left = 224
+      Left = 104
       Top = 0
       Width = 18
       Caption = 'ToolButton1'
@@ -63,8 +56,8 @@ inherited StructShowForm: TStructShowForm
     end
   end
   inherited ParamPanel: TPanel
-    Width = 496
     Height = 60
+    ExplicitHeight = 60
     object Label1: TLabel
       Left = 8
       Top = 33
@@ -122,7 +115,6 @@ inherited StructShowForm: TStructShowForm
       Top = 4
       Width = 109
       Height = 21
-      ItemHeight = 13
       TabOrder = 0
       Text = '0'
       OnExit = AdresBoxExit
@@ -139,7 +131,6 @@ inherited StructShowForm: TStructShowForm
       Height = 21
       Style = csDropDownList
       DropDownCount = 20
-      ItemHeight = 13
       Sorted = True
       TabOrder = 1
       OnChange = VarListBoxChange
@@ -156,7 +147,6 @@ inherited StructShowForm: TStructShowForm
       Width = 109
       Height = 21
       Style = csDropDownList
-      ItemHeight = 13
       TabOrder = 2
       OnChange = TypeDefBoxChange
       Items.Strings = (
@@ -181,7 +171,6 @@ inherited StructShowForm: TStructShowForm
       Top = 28
       Width = 78
       Height = 21
-      ItemHeight = 13
       TabOrder = 4
       Text = '500'
       OnExit = AutoRepTmEditExit

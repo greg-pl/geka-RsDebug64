@@ -10,7 +10,10 @@ uses
   ProgCfgUnit,
   ToolsUnit,
   RsdDll,
-  CrcUnit;
+  Rsd64Definitions,
+  CrcUnit, System.ImageList, System.Actions,
+  System.JSON,
+  JSonUtils;
 
 const
   EV_IN_PACK =15;
@@ -86,6 +89,8 @@ type
     destructor Destroy; override;
 
     procedure SaveToIni(Ini : TDotIniFile; SName : string); override;
+    function GetJSONObject: TJSONObject; override;
+
     procedure LoadFromIni(Ini : TDotIniFile; SName : string); override;
   end;
 
@@ -227,9 +232,12 @@ procedure TRz40EventsForm.SaveToIni(Ini : TDotIniFile; SName : string);
 begin
   inherited;
   Ini.WriteString(SName,'EventDefFile',mEventDefFName);
+end;
 
-
-
+function TRz40EventsForm.GetJSONObject: TJSONObject;
+begin
+  Result := inherited GetJSONObject;
+  JSonAddPair(Result,'EventDefFile',mEventDefFName);
 end;
 
 procedure TRz40EventsForm.LoadFromIni(Ini : TDotIniFile; SName : string);
@@ -238,9 +246,6 @@ begin
   mEventDefFName := Ini.ReadString(SName,'EventDefFile','');
   if FileExists(mEventDefFName) then
       EventDefList.LoadFromEtManagerDeffile(mEventDefFName);
-
-
-
 end;
 
 const

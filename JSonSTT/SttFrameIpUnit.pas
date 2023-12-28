@@ -17,7 +17,7 @@ type
     { Private declarations }
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    procedure getData(obj: TJSONObject); override;
+    function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
   end;
 
@@ -29,12 +29,13 @@ implementation
 procedure TSttFrameIp.LoadField(ParamList: TSttObjectListJson);
 begin
   inherited;
-  LoadIpEditItem(SttIpEdit, ParamList, FItemName);
+  InitIPEditItem(SttIpEdit, ParamList, FItemName);
 end;
 
-procedure TSttFrameIp.getData(obj: TJSONObject);
+function TSttFrameIp.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, SttIpEdit.Text));
+  Result :=true;
 end;
 
 procedure TSttFrameIp.setData(obj: TJSONObject);

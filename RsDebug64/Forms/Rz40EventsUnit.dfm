@@ -1,29 +1,26 @@
 inherited Rz40EventsForm: TRz40EventsForm
-  Width = 591
-  Height = 494
   Caption = 'Rz40EventsForm'
   OldCreateOrder = True
   PixelsPerInch = 96
   TextHeight = 13
   inherited StatusBar: TStatusBar
-    Top = 436
-    Width = 575
+    ExplicitTop = 436
+    ExplicitWidth = 575
   end
   inherited ToolBar1: TToolBar
-    Width = 575
     object ToolButton1: TToolButton
-      Left = 201
+      Left = 178
       Top = 0
       Action = actReadEvents
     end
     object ReadRepeatBtn: TToolButton
-      Left = 224
+      Left = 201
       Top = 0
       Action = actReadRepeat
       Style = tbsCheck
     end
     object ToolButton4: TToolButton
-      Left = 247
+      Left = 224
       Top = 0
       Width = 17
       Caption = 'ToolButton4'
@@ -31,23 +28,23 @@ inherited Rz40EventsForm: TRz40EventsForm
       Style = tbsSeparator
     end
     object ToolButton2: TToolButton
-      Left = 264
+      Left = 241
       Top = 0
       Action = actLoadEvDef
     end
     object ToolButton5: TToolButton
-      Left = 287
+      Left = 264
       Top = 0
       Action = actShowEvendsDef
     end
     object ToolButton6: TToolButton
-      Left = 310
+      Left = 287
       Top = 0
       Action = actClearMemo
     end
   end
   inherited ParamPanel: TPanel
-    Width = 575
+    ExplicitWidth = 575
     object Label5: TLabel
       Left = 4
       Top = 16
@@ -60,7 +57,6 @@ inherited Rz40EventsForm: TRz40EventsForm
       Top = 12
       Width = 57
       Height = 21
-      ItemHeight = 13
       TabOrder = 0
       Text = '250'
       Items.Strings = (
@@ -84,8 +80,8 @@ inherited Rz40EventsForm: TRz40EventsForm
   object Memo: TMemo [3]
     Left = 0
     Top = 70
-    Width = 575
-    Height = 366
+    Width = 419
+    Height = 212
     Align = alClient
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
@@ -95,6 +91,8 @@ inherited Rz40EventsForm: TRz40EventsForm
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 3
+    ExplicitWidth = 575
+    ExplicitHeight = 366
   end
   inherited ActionList2: TActionList
     object actReadEvents: TAction
@@ -131,7 +129,7 @@ inherited Rz40EventsForm: TRz40EventsForm
   end
   inherited ToolBarImgList: TImageList
     Bitmap = {
-      494C010110001300040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101100013000C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

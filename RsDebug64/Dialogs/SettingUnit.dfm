@@ -46,6 +46,8 @@ object SettingForm: TSettingForm
     TabOrder = 2
     object TabSheet1: TTabSheet
       Caption = 'Og'#243'lne'
+      ExplicitLeft = 2
+      ExplicitTop = 29
       object Label1: TLabel
         Left = 74
         Top = 8
@@ -124,7 +126,6 @@ object SettingForm: TSettingForm
         Width = 73
         Height = 21
         Style = csDropDownList
-        ItemHeight = 13
         ItemIndex = 0
         TabOrder = 1
         Text = 'TAK'
@@ -139,7 +140,6 @@ object SettingForm: TSettingForm
         Width = 73
         Height = 21
         Style = csDropDownList
-        ItemHeight = 13
         ItemIndex = 0
         TabOrder = 2
         Text = 'TAK'
@@ -269,41 +269,9 @@ object SettingForm: TSettingForm
           'Bottom')
         TabOrder = 7
       end
-    end
-    object TabSheet2: TTabSheet
-      Caption = 'Obszary pami'#281'ci'
-      ImageIndex = 1
-      OnShow = TabSheet2Show
-      object AreaGrid: TStringGrid
-        Left = 0
-        Top = 8
-        Width = 433
-        Height = 201
-        ColCount = 6
-        DefaultColWidth = 20
-        DefaultRowHeight = 20
-        RowCount = 30
-        Font.Charset = EASTEUROPE_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'Courier'
-        Font.Style = []
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goEditing]
-        ParentFont = False
-        ScrollBars = ssVertical
-        TabOrder = 0
-        OnSetEditText = AreaGridSetEditText
-        ColWidths = (
-          20
-          40
-          65
-          95
-          110
-          74)
-      end
       object MainPtrSizeGrp: TRadioGroup
-        Left = 8
-        Top = 208
+        Left = 200
+        Top = 285
         Width = 97
         Height = 65
         Caption = 'PtrSize'
@@ -312,7 +280,7 @@ object SettingForm: TSettingForm
           '8bit'
           '16bit'
           '32bit')
-        TabOrder = 1
+        TabOrder = 8
       end
     end
   end

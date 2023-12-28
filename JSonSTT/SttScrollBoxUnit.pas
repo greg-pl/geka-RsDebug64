@@ -19,7 +19,7 @@ type
     procedure RemoveItems;
     procedure LoadList(List: TSttObjectListJson; RmArr: TStringArr);
     procedure AddFrame(SttClass: TSttFrameBaseClass; SttName: string; List: TSttObjectListJson);
-    procedure getValueArray(arr: TJSONObject);
+    function getValueArray(arr: TJSONObject) : boolean;
     procedure setValueArray(arr: TJSONObject);
   end;
 
@@ -64,15 +64,16 @@ begin
 
 end;
 
-procedure TSttScrollBox.getValueArray(arr: TJSONObject);
+function TSttScrollBox.getValueArray(arr: TJSONObject) : boolean;
 var
   i: integer;
 begin
+  Result := true;
   for i := 0 to ComponentCount - 1 do
   begin
     if Components[i] is TSttFrameBase then
     begin
-      (Components[i] as TSttFrameBase).getData(arr);
+      Result := Result and (Components[i] as TSttFrameBase).getData(arr);
     end;
   end;
 end;

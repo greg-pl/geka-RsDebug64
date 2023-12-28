@@ -29,12 +29,10 @@ end;
 procedure Logger(LogLevel: integer; Txt: string);
 var
   BytesWritten: cardinal;
-  ATxt: AnsiString;
 begin
   if (LogLevel < GlobLogLevel) and (LoggerHandle <> INVALID_HANDLE_VALUE) then
   begin
-    ATxt := String(Txt);
-    WriteFile(LoggerHandle, ATxt[1], length(ATxt), BytesWritten, nil);
+    WriteFile(LoggerHandle, Txt[1], length(Txt) * sizeof(char), BytesWritten, nil);
   end;
 end;
 
@@ -50,5 +48,7 @@ IsMultiThread := True; // Make memory manager thread safe
 LoggerHandle := INVALID_HANDLE_VALUE;
 GlobGetMemFunc := nil;
 GlobLibID := -1;
+
+GlobLogLevel := 5;
 
 end.

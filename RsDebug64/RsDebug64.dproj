@@ -128,7 +128,6 @@
         <DCCReference Include="Tools\CommThreadUnit.pas"/>
         <DCCReference Include="Tools\ComTradeUnit.pas"/>
         <DCCReference Include="Tools\CommonDef.pas"/>
-        <DCCReference Include="Tools\CrcUnit.pas"/>
         <DCCReference Include="Dialogs\SettingUnit.pas">
             <Form>SettingForm</Form>
         </DCCReference>
@@ -184,30 +183,23 @@
         <DCCReference Include="Forms\RfcUnit.pas">
             <Form>RfcForm</Form>
         </DCCReference>
-        <DCCReference Include="..\Wykres3\Wykres3Unit.pas"/>
-        <DCCReference Include="..\Wykres3\WykresEngUnit.pas"/>
-        <DCCReference Include="Forms\WrtControlUnit.pas">
-            <Form>WrtControlForm</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
         <DCCReference Include="Forms\TypeDefEditUnit.pas">
             <Form>TypeDefEditForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="Tools\UpLoadDefUnit.pas"/>
         <DCCReference Include="Forms\WavGenUnit.pas">
             <Form>WavGenForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Forms\VarListUnit.pas">
             <Form>VarListForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="Forms\UpLoadFileUnit.pas">
             <Form>UpLoadFileForm</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="..\Wykres3\Wykres3Unit.pas"/>
+        <DCCReference Include="..\Wykres3\WykresEngUnit.pas"/>
+        <DCCReference Include="Tools\UpLoadDefUnit.pas"/>
         <DCCReference Include="..\Common\Rsd64Definitions.pas"/>
+        <DCCReference Include="..\Common\CrcUnit.pas"/>
         <DCCReference Include="Dialogs\OpenConnectionDlgUnit.pas">
             <Form>OpenConnectionDlg</Form>
             <FormType>dfm</FormType>
@@ -252,6 +244,8 @@
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttScrollBoxUnit.pas"/>
+        <DCCReference Include="DComp\ExtG2MemoUnit.pas"/>
+        <DCCReference Include="..\Common\JSonUtils.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

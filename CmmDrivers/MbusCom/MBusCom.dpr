@@ -21,7 +21,8 @@ uses
   ModbusObj in 'ModbusObj.pas',
   ComUnit in 'ComUnit.pas',
   LibUtils in 'LibUtils.pas',
-  SttObjectDefUnit in '..\..\JSonSTT\SttObjectDefUnit.pas';
+  SttObjectDefUnit in '..\..\JSonSTT\SttObjectDefUnit.pas',
+  CrcUnit in '..\..\Common\CrcUnit.pas';
 
 {$R *.res}
 

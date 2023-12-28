@@ -6,9 +6,7 @@ uses Winapi.Windows, System.SysUtils, System.Classes, Vcl.Graphics, Vcl.Forms,
   Vcl.Controls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Vcl.ComCtrls,
   System.JSON,
   SttScrollBoxUnit,
-  Rsd64Definitions,
-  SttObjectDefUnit,
-  RsdDll;
+  SttObjectDefUnit;
 
 type
   TOpenConnectionDlg = class(TForm)
@@ -20,13 +18,17 @@ type
     procedure TabControlChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure OKBtnClick(Sender: TObject);
+    procedure TabControlChanging(Sender: TObject; var AllowChange: Boolean);
   private
     SttScrollBox: TSttScrollBox;
     MemConfig: string;
-    procedure ExecConfig;
+    memDevStr: array of string;
+    procedure SetDevStr(aDevStr: string);
+
   public
     procedure SetConfig(config: string);
-    function GetConfig: string;
+    function GetConfig(var devStr: string): Boolean;
   end;
 
 implementation
@@ -34,9 +36,11 @@ implementation
 {$R *.dfm}
 
 uses
+  Rsd64Definitions,
   SttFrameBaseUnit,
   SttFrameUartUnit,
-  SttFrameAddrIpUnit;
+  SttFrameAddrIpUnit,
+  RsdDll;
 
 procedure TOpenConnectionDlg.FormCreate(Sender: TObject);
 begin
@@ -46,9 +50,22 @@ begin
 end;
 
 procedure TOpenConnectionDlg.FormShow(Sender: TObject);
+var
+  driverName: string;
+  idx: integer;
 begin
   RsdDll.CmmLibraryList.LoadDriverList(TabControl.Tabs);
-  ExecConfig;
+  setlength(memDevStr, TabControl.Tabs.Count);
+  if ExtractDriverName(MemConfig, driverName) then
+  begin
+    idx := TabControl.Tabs.IndexOf(driverName);
+    if idx >= 0 then
+    begin
+      memDevStr[idx] := MemConfig;
+      TabControl.TabIndex := idx;
+      TabControlChange(nil);
+    end;
+  end;
 end;
 
 procedure TOpenConnectionDlg.SetConfig(config: string);
@@ -86,52 +103,68 @@ begin
   begin
     SttScrollBox.AddFrame(ConnFrameClass, ConnFrameClass.ClassName, Params.ConnectionParams);
   end;
+  SetDevStr(memDevStr[TabControl.TabIndex]);
+end;
+
+procedure TOpenConnectionDlg.TabControlChanging(Sender: TObject; var AllowChange: Boolean);
+var
+  dStr: string;
+begin
+  AllowChange := GetConfig(dStr);
+  if AllowChange then
+    memDevStr[TabControl.TabIndex] := dStr
+  else
+    Application.MessageBox('Data error.Correct.', 'Checking', mb_ok);
 
 end;
 
-
-
-procedure TOpenConnectionDlg.ExecConfig;
+procedure TOpenConnectionDlg.SetDevStr(aDevStr: string);
 var
   jVal: TJSONValue;
   jObj: TJsonObject;
   jObj2: TJsonObject;
-  DriverName: string;
-  idx: integer;
 begin
   try
-    jVal := TJsonObject.ParseJSONValue(MemConfig);
+    jVal := TJsonObject.ParseJSONValue(aDevStr);
     jObj := jVal as TJsonObject;
-
-    DriverName := jObj.Get(CONNECTION_DRIVER_NAME).JSonValue.Value;
-    idx := TabControl.Tabs.IndexOf(DriverName);
-    if idx >= 0 then
+    if Assigned(jObj) then
     begin
-      TabControl.TabIndex := idx;
-      TabControlChange(nil);
       jObj2 := jObj.Get(CONNECTION_PARAMS_NAME).JSonValue as TJsonObject;
-      SttScrollBox.setValueArray(jObj2);
+      if Assigned(jObj2) then
+        SttScrollBox.setValueArray(jObj2);
     end;
   except
 
   end;
 end;
 
-function TOpenConnectionDlg.GetConfig: string;
+function TOpenConnectionDlg.GetConfig(var devStr: string): Boolean;
 var
   jObj: TJsonObject;
   jObj2: TJsonObject;
 begin
   try
     jObj2 := TJsonObject.Create;
-
-    SttScrollBox.getValueArray(jObj2);
+    Result := SttScrollBox.getValueArray(jObj2);
     jObj := TJsonObject.Create;
     jObj.AddPair(TJSonPair.Create(CONNECTION_PARAMS_NAME, jObj2));
     jObj.AddPair(TJSonPair.Create(CONNECTION_DRIVER_NAME, TabControl.Tabs[TabControl.TabIndex]));
-    Result := jObj.ToString;
+    devStr := jObj.ToString;
   except
+    Result := false;
+  end;
+end;
 
+procedure TOpenConnectionDlg.OKBtnClick(Sender: TObject);
+var
+  dStr: string;
+begin
+  if GetConfig(dStr) then
+    ModalResult := mrOK
+  else
+  begin
+    Application.MessageBox('Data error', 'Checking', mb_ok);
+    ModalResult := mrNone;
   end;
 end;
 

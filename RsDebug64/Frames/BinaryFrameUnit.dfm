@@ -33,7 +33,7 @@ object BinaryFrame: TBinaryFrame
     object Label4: TLabel
       Left = 8
       Top = 8
-      Width = 58
+      Width = 56
       Height = 13
       Caption = 'ilo'#347#263' kolumn'
     end

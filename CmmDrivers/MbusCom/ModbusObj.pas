@@ -6,6 +6,7 @@ uses
   Windows, Messages, SysUtils, Classes, Math,
   System.AnsiStrings,
   System.Contnrs,
+  System.JSON,
   ComUnit,
   LibUtils,
   Rsd64Definitions;
@@ -14,6 +15,11 @@ const
   MAX_MDB_FRAME_SIZE = 240;
   MAX_MDB_STD_FRAME_SIZE = 112;
   DRIVER_SHORT_NAME = 'MCOM';
+  TERMINAL_CNT = 1;
+
+  MODBUS_DEVNR = 'MdbDevNr';
+  MODBUS_MODE = 'MdbMode';
+  MODBUS_MEMACCESS = 'MemAccessMode';
 
 type
 
@@ -30,8 +36,45 @@ type
 
   TMdbMode = (mdbRTU, mdbASCII);
   TParity = (paNONE, paEVEN, paODD);
+  TMdbMemAccess = (mdbmemGEKA, mdbmemDPC06);
+
+  TBitCnt = (bit8, bit7, bit6);
+
+  TDevItem = class;
+
+  TTerminalThread = class(TThread)
+  private
+    FOwner: TDevItem;
+    FEventHandle: THandle;
+  protected
+    procedure Execute; override;
+  public
+    FRunFlag: boolean;
+    FOutPipe: THandle;
+    constructor Create(aOwner: TDevItem);
+    destructor Destroy; override;
+    procedure SetRunFlag(q: boolean);
+  end;
 
   TDevItem = class(TObject)
+  public type
+    TOpenParams = record
+      ComNr: TComPort;
+      DevNr: integer;
+      BaudRate: TBaudRate;
+      Parity: TParity;
+      BitCnt: TBitCnt;
+      MdbMode: TMdbMode;
+      MdbMemAccess: TMdbMemAccess;
+      procedure InitDefault;
+    end;
+
+    TTerminalData = record
+      PipeHandle: THandle;
+      RunFlag: boolean;
+      Thread: TTerminalThread;
+    end;
+
   private
     AccId: integer;
     ComNr: integer;
@@ -39,6 +82,10 @@ type
     BaudRate: TBaudRate;
     FMdbMode: TMdbMode;
     FParity: TParity;
+    FBitCnt: TBitCnt;
+    FMdbMemAccess: TMdbMemAccess;
+    FTermialTab: array [0 .. TERMINAL_CNT - 1] of TTerminalData;
+
     FCallBackFunc: TCallBackFunc;
     FCmmId: integer;
 
@@ -58,9 +105,9 @@ type
     FCountDivide: integer;
     FMdbStdCndDiv: integer; // podzia³ na krótsze ramki dla standardowych zapytañ MODBUS
     FAskNumber: word;
-    glProgress: boolean; // false -> progress wysy³a procedura Konwers
     DriverMode: TDriverMode;
     Rs485Wait: boolean;
+    TerminalReadTime: integer;
     FClr_ToRdCnt: boolean; // odbiór ramki az do przerwy
 
     function GetNewAskNr: word;
@@ -70,21 +117,17 @@ type
     function GetComAcces: boolean;
     procedure ReleaseComAcces;
 
-    function RsWrite(var Buffer; Count: integer): integer;
+    function RsWrite(Buffer: TBytes): integer;
     function RsRead(var Buffer; Count: integer): integer;
     procedure PurgeInOut;
-    function Konwers(RepZad: integer; var Buf; Count: byte; var OutBuf; var RecLen: integer): TStatus; overload;
-    function Konwers(var Buf; Count: byte; var OutBuf; var RecLen: integer): TStatus; overload;
-    function Konwers(var Buf; Count: byte; var OutBuf): TStatus; overload;
+    function Konwers(showProgress: boolean; RepZad: integer; Buf: TBytes; var OutBuf: TBytes): TStatus; overload;
+    function Konwers(showProgress: boolean; Buf: TBytes; var OutBuf: TBytes): TStatus; overload;
+    function Konwers(Buf: TBytes; var OutBuf: TBytes): TStatus; overload;
 
-    // function  ProceddCRC(CRC : word; Data : byte):word;
-    function ProceddCRC_1(CRC: word; Data: byte): word;
-    function CheckCRC(const p; Count: word): boolean;
-    function MakeCRC(const p; Count: word): word;
-    function ReciveRTUAnswer(var Buffer; ToReadCnt: integer; var RecLen: integer): boolean;
-    function ReciveASCIIAnswer(var Buffer; ToReadCnt: integer; var RecLen: integer): boolean;
-    function RdRegHd(var QA: TByteAr; Adress: word; Count: word): TStatus;
-    function RdAbnalogInpHd(var QA: TByteAr; Adress: word; Count: word): TStatus;
+    function ReciveRTUAnswer(var Buffer: TBytes): boolean;
+    function ReciveASCIIAnswer(var Buffer: TBytes): boolean;
+    function RdRegHd(var QA: TBytes; Adress: word; Count: word): TStatus;
+    function RdAbnalogInpHd(var QA: TBytes; Adress: word; Count: word): TStatus;
     function WrMultiRegHd(Adress: word; Count: word; pW: pWord): TStatus;
     // function  GetSmallInt(const b):Smallint;
     procedure SetSmallInt(const b; Val: Smallint);
@@ -97,7 +140,7 @@ type
     function SeReadFileHd(SesId: TSesID; FileNr: TFileNr; var Buf; var Cnt: integer): TStatus;
     function SeWriteFileHd(SesId: TSesID; FileNr: TFileNr; const Buf; var Cnt: integer): TStatus;
   protected
-    procedure GoBackFunct(Ev: integer; R: real);
+    procedure CallBackFunct(Ev: integer; R: real);
     procedure SetProgress(F: real); overload;
     procedure SetProgress(Cnt, Max: integer); overload;
     procedure MsgFlowSize(R: real);
@@ -106,12 +149,9 @@ type
     function RsReadByte(var b: byte): boolean;
     function InQue: integer;
     function OutQue: integer;
-    procedure RsWriteByte(b: byte);
-    procedure RsWriteWord(b: word);
   public
-    MaxTime: integer;
-    constructor Create(AId: TAccId; AComNr: TComPort; ADevNr: integer; ABaudRate: TBaudRate; AMode: TMdbMode;
-      AParity: TParity);
+    MaxTimeWaitSemafor: integer;
+    constructor Create(AId: TAccId; OpenParams: TOpenParams);
     destructor Destroy; override;
     property CountDivide: integer read FCountDivide write FSetCountDivide;
     property MdbStdCndDiv: integer read FMdbStdCndDiv write FSetMdbStdCndDiv;
@@ -140,13 +180,12 @@ type
     // odczyt, zapis pamiêci
     function RdMemory(var Buf; Adress: cardinal; Count: cardinal): TStatus;
     function WrMemory(const Buf; Adress: cardinal; Count: cardinal): TStatus;
-    function RdDevInfo(DevName: pchar; var TabVec: cardinal): TStatus;
-    function RdCtrlByte(Nr: byte; var Val: byte): TStatus;
-    function WrCtrlByte(Nr: byte; Val: byte): TStatus;
 
     // obsluga terminala
     function TerminalSendKey(key: AnsiChar): TStatus;
     function TerminalRead(Buf: PAnsiChar; var rdcnt: integer): TStatus;
+    function TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
+    function TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
 
     // dostep do sesji i plików
     function GetErrStr(Code: TStatus; Buffer: PAnsiChar; MaxLen: integer): boolean;
@@ -175,6 +214,8 @@ type
     function GetBoudRate(BdTxt: String; var Baund: TBaudRate): boolean;
     function GetMdbMode(BdTxt: String; var MdbMode: TMdbMode): boolean;
     function GetParity(BdTxt: String; var Parity: TParity): boolean;
+    function GetBitCnt(Txt: String; var BitCnt: TBitCnt): boolean;
+    function GetMdbMemAccess(Txt: String; var MemAcc: TMdbMemAccess): boolean;
     function GetTocken(s: PAnsiChar; var p: integer): String;
     function GetId: TAccId;
   public
@@ -192,6 +233,9 @@ var
   GlobDevList: TDevList;
 
 implementation
+
+uses
+  CrcUnit;
 
 function lolo(w: cardinal): byte;
 begin
@@ -228,31 +272,120 @@ begin
   Result := AnsiString(IntToStr(GetLastError));
 end;
 
+
+// ---------------------  TTerminalThread ---------------------------
+
+constructor TTerminalThread.Create(aOwner: TDevItem);
+begin
+  FOwner := aOwner;
+  FRunFlag := false;
+  FOutPipe := INVALID_HANDLE_VALUE;
+  FEventHandle := CreateEvent(nil, false, false, nil);
+
+  inherited Create(false);
+end;
+
+destructor TTerminalThread.Destroy;
+begin
+  inherited;
+  CloseHandle(FEventHandle);
+end;
+
+procedure TTerminalThread.Execute;
+var
+  Buffer: array of AnsiChar;
+  WideCh: array of Char;
+  rdcnt: integer;
+  st: TStatus;
+  BytesWritten: cardinal;
+  idx: integer;
+  i: integer;
+begin
+  Logger(1, '\wTerminalThread Start' + #10);
+  setLength(Buffer, 512);
+  idx := 0;
+  while not(Terminated) do
+  begin
+    if FRunFlag and (FOutPipe <> INVALID_HANDLE_VALUE) then
+    begin
+      rdcnt := 0;
+      st := FOwner.TerminalRead(@Buffer[0], rdcnt);
+      if (st = stOK) and (rdcnt > 0) then
+      begin
+        setLength(WideCh, rdcnt);
+        for i := 0 to rdcnt - 1 do
+        begin
+          WideCh[i] := Char(Buffer[i]);
+        end;
+
+        WriteFile(FOutPipe, WideCh[0], rdcnt * sizeof(Char), BytesWritten, nil);
+      end
+      else
+        WaitForSingleObject(FEventHandle, FOwner.TerminalReadTime);
+    end
+    else
+    begin
+      WaitForSingleObject(FEventHandle, 1000);
+      // Logger(1, Format('\iTerminalThread wait %d', [idx]) + #10);
+      inc(idx);
+    end;
+  end;
+  Logger(1, '\wTerminalThread Exit' + #10);
+
+end;
+
+procedure TTerminalThread.SetRunFlag(q: boolean);
+begin
+  FRunFlag := q;
+  SetEvent(FEventHandle);
+end;
+
 // ---------------------  TDevItem ---------------------------
-constructor TDevItem.Create(AId: TAccId; AComNr: TComPort; ADevNr: integer; ABaudRate: TBaudRate; AMode: TMdbMode;
-  AParity: TParity);
+constructor TDevItem.Create(AId: TAccId; OpenParams: TOpenParams);
+var
+  i: integer;
 begin
   inherited Create;
   AccId := AId;
-  ComNr := AComNr;
-  FDevNr := ADevNr;
-  BaudRate := ABaudRate;
-  FMdbMode := AMode;
-  FParity := AParity;
+  ComNr := OpenParams.ComNr;
+  FDevNr := OpenParams.DevNr;
+  BaudRate := OpenParams.BaudRate;
+  FMdbMode := OpenParams.MdbMode;
+  FParity := OpenParams.Parity;
+  FBitCnt := OpenParams.BitCnt;
+  FMdbMemAccess := OpenParams.MdbMemAccess;
+
   DriverMode := dmFAST; // ;
   Rs485Wait := false;
   FClr_ToRdCnt := false;
+  TerminalReadTime := 100;
 
   LastFinished := GetTickCount;
-  MaxTime := 5000;
+  MaxTimeWaitSemafor := 5000;
   CountDivide := 128;
   MdbStdCndDiv := MAX_MDB_STD_FRAME_SIZE;
+
+  for i := 0 to TERMINAL_CNT - 1 do
+  begin
+    FTermialTab[i].PipeHandle := INVALID_HANDLE_VALUE;
+    FTermialTab[i].RunFlag := false;
+    FTermialTab[i].Thread := TTerminalThread.Create(self);
+  end;
+
 end;
 
 destructor TDevItem.Destroy;
+var
+  i: integer;
 begin
   inherited Destroy;
-
+  for i := 0 to TERMINAL_CNT - 1 do
+  begin
+    FTermialTab[i].Thread.Terminate;
+    FTermialTab[i].Thread.SetRunFlag(false);
+    FTermialTab[i].Thread.WaitFor;
+    FTermialTab[i].Thread.Free;
+  end;
 end;
 
 function TDevItem.ValidHandle: boolean;
@@ -284,8 +417,8 @@ var
   ErrCode: integer;
   s: string;
 begin
-  FillChar(DCB, SizeOf(DCB), 0);
-  DCB.DCBlength := SizeOf(DCB);
+  FillChar(DCB, sizeof(DCB), 0);
+  DCB.DCBlength := sizeof(DCB);
   DCB.Flags := DCB.Flags or dcb_Binary;
   if FParity <> paNONE then
   begin
@@ -326,12 +459,17 @@ begin
     br115200:
       DCB.BaudRate := CBR_115200;
   end;
-  case FMdbMode of
-    mdbRTU:
+  case FBitCnt of
+    bit8:
       DCB.ByteSize := 8;
-    mdbASCII:
+    bit7:
       DCB.ByteSize := 7;
+    bit6:
+      DCB.ByteSize := 6;
+  else
+    DCB.ByteSize := 8;
   end;
+
   DCB.XonLim := 2048;
   DCB.XoffLim := 1024;
   DCB.XonChar := #17;
@@ -375,7 +513,7 @@ begin
     Exit;
   if not SetupComm(ComHandle, $400, $400) then
     Exit;
-  Result := stOk;
+  Result := stOK;
 end;
 
 function TDevItem.Open: TStatus;
@@ -410,7 +548,6 @@ function TDevItem.isOpen: boolean;
 begin
   Result := (ComHandle <> INVALID_HANDLE_VALUE)
 end;
-
 
 procedure TDevItem.SetSmallInt(const b; Val: Smallint);
 var
@@ -484,7 +621,7 @@ end;
 
 function TDevItem.GetComAcces: boolean;
 begin
-  Result := (WaitForSingleObject(SemHandle, MaxTime) = WAIT_OBJECT_0);
+  Result := (WaitForSingleObject(SemHandle, MaxTimeWaitSemafor) = WAIT_OBJECT_0);
 end;
 
 procedure TDevItem.ReleaseComAcces;
@@ -512,7 +649,7 @@ begin
   Result := ComStat.cbOutQue;
 end;
 
-function TDevItem.RsWrite(var Buffer; Count: integer): integer;
+function TDevItem.RsWrite(Buffer: TBytes): integer;
 var
   Overlapped: TOverlapped;
   BytesWritten: cardinal;
@@ -520,9 +657,9 @@ var
   TT: cardinal;
 begin
   TT := GetTickCount;
-  FillChar(Overlapped, SizeOf(Overlapped), 0);
-  Overlapped.hEvent := CreateEvent(nil, True, True, nil);
-  WriteFile(ComHandle, Buffer, Count, BytesWritten, @Overlapped);
+  FillChar(Overlapped, sizeof(Overlapped), 0);
+  Overlapped.hEvent := CreateEvent(nil, true, true, nil);
+  WriteFile(ComHandle, Buffer[0], length(Buffer), BytesWritten, @Overlapped);
 
   WaitForSingleObject(Overlapped.hEvent, INFINITE);
   q := GetOverlappedResult(ComHandle, Overlapped, BytesWritten, false);
@@ -532,16 +669,6 @@ begin
     Result := 0;
   TT := cardinal(GetTickCount - TT);
   inc(SumSendTime, TT);
-end;
-
-procedure TDevItem.RsWriteByte(b: byte);
-begin
-  RsWrite(b, 1);
-end;
-
-procedure TDevItem.RsWriteWord(b: word);
-begin
-  RsWrite(b, 2);
 end;
 
 var
@@ -555,8 +682,8 @@ var
   q: boolean;
 begin
   TTTT := GetTickCount;
-  FillChar(Overlapped, SizeOf(Overlapped), 0);
-  Overlapped.hEvent := CreateEvent(nil, True, True, nil);
+  FillChar(Overlapped, sizeof(Overlapped), 0);
+  Overlapped.hEvent := CreateEvent(nil, true, true, nil);
   ReadFile(ComHandle, Buffer, Count, BytesRead, @Overlapped);
   TTTT2 := GetTickCount;
   WaitForSingleObject(Overlapped.hEvent, 1000);
@@ -579,7 +706,7 @@ begin
   PurgeComm(ComHandle, PURGE_RXABORT or PURGE_RXCLEAR or PURGE_TXABORT or PURGE_TXCLEAR);
 end;
 
-procedure TDevItem.GoBackFunct(Ev: integer; R: real);
+procedure TDevItem.CallBackFunct(Ev: integer; R: real);
 begin
   if Assigned(FCallBackFunc) then
     FCallBackFunc(AccId, FCmmId, Ev, R);
@@ -587,7 +714,7 @@ end;
 
 procedure TDevItem.SetProgress(F: real);
 begin
-  GoBackFunct(evProgress, F);
+  CallBackFunct(evProgress, F);
 end;
 
 procedure TDevItem.SetProgress(Cnt, Max: integer);
@@ -603,15 +730,15 @@ end;
 
 procedure TDevItem.MsgFlowSize(R: real);
 begin
-  GoBackFunct(evFlow, R);
+  CallBackFunct(evFlow, R);
 end;
 
 procedure TDevItem.SetWorkFlag(w: boolean);
 begin
   if w then
-    GoBackFunct(evWorkOnOff, 1)
+    CallBackFunct(evWorkOnOff, 1)
   else
-    GoBackFunct(evWorkOnOff, 0);
+    CallBackFunct(evWorkOnOff, 0);
 end;
 
 procedure TDevItem.FSetCountDivide(AValue: integer);
@@ -631,72 +758,7 @@ end;
 // -----------------------------------------------------------------------------
 // --------   OBSLUGA PROTOKOLU    ---------------------------------------------
 // -----------------------------------------------------------------------------
-const
-  CrcTab: array [0 .. 255] of word = ($0000, $C0C1, $C181, $0140, $C301, $03C0, $0280, $C241, $C601, $06C0, $0780,
-    $C741, $0500, $C5C1, $C481, $0440, $CC01, $0CC0, $0D80, $CD41, $0F00, $CFC1, $CE81, $0E40, $0A00, $CAC1, $CB81,
-    $0B40, $C901, $09C0, $0880, $C841, $D801, $18C0, $1980, $D941, $1B00, $DBC1, $DA81, $1A40, $1E00, $DEC1, $DF81,
-    $1F40, $DD01, $1DC0, $1C80, $DC41, $1400, $D4C1, $D581, $1540, $D701, $17C0, $1680, $D641, $D201, $12C0, $1380,
-    $D341, $1100, $D1C1, $D081, $1040, $F001, $30C0, $3180, $F141, $3300, $F3C1, $F281, $3240, $3600, $F6C1, $F781,
-    $3740, $F501, $35C0, $3480, $F441, $3C00, $FCC1, $FD81, $3D40, $FF01, $3FC0, $3E80, $FE41, $FA01, $3AC0, $3B80,
-    $FB41, $3900, $F9C1, $F881, $3840, $2800, $E8C1, $E981, $2940, $EB01, $2BC0, $2A80, $EA41, $EE01, $2EC0, $2F80,
-    $EF41, $2D00, $EDC1, $EC81, $2C40, $E401, $24C0, $2580, $E541, $2700, $E7C1, $E681, $2640, $2200, $E2C1, $E381,
-    $2340, $E101, $21C0, $2080, $E041, $A001, $60C0, $6180, $A141, $6300, $A3C1, $A281, $6240, $6600, $A6C1, $A781,
-    $6740, $A501, $65C0, $6480, $A441, $6C00, $ACC1, $AD81, $6D40, $AF01, $6FC0, $6E80, $AE41, $AA01, $6AC0, $6B80,
-    $AB41, $6900, $A9C1, $A881, $6840, $7800, $B8C1, $B981, $7940, $BB01, $7BC0, $7A80, $BA41, $BE01, $7EC0, $7F80,
-    $BF41, $7D00, $BDC1, $BC81, $7C40, $B401, $74C0, $7580, $B541, $7700, $B7C1, $B681, $7640, $7200, $B2C1, $B381,
-    $7340, $B101, $71C0, $7080, $B041, $5000, $90C1, $9181, $5140, $9301, $53C0, $5280, $9241, $9601, $56C0, $5780,
-    $9741, $5500, $95C1, $9481, $5440, $9C01, $5CC0, $5D80, $9D41, $5F00, $9FC1, $9E81, $5E40, $5A00, $9AC1, $9B81,
-    $5B40, $9901, $59C0, $5880, $9841, $8801, $48C0, $4980, $8941, $4B00, $8BC1, $8A81, $4A40, $4E00, $8EC1, $8F81,
-    $4F40, $8D01, $4DC0, $4C80, $8C41, $4400, $84C1, $8581, $4540, $8701, $47C0, $4680, $8641, $8201, $42C0, $4380,
-    $8341, $4100, $81C1, $8081, $4040);
-
-function TDevItem.ProceddCRC_1(CRC: word; Data: byte): word;
-begin
-  Result := CrcTab[(CRC xor Data) and $FF] xor (CRC shr 8);
-end;
-
-{
-  function  TDevItem.ProceddCRC(CRC : word; Data : byte):word;
-  const
-  Gen_poly:word= $A001;
-  var
-  i    : byte;
-  begin
-  Crc:=Crc xor Data;
-  for i:=1 to 8 do
-  begin
-  if Crc mod 2=1 then
-  Crc:=((Crc div 2) xor Gen_Poly)
-  else
-  crc:=crc div 2;
-  end;
-  Result:= Crc;
-  end;
-}
-
-function TDevItem.MakeCRC(const p; Count: word): word;
-const
-  Gen_poly: word = $A001;
-var
-  a: word;
-  CRC: word;
-  n: word;
-begin
-  CRC := $FFFF;
-  for n := 0 to Count - 1 do
-  begin
-    a := TByteAr(p)[n];
-    CRC := ProceddCRC_1(CRC, a);
-  end;
-  Result := CRC;
-end;
-
-function TDevItem.CheckCRC(const p; Count: word): boolean;
-begin
-  Result := (MakeCRC(p, Count) = 0);
-end;
-
-function TDevItem.ReciveRTUAnswer(var Buffer; ToReadCnt: integer; var RecLen: integer): boolean;
+function TDevItem.ReciveRTUAnswer(var Buffer: TBytes): boolean;
 {
   function ShiftToBuf(var Buffer; RecLen:integer; var SrcBuf; L:integer): integer;
   var
@@ -721,18 +783,20 @@ var
   dT: cardinal;
   L: integer;
   TimeFlag: boolean;
+  ToReadCnt: integer;
+  RecLen: integer;
 begin
+  ToReadCnt := length(Buffer);
+
   if FClr_ToRdCnt then
     ToReadCnt := 0;
+  if ToReadCnt = 0 then
+    setLength(Buffer, MAX_MDB_FRAME_SIZE);
+
   T2 := GetTickCount;
   if DriverMode = dmSTD then
   begin
-    if (ToReadCnt = 0) or (ToReadCnt > SizeOf(TByteAr)) then
-      RecLen := RsRead(Buffer, SizeOf(TByteAr))
-    else
-    begin
-      RecLen := RsRead(Buffer, ToReadCnt);
-    end;
+    RecLen := RsRead(Buffer[0], length(Buffer));
   end
   else
   begin
@@ -744,10 +808,10 @@ begin
     RecLen := 0;
     while RecLen = 0 do
     begin
-      L := RsRead(q[RecLen], SizeOf(q) - RecLen);
+      L := RsRead(q[RecLen], sizeof(q) - RecLen);
       inc(RecLen, L);
       if (DriverMode = dmSLOW) and (L = 0) then
-        Sleep(dT);
+        sleep(dT);
       if GetTickCount - TT > TIME_TO_RPL then
       begin
         break;
@@ -756,12 +820,12 @@ begin
 
     TT := GetTickCount;
     TimeFlag := false;
-    while True do
+    while true do
     begin
-      if RecLen = SizeOf(q) then
+      if RecLen = sizeof(q) then
         break;
       try
-        L := RsRead(q[RecLen], SizeOf(q) - RecLen);
+        L := RsRead(q[RecLen], sizeof(q) - RecLen);
       except
         L := 0;
       end;
@@ -783,22 +847,26 @@ begin
         end
         else
         begin
-          Sleep(dT);
+          sleep(dT);
         end;
-        TimeFlag := True;
+        TimeFlag := true;
       end;
       if (DriverMode = dmSLOW) and (L = 0) then
-        Sleep(dT);
+        sleep(dT);
     end;
-    T2 := GetTickCount - T2;
-    inc(SumRecTime, T2);
-    move(q, Buffer, RecLen);
+
+    if RecLen > length(Buffer) then
+      RecLen := length(Buffer);
+    move(q, Buffer[0], RecLen);
   end;
+  T2 := GetTickCount - T2;
+  inc(SumRecTime, T2);
 
   if (ToReadCnt = 0) or (ToReadCnt = RecLen) then
   begin
+    setLength(Buffer, RecLen);
     if RecLen > 0 then
-      Result := CheckCRC(Buffer, RecLen)
+      Result := TCrc.CheckCRC(Buffer[0], RecLen)
     else
       Result := false;
   end
@@ -806,8 +874,9 @@ begin
     Result := false;
 end;
 
-function TDevItem.ReciveASCIIAnswer(var Buffer; ToReadCnt: integer; var RecLen: integer): boolean;
-  function HexVal(ch: char): byte;
+function TDevItem.ReciveASCIIAnswer(var Buffer: TBytes): boolean;
+// ReciveASCIIAnswer(var Buffer; ToReadCnt: integer; var RecLen: integer): boolean;
+  function HexVal(ch: Char): byte;
   begin
     if (ch >= '0') and (ch <= '9') then
       Result := ord(ch) - ord('0')
@@ -820,7 +889,7 @@ function TDevItem.ReciveASCIIAnswer(var Buffer; ToReadCnt: integer; var RecLen: 
   end;
 
 var
-  RecBuf: array of char;
+  RecBuf: array of Char;
   n: integer;
   Len: cardinal;
   i: integer;
@@ -828,35 +897,41 @@ var
   sum: byte;
 begin
   Result := false;
-  n := SizeOf(TByteAr) * 2 + 3;
-  SetLength(RecBuf, n);
+  n := sizeof(TByteAr) * 2 + 3;
+  setLength(RecBuf, n);
   Len := RsRead(RecBuf[0], n);
   if (Len > 3) and (RecBuf[0] = ':') and (RecBuf[Len - 1] = #10) and (RecBuf[Len - 2] = #13) then
   begin
     n := (Len - 3) div 2;
+    setLength(Buffer, n);
     sum := 0;
     for i := 0 to n - 1 do
     begin
       a := 16 * HexVal(RecBuf[2 * i + 1]) + HexVal(RecBuf[2 * i + 2]);
-      TByteAr(Buffer)[i] := a;
+      Buffer[i] := a;
       sum := byte(sum + a);
     end;
     if sum = 0 then
-      Result := True;
-    RecLen := n;
+      Result := true;
   end
   else
-    RecLen := 0;
-  SetLength(RecBuf, 0);
+    setLength(Buffer, 0);
+  setLength(RecBuf, 0);
 end;
 
-function TDevItem.Konwers(var Buf; Count: byte; var OutBuf; var RecLen: integer): TStatus;
+function TDevItem.Konwers(showProgress: boolean; Buf: TBytes; var OutBuf: TBytes): TStatus;
 begin
-  Result := Konwers(5, Buf, Count, OutBuf, RecLen);
+  Result := Konwers(showProgress, 5, Buf, OutBuf);
 end;
 
-function TDevItem.Konwers(RepZad: integer; var Buf; Count: byte; var OutBuf; var RecLen: integer): TStatus;
+function TDevItem.Konwers(Buf: TBytes; var OutBuf: TBytes): TStatus;
+begin
+  Result := Konwers(true, 5, Buf, OutBuf);
+end;
 
+function TDevItem.Konwers(showProgress: boolean; RepZad: integer; Buf: TBytes; var OutBuf: TBytes): TStatus;
+label
+  ExitP;
   procedure WriteToFile(const Buf; Len: integer);
   var
     Str: TMemoryStream;
@@ -870,184 +945,192 @@ function TDevItem.Konwers(RepZad: integer; var Buf; Count: byte; var OutBuf; var
     end;
   end;
 
-  procedure BildAsciiBuf(var BufToSnd; const b; Count: integer);
-    procedure PlaceChar(var p: pchar; b: char);
+// procedure BildAsciiBuf(var BufToSnd; const b; Count: integer);
+  function BildAsciiBuf(Buf: TBytes): TBytes;
+    procedure PlaceChar(Buf: TBytes; var wsk: integer; b: AnsiChar);
     begin
-      p^ := b;
-      inc(p);
+      Buf[wsk] := ord(b);
+      inc(wsk);
     end;
-    procedure PlaceByte(var p: pchar; b: byte);
+
+    procedure PlaceByte(Buf: TBytes; var wsk: integer; b: byte);
     const
-      HexCyfr: array [0 .. 15] of char = '0123456789ABCDEF';
+      HexCyfr: array [0 .. 15] of AnsiChar = '0123456789ABCDEF';
     begin
-      PlaceChar(p, HexCyfr[(b shr 4) and $0F]);
-      PlaceChar(p, HexCyfr[b and $0F])
+      PlaceChar(Buf, wsk, HexCyfr[(b shr 4) and $0F]);
+      PlaceChar(Buf, wsk, HexCyfr[b and $0F]);
     end;
 
   var
-    p: pchar;
     i: integer;
     a: byte;
     sum: byte;
+    n: integer;
+    wsk: integer;
   begin
-    p := pchar(@BufToSnd);
-    PlaceChar(p, ':');
+    n := length(Buf);
+    setLength(Result, 1 + 2 * (n + 1) + 2);
+
+    wsk := 0;
+    PlaceChar(Result, wsk, ':');
+
     sum := 0;
-    for i := 0 to Count - 1 do
+    for i := 0 to n - 1 do
     begin
-      a := ord(pchar(@b)[i]);
+      a := Buf[i];
       sum := byte(sum + a);
-      PlaceByte(p, a);
+      PlaceByte(Result, wsk, a);
     end;
     sum := $100 - sum;
-    PlaceByte(p, sum);
-    PlaceChar(p, #$0D);
-    PlaceChar(p, #$0A);
+    PlaceByte(Result, wsk, sum);
+
+    PlaceChar(Result, wsk, #$0D);
+    PlaceChar(Result, wsk, #$0A);
+  end;
+
+  function BuilBufToSnd(Buf: TBytes): TBytes;
+  var
+    n: integer;
+    w: word;
+  begin
+    case FMdbMode of
+      mdbRTU:
+        begin
+          n := length(Buf);
+          setLength(Result, n + 2);
+          move(Buf[0], Result[0], n);
+          w := TCrc.MakeCRC(Result[0], n);
+          Result[n] := lo(w);
+          Result[n + 1] := hi(w);
+        end;
+      mdbASCII:
+        Result := BildAsciiBuf(Buf);
+    else
+      Result := nil;
+    end;
   end;
 
 var
   w: word;
   Rep: byte;
   q: boolean;
-  MyBuf: array of byte;
+  BufToSnd: TBytes;
   CntToSnd: integer;
   Cmd: byte;
   CmdRep: byte;
   ToReadCnt: integer;
 begin
-  ToReadCnt := RecLen;
   if not(ValidHandle) then
   begin
     ErrStr := 'Nie otwarty port.';
     Result := stNotOpen;
-    Exit;
+    goto ExitP;
   end;
   if GetComAcces then
   begin
-    if not(glProgress) then
+    ToReadCnt := length(OutBuf);
+    if showProgress then
     begin
       SetProgress(0);
       MsgFlowSize(0);
-      SetWorkFlag(True);
+      SetWorkFlag(true);
     end;
 
-    case FMdbMode of
-      mdbRTU:
-        begin
-          CntToSnd := Count + 2;
-          SetLength(MyBuf, CntToSnd);
-          move(Buf, MyBuf[0], Count);
-          w := MakeCRC(MyBuf[0], Count);
-          MyBuf[Count] := lo(w);
-          MyBuf[Count + 1] := hi(w);
-        end;
-      mdbASCII:
-        begin
-          CntToSnd := 1 + 2 * (Count + 1) + 2;
-          SetLength(MyBuf, CntToSnd);
-          BildAsciiBuf(MyBuf[0], Buf, Count);
-        end;
-    else
-      CntToSnd := 0;
-    end;
+    BufToSnd := BuilBufToSnd(Buf);
 
-    if TByteAr(Buf)[0] <> 0 then
+    if BufToSnd <> nil then
     begin
-      Rep := RepZad;
-      repeat
-        q := True;
-        CmdRep := 0;
-        if not(FBreakFlag) then
+      if Buf[0] <> 0 then // !Brodcast
+      begin
+        Rep := RepZad;
+        repeat
+          q := true;
+          CmdRep := 0;
+          if not(FBreakFlag) then
+          begin
+            PurgeInOut;
+            inc(FrameCnt);
+            if Rs485Wait then
+            begin
+              while GetTickCount - LastFinished < 2 do
+              begin
+                sleep(1);
+                inc(WaitCnt);
+              end;
+            end;
+            RsWrite(BufToSnd);
+
+            case FMdbMode of
+              mdbRTU:
+                q := ReciveRTUAnswer(OutBuf);
+              mdbASCII:
+                q := ReciveASCIIAnswer(OutBuf);
+            else
+              q := false;
+            end;
+            if q and (length(OutBuf) > 4) then
+            begin
+              Cmd := Buf[1];
+              CmdRep := OutBuf[1];
+              q := (OutBuf[0] = FDevNr) and (Cmd = (CmdRep and $7F));
+            end;
+
+            if not(q) then
+            begin
+              inc(FrameRepCnt);
+              dec(Rep);
+              if (Rep <> 0) then
+              begin
+                sleep(10)
+              end;
+            end;
+            LastFinished := GetTickCount;
+          end;
+        until (Rep = 0) or q or FBreakFlag;
+
+        Result := stOK;
+        if FBreakFlag then
         begin
-          PurgeInOut;
-          inc(FrameCnt);
-          if Rs485Wait then
+          Result := stUserBreak;
+        end
+        else if Rep = 0 then
+        begin
+          Result := stBadRepl;
+        end
+        else if not(q) then
+        begin
+          Result := stTimeErr;
+        end
+        else
+        begin
+          if (CmdRep and $80) <> 0 then
           begin
-            while GetTickCount - LastFinished < 2 do
-            begin
-              Sleep(1);
-              inc(WaitCnt);
-            end;
+            if OutBuf[2] <> 4 then
+              Result := stMdbError + OutBuf[2]
+            else
+              Result := stMdbExError + OutBuf[3];
           end;
-          RsWrite(MyBuf[0], CntToSnd);
-
-          case FMdbMode of
-            mdbRTU:
-              q := ReciveRTUAnswer(OutBuf, ToReadCnt, RecLen);
-            mdbASCII:
-              q := ReciveASCIIAnswer(OutBuf, ToReadCnt, RecLen);
-          else
-            q := false;
-          end;
-
-          Cmd := TByteAr(Buf)[1];
-          CmdRep := TByteAr(OutBuf)[1];
-          if (TByteAr(OutBuf)[0] <> FDevNr) or (Cmd <> (CmdRep and $7F)) then
-          begin
-            q := false; // odebrano nie t¹ ramkê
-          end;
-
-          if not(q) then
-          begin
-            inc(FrameRepCnt);
-            dec(Rep);
-            if (Rep <> 0) then
-            begin
-              Sleep(10)
-            end;
-          end;
-          LastFinished := GetTickCount;
         end;
-      until (Rep = 0) or q or FBreakFlag;
-
-      Result := stOk;
-      if FBreakFlag then
-      begin
-        Result := stUserBreak;
-      end
-      else if Rep = 0 then
-      begin
-        Result := stBadRepl;
-      end
-      else if not(q) then
-      begin
-        Result := stTimeErr;
+        if showProgress then
+        begin
+          SetProgress(100);
+          SetWorkFlag(false);
+        end;
       end
       else
-      begin
-        if (CmdRep and $80) <> 0 then
-        begin
-          if TByteAr(OutBuf)[2] <> 4 then
-            Result := stMdbError + TByteAr(OutBuf)[2]
-          else
-            Result := stMdbExError + TByteAr(OutBuf)[3]
-        end;
+      begin // Brodcast
+        PurgeInOut;
+        RsWrite(BufToSnd);
+        Result := stOK;
       end;
-      if not(glProgress) then
-      begin
-        SetProgress(100);
-        SetWorkFlag(false);
-      end;
-    end
-    else
-    begin // Brodcast
-      PurgeInOut;
-      RsWrite(Buf, Count + 2);
-      Result := stOk;
     end;
-    SetLength(MyBuf, 0);
+    setLength(BufToSnd, 0);
     ReleaseComAcces;
   end
   else
     Result := stNoSemafor;
-end;
+ExitP:
 
-function TDevItem.Konwers(var Buf; Count: byte; var OutBuf): TStatus;
-var
-  RecLen: integer;
-begin
-  RecLen := 0;
-  Result := Konwers(Buf, Count, OutBuf, RecLen);
 end;
 
 procedure TDevItem.BreakPulse;
@@ -1057,7 +1140,7 @@ begin
     if GetComAcces then
     begin
       SetCommBreak(ComHandle);
-      Sleep(10);
+      sleep(10);
       ClearCommBreak(ComHandle);
       ReleaseComAcces;
     end;
@@ -1067,7 +1150,7 @@ end;
 function TDevItem.SetBreakFlag(Val: boolean): TStatus;
 begin
   FBreakFlag := Val;
-  Result := stOk;
+  Result := stOK;
 end;
 
 function TDevItem.GetDrvStatus(ParamName: PAnsiChar; ParamValue: PAnsiChar; MaxRpl: integer): TStatus;
@@ -1097,7 +1180,7 @@ begin
   if s <> '' then
   begin
     System.AnsiStrings.StrPLCopy(ParamValue, AnsiString(s), MaxRpl);
-    Result := stOk;
+    Result := stOK;
   end
   else
     Result := stBadArguments;
@@ -1107,7 +1190,7 @@ function TDevItem.SetDrvParam(ParamName: PAnsiChar; ParamValue: PAnsiChar): TSta
 var
   n: integer;
 begin
-  Result := stOk;
+  Result := stOK;
   if ParamName = 'DIVIDE_LEN' then
   begin
     CountDivide := StrToIntDef(pchar(ParamValue), MAX_MDB_FRAME_SIZE);
@@ -1146,17 +1229,18 @@ end;
 
 function TDevItem.RdOutTable(var Buf; Adress: word; Count: word): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   i: word;
   b, mask: byte;
 begin
+  setLength(q, 6);
   q[0] := FDevNr;
   q[1] := $01;
   SetSmallInt(q[2], Smallint(Adress));
   SetSmallInt(q[4], Smallint(Count));
-  Result := Konwers(q, 6, QA);
-  if Result = stOk then
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     if (QA[0] = FDevNr) and (QA[1] = 1) then
     begin
@@ -1174,17 +1258,18 @@ end;
 
 function TDevItem.RdInpTable(var Buf; Adress: word; Count: word): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   i: word;
   b, mask: byte;
 begin
+  setLength(q, 6);
   q[0] := FDevNr;
   q[1] := $02;
   SetSmallInt(q[2], Smallint(Adress));
   SetSmallInt(q[4], Smallint(Count));
-  Result := Konwers(q, 6, QA);
-  if Result = stOk then
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     if (QA[0] = FDevNr) and (QA[1] = 2) then
     begin
@@ -1200,19 +1285,20 @@ begin
   end;
 end;
 
-function TDevItem.RdRegHd(var QA: TByteAr; Adress: word; Count: word): TStatus;
+function TDevItem.RdRegHd(var QA: TBytes; Adress: word; Count: word): TStatus;
 var
-  q: TByteAr;
+  q: TBytes;
 begin
   if Adress > 0 then
   begin
+    setLength(q, 6);
     dec(Adress);
     q[0] := FDevNr;
     q[1] := $03;
     SetSmallInt(q[2], Smallint(Adress));
     SetSmallInt(q[4], Smallint(Count));
-    Result := Konwers(q, 6, QA);
-    if Result = stOk then
+    Result := Konwers(false, q, QA);
+    if Result = stOK then
     begin
       if not((QA[0] = FDevNr) and (QA[1] = $03)) then
         Result := stBadRepl;
@@ -1225,7 +1311,7 @@ end;
 function TDevItem.RdReg(var Buf; Adress: word; Count: word): TStatus;
 var
   Cnt: word;
-  QA: TByteAr;
+  QA: TBytes;
   i: word;
   w: word;
   st: TStatus;
@@ -1233,22 +1319,21 @@ var
   SCnt: integer;
   Count1: integer;
 begin
-  glProgress := True;
   SetProgress(0);
   MsgFlowSize(0);
-  SetWorkFlag(True);
+  SetWorkFlag(true);
 
   n := 0;
-  st := stOk;
+  st := stOK;
   Count1 := Count;
   SCnt := 0;
-  while (Count <> 0) and (st = stOk) do
+  while (Count <> 0) and (st = stOK) do
   begin
     Cnt := Count;
     if Cnt > FMdbStdCndDiv then
       Cnt := FMdbStdCndDiv;
     st := RdRegHd(QA, Adress, Cnt);
-    if st = stOk then
+    if st = stOK then
     begin
       for i := 0 to Cnt - 1 do
       begin
@@ -1269,27 +1354,26 @@ begin
   SetProgress(100);
   MsgFlowSize(Count);
   SetWorkFlag(false);
-  glProgress := false;
   Result := st;
 end;
 
-function TDevItem.RdAbnalogInpHd(var QA: TByteAr; Adress: word; Count: word): TStatus;
+function TDevItem.RdAbnalogInpHd(var QA: TBytes; Adress: word; Count: word): TStatus;
 var
-  q: TByteAr;
-  RecLen: integer;
+  q: TBytes;
 begin
   if Adress > 0 then
   begin
+    setLength(q, 6);
     dec(Adress);
     q[0] := FDevNr;
     q[1] := $04;
     SetSmallInt(q[2], Smallint(Adress));
     SetSmallInt(q[4], Smallint(Count));
-    RecLen := 0;
-    Result := Konwers(q, 6, QA, RecLen);
-    if Result = stOk then
+    setLength(QA, 0);
+    Result := Konwers(false, q, QA);
+    if Result = stOK then
     begin
-      if not((QA[0] = FDevNr) and (QA[1] = $04) and (QA[2] = Count * 2) and (RecLen = 3 + 2 * Count + 2)) then
+      if not((QA[0] = FDevNr) and (QA[1] = $04) and (QA[2] = Count * 2) and (length(QA) = 3 + 2 * Count + 2)) then
         Result := stBadRepl;
     end;
   end
@@ -1300,7 +1384,7 @@ end;
 function TDevItem.RdAnalogInp(var Buf; Adress: word; Count: word): TStatus;
 var
   Cnt: word;
-  QA: TByteAr;
+  QA: TBytes;
   i: word;
   w: word;
   st: TStatus;
@@ -1309,22 +1393,21 @@ var
   Count1: integer;
 begin
   try
-    glProgress := True;
     SetProgress(0);
     MsgFlowSize(0);
-    SetWorkFlag(True);
+    SetWorkFlag(true);
 
     n := 0;
-    st := stOk;
+    st := stOK;
     Count1 := Count;
     SCnt := 0;
-    while (Count <> 0) and (st = stOk) do
+    while (Count <> 0) and (st = stOK) do
     begin
       Cnt := Count;
       if Cnt > FMdbStdCndDiv then
         Cnt := FMdbStdCndDiv;
       st := RdAbnalogInpHd(QA, Adress, Cnt);
-      if st = stOk then
+      if st = stOK then
       begin
         for i := 0 to Cnt - 1 do
         begin
@@ -1352,11 +1435,11 @@ end;
 
 function TDevItem.WrOutput(Adress: word; Val: boolean): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   i: byte;
-  RecLen: integer;
 begin
+  setLength(q, 6);
   dec(Adress);
   q[0] := FDevNr;
   q[1] := $05;
@@ -1366,9 +1449,9 @@ begin
   else
     q[4] := $00;
   q[5] := $00;
-  RecLen := 8;
-  Result := Konwers(q, 6, QA, RecLen);
-  if Result = stOk then
+  setLength(QA, 8);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     if FDevNr <> 0 then
     begin
@@ -1381,17 +1464,19 @@ end;
 
 function TDevItem.WrReg(Adress: word; Val: word): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   i: integer;
 begin
+  setLength(q, 6);
   dec(Adress);
   q[0] := FDevNr;
   q[1] := $06;
   SetSmallInt(q[2], Smallint(Adress));
   SetSmallInt(q[4], Smallint(Val));
-  Result := Konwers(q, 6, QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     if FDevNr <> 0 then
     begin
@@ -1404,28 +1489,31 @@ end;
 
 function TDevItem.RdStatus(var Val: byte): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
 begin
+  setLength(q, 2);
   q[0] := FDevNr;
   q[1] := $07;
-  Result := Konwers(q, 2, QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
     if not((QA[0] = FDevNr) and (QA[1] = 7)) then
       Result := stBadRepl;
-  if Result = stOk then
+  if Result = stOK then
     Val := QA[2];
 end;
 
 function TDevItem.WrMultiRegHd(Adress: word; Count: word; pW: pWord): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   w: word;
   i: integer;
   rCnt: word;
   rAdr: word;
 begin
+  setLength(q, 7 + 2 * Count);
   dec(Adress);
   q[0] := FDevNr;
   q[1] := 16;
@@ -1439,8 +1527,9 @@ begin
     q[7 + i * 2 + 0] := byte(w shr 8);
     q[7 + i * 2 + 1] := byte(w);
   end;
-  Result := Konwers(q, 7 + 2 * Count, QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(false, q, QA);
+  if Result = stOK then
   begin
     rAdr := QA[2] * 256 + QA[3];
     rCnt := QA[4] * 256 + QA[5];
@@ -1459,15 +1548,14 @@ var
   pW: pWord;
   SCnt: integer;
 begin
-  glProgress := True;
   SetProgress(0);
   MsgFlowSize(0);
-  SetWorkFlag(True);
+  SetWorkFlag(true);
 
-  st := stOk;
+  st := stOK;
   pW := pWord(@Buf);
   SCnt := 0;
-  while (Count <> 0) and (st = stOk) do
+  while (Count <> 0) and (st = stOK) do
   begin
     Cnt := Count;
     if Cnt > FMdbStdCndDiv then
@@ -1484,7 +1572,6 @@ begin
   SetProgress(100);
   MsgFlowSize(Count);
   SetWorkFlag(false);
-  glProgress := false;
 
   Result := st;
 end;
@@ -1493,46 +1580,46 @@ end;
 
 function TDevItem.RdMemory(var Buf; Adress: cardinal; Count: cardinal): TStatus;
 
-  function RdMemoryHd(FDevNr: byte; Adress: cardinal; Count: byte; var QA: TByteAr): TStatus;
+  function RdMemoryHd(FDevNr: byte; Adress: cardinal; Count: byte; var QA: TBytes): TStatus;
   var
-    q: TByteAr;
-    RecLen: integer;
+    q: TBytes;
   begin
+    setLength(q, 8);
     q[0] := FDevNr;
     q[1] := 41;
     q[2] := Count;
     q[3] := 0;
     SetLongInt(q[4], Adress);
-    RecLen := Count + 10;
-    Result := Konwers(q, 8, QA, RecLen);
-    if Result = stOk then
+    setLength(QA, Count + 10);
+
+    Result := Konwers(false, q, QA);
+    if Result = stOK then
       if not((QA[0] = FDevNr) and (QA[1] = 41)) then
         Result := stBadRepl;
   end;
 
 var
   Cnt: integer;
-  QA: TByteAr;
+  QA: TBytes;
   i: word;
   st: TStatus;
   p: pByte;
   SCnt: cardinal;
 begin
-  glProgress := True;
   SetProgress(0);
   MsgFlowSize(0);
-  SetWorkFlag(True);
+  SetWorkFlag(true);
 
-  st := stOk;
+  st := stOK;
   p := pByte(@Buf);
   SCnt := 0;
-  while (SCnt <> Count) and (st = stOk) do
+  while (SCnt <> Count) and (st = stOK) do
   begin
     Cnt := Count - SCnt;
     if Cnt > FCountDivide then
       Cnt := FCountDivide;
     st := RdMemoryHd(FDevNr, Adress, Cnt, QA);
-    if st = stOk then
+    if st = stOK then
     begin
       for i := 0 to Cnt - 1 do
       begin
@@ -1544,13 +1631,11 @@ begin
     inc(SCnt, Cnt);
     SetProgress(SCnt, Count);
     MsgFlowSize(SCnt);
-    SetWorkFlag(True);
   end;
   Result := st;
   SetProgress(100);
   MsgFlowSize(Count);
   SetWorkFlag(false);
-  glProgress := false;
 end;
 {$Q+}
 {$Q-}
@@ -1559,19 +1644,19 @@ function TDevItem.WrMemory(const Buf; Adress: cardinal; Count: cardinal): TStatu
 
   function WrMemoryHd(FDevNr: byte; Adress: cardinal; Count: byte; p: pByte): TStatus;
   var
-    q: TByteAr;
-    QA: TByteAr;
-    RecLen: integer;
+    q: TBytes;
+    QA: TBytes;
   begin
+    setLength(q, 8 + Count);
     q[0] := FDevNr;
     q[1] := 42;
     q[2] := Count;
     q[3] := 0;
     SetLongInt(q[4], Adress);
     move(p^, q[8], Count);
-    RecLen := 10;
-    Result := Konwers(q, 8 + Count, QA, RecLen);
-    if Result = stOk then
+    setLength(QA, 10);
+    Result := Konwers(false, q, QA);
+    if Result = stOK then
       if not((QA[0] = FDevNr) and (QA[1] = 42)) then
         Result := stBadRepl;
   end;
@@ -1582,15 +1667,14 @@ var
   p: pByte;
   SCnt: cardinal;
 begin
-  glProgress := True;
   SetProgress(0);
   MsgFlowSize(0);
-  SetWorkFlag(True);
+  SetWorkFlag(true);
 
-  st := stOk;
+  st := stOK;
   p := pByte(@Buf);
   SCnt := 0;
-  while (Count <> SCnt) and (st = stOk) do
+  while (Count <> SCnt) and (st = stOK) do
   begin
     Cnt := Count - SCnt;
     if Cnt > FCountDivide then
@@ -1606,100 +1690,43 @@ begin
   SetProgress(100);
   MsgFlowSize(Count);
   SetWorkFlag(false);
-  glProgress := false;
 end;
 {$Q+}
 
-function TDevItem.RdDevInfo(DevName: pchar; var TabVec: cardinal): TStatus;
-var
-  q: TByteAr;
-  QA: TByteAr;
-  i: integer;
-  RecLen: integer;
-begin
-  q[0] := FDevNr;
-  q[1] := 40;
-  RecLen := 16;
-  Result := Konwers(q, 2, QA, RecLen);
-  if Result = stOk then
-    if not((QA[0] = FDevNr) and (QA[1] = 40)) then
-      Result := stBadRepl;
-  if Result = stOk then
-  begin
-    for i := 0 to 7 do
-    begin
-      DevName^ := chr(QA[i + 2]);
-      inc(DevName);
-    end;
-    DevName^ := #0;
-    TabVec := QA[10] shl 24;
-    TabVec := TabVec or (QA[11] shl 16);
-    TabVec := TabVec or (QA[12] shl 8);
-    TabVec := TabVec or QA[13];
-  end;
-end;
-
-function TDevItem.RdCtrlByte(Nr: byte; var Val: byte): TStatus;
-var
-  q: TByteAr;
-  QA: TByteAr;
-begin
-  q[0] := FDevNr;
-  q[1] := 43;
-  q[2] := Nr;
-  Result := Konwers(q, 3, QA);
-  Val := QA[3];
-end;
-
-function TDevItem.WrCtrlByte(Nr: byte; Val: byte): TStatus;
-var
-  q: TByteAr;
-  QA: TByteAr;
-  RecLen: integer;
-begin
-  q[0] := FDevNr;
-  q[1] := 44;
-  q[2] := Nr;
-  q[3] := Val;
-  RecLen := 5;
-  Result := Konwers(q, 4, QA, RecLen);
-end;
-
 function TDevItem.TerminalSendKey(key: AnsiChar): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
-  RecLen: integer;
+  q: TBytes;
+  QA: TBytes;
 begin
+  setLength(q, 3);
   q[0] := FDevNr;
   q[1] := 45;
   q[2] := ord(key);
-  RecLen := 4;
-  Result := Konwers(q, 3, QA, RecLen);
+  setLength(QA, 4);
+  Result := Konwers(false, q, QA);
 end;
 
 function TDevItem.TerminalRead(Buf: PAnsiChar; var rdcnt: integer): TStatus;
 var
-  q: TByteAr;
-  QA: TByteAr;
-  RecLen: integer;
+  q: TBytes;
+  QA: TBytes;
 begin
+  setLength(q, 2);
   q[0] := FDevNr;
   q[1] := 46;
-  RecLen := 0;
-
-  Result := Konwers(1, q, 2, QA, RecLen);
+  setLength(QA, 0);
+  Result := Konwers(false, 1, q, QA);
   if Result = stBadRepl then
   begin
     q[0] := FDevNr;
     q[1] := 47;
-    RecLen := 0;
-    Result := Konwers(q, 2, QA, RecLen);
+    setLength(QA, 0);
+    Result := Konwers(false, q, QA);
   end;
 
-  if Result = stOk then
+  if Result = stOK then
   begin
-    rdcnt := RecLen - 4;
+    rdcnt := length(QA) - 4;
     if rdcnt < 0 then
       rdcnt := 0;
     if rdcnt > 0 then
@@ -1708,6 +1735,34 @@ begin
   else
     rdcnt := 0;
 end;
+
+function TDevItem.TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
+begin
+  if TerminalNr < TERMINAL_CNT then
+  begin
+    FTermialTab[TerminalNr].PipeHandle := PipeHandle;
+    FTermialTab[TerminalNr].RunFlag := false;
+    FTermialTab[TerminalNr].Thread.FOutPipe := PipeHandle;
+    Result := stOK;
+  end
+  else
+    Result := stToBigTerminalNr;
+end;
+
+function TDevItem.TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
+begin
+  if TerminalNr < TERMINAL_CNT then
+  begin
+    FTermialTab[TerminalNr].RunFlag := RunFlag;
+    FTermialTab[TerminalNr].Thread.SetRunFlag(RunFlag);
+    Result := stOK;
+  end
+  else
+    Result := stToBigTerminalNr;
+end;
+
+
+// -- Files -----------------------------------------------------------------------------------------------
 
 const
   crdOpenSesion = 50;
@@ -1822,6 +1877,17 @@ type
     Free: byte;
   end;
 
+procedure TDevItem.TOpenParams.InitDefault;
+begin
+  ComNr := 1;
+  DevNr := 1;
+  BaudRate := br115200;
+  BitCnt := bit8;
+  Parity := paNONE;
+  MdbMode := mdbRTU;
+  MdbMemAccess := mdbmemGEKA;
+end;
+
 function TDevItem.GetNewAskNr: word;
 begin
   inc(FAskNumber);
@@ -1831,71 +1897,78 @@ end;
 function TDevItem.GetErrStr(Code: TStatus; Buffer: PAnsiChar; MaxLen: integer): boolean;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameError;
   st: TStatus;
 begin
+  setLength(q, 2 + sizeof(p^));
   q[0] := FDevNr;
   q[1] := crdGetErrorStr;
   p := PSEAskFrameError(@q[2]);
   p^.ErrCode := swap(Code);
-  st := Konwers(q, 2 + SizeOf(p^), QA);
-  if st = stOk then
+  setLength(QA, 0);
+  st := Konwers(q, QA);
+  if st = stOK then
   begin
     System.AnsiStrings.StrPLCopy(Buffer, PAnsiChar(@QA[2]), MaxLen);
   end;
-  Result := (st = stOk);
+  Result := (st = stOK);
 end;
 
 function TDevItem.SeOpenSesion(var SesId: TSesID): TStatus;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrame;
 begin
+  setLength(q, 2 + 2);
   q[0] := FDevNr;
   q[1] := crdOpenSesion;
   p := PSEAskFrame(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
-  Result := Konwers(q, 2 + 2, QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
     SesId := GetDWord(QA[2]);
 end;
 
 function TDevItem.SeCloseSesion(SesId: TSesID): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrame;
 begin
+  setLength(q, 2 + sizeof(p^));
   q[0] := FDevNr;
   q[1] := crdCloseSesion;
   p := PSEAskFrame(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
-  Result := Konwers(q, 2 + SizeOf(p^), QA);
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
 end;
 
 function TDevItem.SeOpenFile(SesId: TSesID; FName: PAnsiChar; Mode: byte; var FileNr: TFileNr): TStatus;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameOpenFile;
   L: integer;
 begin
+  L := 2 + (2 + 4 + 2 + System.AnsiStrings.strlen(FName) + 1);
+  setLength(q, L);
   q[0] := FDevNr;
   q[1] := crdOpenFile;
   p := PSEAskFrameOpenFile(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
   p^.OpenMode := Mode;
-  System.AnsiStrings.StrPLCopy(p^.FName, FName, SizeOf(p^.FName));
-  L := 2 + 4 + 2 + System.AnsiStrings.strlen(FName) + 1;
-  Result := Konwers(q, 2 + L, QA);
+  System.AnsiStrings.StrPLCopy(p^.FName, FName, sizeof(p^.FName));
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
   FileNr := QA[2];
 end;
 
@@ -1903,12 +1976,18 @@ function TDevItem.SeGetDirHd(First: boolean; SesId: TSesID; FName: PAnsiChar; At
   MaxLen: integer; var Len: integer): TStatus;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameDir;
   RecLen: integer;
   L: integer;
 begin
+  if First then
+    L := 2 + (2 + 4 + 4 + System.AnsiStrings.strlen(FName) + 1)
+  else
+    L := 2 + (2 + 4 + 1);
+  setLength(q, L);
+
   q[0] := FDevNr;
   q[1] := crdGetDirs;
   p := PSEAskFrameDir(@q[2]);
@@ -1919,8 +1998,7 @@ begin
     p^.First := 1;
     p^.Attrib := Attrib;
     p^.Free := 0;
-    System.AnsiStrings.StrPLCopy(p^.Name, FName, SizeOf(p^.Name));
-    L := 2 + 4 + 4 + System.AnsiStrings.strlen(FName) + 1;
+    System.AnsiStrings.StrPLCopy(p^.Name, FName, sizeof(p^.Name));
   end
   {
     TSEAskFrameDir = packed record
@@ -1935,11 +2013,10 @@ begin
   else
   begin
     p^.First := 0;
-    L := 2 + 4 + 1;
   end;
-  RecLen := 0;
-  Result := Konwers(q, 2 + L, QA, RecLen);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     Len := RecLen - 4;
     if Len > MaxLen then
@@ -1950,14 +2027,13 @@ begin
 end;
 
 function TDevItem.SeGetDir(SesId: TSesID; FName: PAnsiChar; Attrib: byte; Buffer: PAnsiChar; MaxLen: integer): TStatus;
-
 var
   Len: integer;
   pch: PAnsiChar;
 begin
   pch := Buffer;
-  Result := SeGetDirHd(True, SesId, FName, Attrib, pch, MaxLen, Len);
-  while (Result = stOk) and (Len <> 0) and (MaxLen <> 0) do
+  Result := SeGetDirHd(true, SesId, FName, Attrib, pch, MaxLen, Len);
+  while (Result = stOK) and (Len <> 0) and (MaxLen <> 0) do
   begin
     pch := @pch[Len];
     dec(MaxLen, Len);
@@ -1979,46 +2055,49 @@ begin
     Result := stBufferToSmall;
 
   if Result = stEND_OFF_DIR then
-    Result := stOk;
+    Result := stOK;
 
 end;
 
 function TDevItem.SeGetDrvList(SesId: TSesID; DrvList: PAnsiChar): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrame;
 begin
+  setLength(q, 2 + sizeof(p^));
   q[0] := FDevNr;
   q[1] := crdGetDriveList;
   p := PSEAskFrame(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
-  Result := Konwers(q, 2 + SizeOf(p^), QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     System.AnsiStrings.StrPLCopy(DrvList, PAnsiChar(@QA[2]), 20);
   end;
 end;
 
 function TDevItem.SeShell(SesId: TSesID; Command: PAnsiChar; ResultStr: PAnsiChar; MaxLen: integer): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameCmd;
   L: integer;
 begin
+  L := 2 + (2 + 4 + System.AnsiStrings.strlen(Command) + 1);
+  setLength(q, L);
+
   q[0] := FDevNr;
   q[1] := crdShell;
   p := PSEAskFrameCmd(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
-  System.AnsiStrings.StrPLCopy(p^.Command, Command, SizeOf(p^.Command));
-  L := 2 + 4 + System.AnsiStrings.strlen(Command) + 1;
-  Result := Konwers(q, 2 + L, QA);
-  if Result = stOk then
+  System.AnsiStrings.StrPLCopy(p^.Command, Command, sizeof(p^.Command));
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     if (MaxLen > 0) and Assigned(ResultStr) then
       System.AnsiStrings.StrPLCopy(ResultStr, PAnsiChar(@QA[2]), MaxLen);
@@ -2029,12 +2108,15 @@ function TDevItem.SeReadFileEx(SesId: TSesID; FileName: PAnsiChar; autoclose: bo
   var FileNr: TFileNr): TStatus;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameReadEx;
   L: integer;
   RecLen: integer;
 begin
+  L := 2 + (2 + 4 + 2 + System.AnsiStrings.strlen(FileName) + 1);
+  setLength(q, L);
+
   q[0] := FDevNr;
   q[1] := crdReadEx;
   p := PSEAskFrameReadEx(@q[2]);
@@ -2044,13 +2126,12 @@ begin
   if size > MAX_MDB_FRAME_SIZE then
     size := MAX_MDB_FRAME_SIZE;
   p^.SizeToRead := size;
-  System.AnsiStrings.StrPLCopy(p^.FName, FileName, SizeOf(p^.FName));
-  L := 2 + 4 + 2 + System.AnsiStrings.strlen(FileName) + 1;
-  RecLen := 0;
-  Result := Konwers(q, 2 + L, QA, RecLen);
-  if Result = stOk then
+  System.AnsiStrings.StrPLCopy(p^.FName, FileName, sizeof(p^.FName));
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
-    RecLen := RecLen - 6; // cztery bajty z przodu i CRC z ty³u
+    RecLen := length(QA) - 6; // cztery bajty z przodu i CRC z ty³u
     if RecLen > size then
       RecLen := size;
     move(QA[4], Buf, RecLen);
@@ -2062,11 +2143,13 @@ end;
 function TDevItem.SeGetGuidEx(SesId: TSesID; FileName: PAnsiChar; var Guid: TSeGuid): TStatus;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameOpenFile;
   L: integer;
 begin
+  setLength(q, L);
+  L := 2 + (2 + 4 + 2 + System.AnsiStrings.strlen(FileName) + 1);
   q[0] := FDevNr;
   q[1] := crdGetGuidEx;
   p := PSEAskFrameOpenFile(@q[2]);
@@ -2074,22 +2157,27 @@ begin
   p^.SesionID := DSwap(SesId);
   p^.OpenMode := 0;
   p^.Free := 0;
-  System.AnsiStrings.StrPLCopy(p^.FName, FileName, SizeOf(p^.FName));
-  L := 2 + 4 + 2 + System.AnsiStrings.strlen(FileName) + 1;
-  Result := Konwers(q, 2 + L, QA);
-  Guid.d1 := DSwap(pCardinal(@QA[2])^);
-  Guid.d2 := DSwap(pCardinal(@QA[6])^);
+  System.AnsiStrings.StrPLCopy(p^.FName, FileName, sizeof(p^.FName));
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
+  begin
+    Guid.d1 := DSwap(pCardinal(@QA[2])^);
+    Guid.d2 := DSwap(pCardinal(@QA[6])^);
+  end;
 end;
 
 function TDevItem.SeReadFileHd(SesId: TSesID; FileNr: TFileNr; var Buf; var Cnt: integer): TStatus;
 
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameFile;
   L: integer;
   RecLen: integer;
 begin
+  setLength(q, 2 + sizeof(p^));
+
   q[0] := FDevNr;
   q[1] := crdRead;
   p := PSEAskFrameFile(@q[2]);
@@ -2101,11 +2189,11 @@ begin
   if L > MAX_DATA_BUF_SIZE then
     L := MAX_DATA_BUF_SIZE;
   p^.Arg1 := DSwap(L);
-  RecLen := 0;
-  Result := Konwers(q, 2 + SizeOf(p^), QA, RecLen);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(false, q, QA);
+  if Result = stOK then
   begin
-    dec(RecLen, 4); // dwa bajty z przodu i CRC z ty³u
+    RecLen := length(QA) - 4; // dwa bajty z przodu i CRC z ty³u
     if RecLen > Cnt then
       RecLen := Cnt;
     move(QA[2], Buf, RecLen);
@@ -2114,46 +2202,46 @@ begin
 end;
 
 function TDevItem.SeReadFile(SesId: TSesID; FileNr: TFileNr; var Buf; var Cnt: integer): TStatus;
-
 var
   Cnt1: integer;
   CntS: integer;
   p: pByte;
 begin
-  glProgress := True;
   SetProgress(0);
   MsgFlowSize(0);
-  SetWorkFlag(True);
+  SetWorkFlag(true);
   p := pByte(@Buf);
   CntS := 0;
   repeat
     Cnt1 := Cnt - CntS;
     Result := SeReadFileHd(SesId, FileNr, p^, Cnt1);
-    if Result = stOk then
+    if Result = stOK then
     begin
       inc(CntS, Cnt1);
       inc(p, Cnt1);
     end;
     SetProgress(CntS, Cnt);
     MsgFlowSize(CntS);
-  until (Result <> stOk) or (Cnt = CntS) or (Cnt1 = 0);
+  until (Result <> stOK) or (Cnt = CntS) or (Cnt1 = 0);
   Cnt := CntS;
   SetProgress(100);
   MsgFlowSize(Cnt);
   SetWorkFlag(false);
-  glProgress := false;
 end;
 
 function TDevItem.SeWriteFileHd(SesId: TSesID; FileNr: TFileNr; const Buf; var Cnt: integer): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameWr;
   L: integer;
-  RecLen: integer;
   HS: integer;
 begin
+  HS := sizeof(p^) - sizeof(BUF234);
+  L := Cnt;
+  if L > MAX_DATA_BUF_SIZE - HS then
+    L := MAX_DATA_BUF_SIZE - HS;
+  setLength(q, 2 + HS + L);
   q[0] := FDevNr;
   q[1] := crdWrite;
   p := PSEAskFrameWr(@q[2]);
@@ -2161,14 +2249,10 @@ begin
   p^.SesionID := DSwap(SesId);
   p^.FileNr := FileNr;
   p^.Free := 0;
-  HS := SizeOf(p^) - SizeOf(BUF234);
-  L := Cnt;
-  if L > MAX_DATA_BUF_SIZE - HS then
-    L := MAX_DATA_BUF_SIZE - HS;
   move(Buf, q[2 + HS], L);
-  RecLen := 0;
-  Result := Konwers(q, 2 + HS + L, QA, RecLen);
-  if (Result = stOk) and (RecLen >= 8) then
+  setLength(QA, 0);
+  Result := Konwers(false, q, QA);
+  if (Result = stOK) and (length(QA) >= 8) then
   begin
     Cnt := GetLongInt(QA[2]);
   end
@@ -2177,43 +2261,40 @@ begin
 end;
 
 function TDevItem.SeWriteFile(SesId: TSesID; FileNr: TFileNr; const Buf; var Cnt: integer): TStatus;
-
 var
   Cnt1: integer;
   CntS: integer;
   p: pByte;
 begin
-  glProgress := True;
   SetProgress(0);
   MsgFlowSize(0);
-  SetWorkFlag(True);
+  SetWorkFlag(true);
   p := pByte(@Buf);
   CntS := 0;
   repeat
     Cnt1 := Cnt - CntS;
     Result := SeWriteFileHd(SesId, FileNr, p^, Cnt1);
-    if Result = stOk then
+    if Result = stOK then
     begin
       inc(p, Cnt1);
       inc(CntS, Cnt1);
     end;
     SetProgress(CntS, Cnt);
     MsgFlowSize(CntS);
-  until (Result <> stOk) or (Cnt = CntS);
+  until (Result <> stOK) or (Cnt = CntS);
   Cnt := CntS;
   SetProgress(100);
   MsgFlowSize(Cnt);
   SetWorkFlag(false);
-  glProgress := false;
 end;
 
 function TDevItem.SeSeek(SesId: TSesID; FileNr: TFileNr; Offset: integer; Orgin: byte; var Pos: integer): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameFile;
 begin
+  setLength(q, 2 + sizeof(p^));
   q[0] := FDevNr;
   q[1] := crdSeek;
   p := PSEAskFrameFile(@q[2]);
@@ -2222,65 +2303,72 @@ begin
   p^.FileNr := FileNr;
   p^.BArg1 := Orgin;
   p^.Arg1 := DSwap(cardinal(Offset));
-  Result := Konwers(q, 2 + SizeOf(p^), QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     Pos := GetLongInt(QA[2]);
   end;
 end;
 
 function TDevItem.SeGetFileSize(SesId: TSesID; FileNr: TFileNr; var FileSize: integer): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameFile;
 begin
+  setLength(q, 2 + 2 + 4 + 1);
   q[0] := FDevNr;
   q[1] := crdGetFileSize;
   p := PSEAskFrameFile(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
   p^.FileNr := FileNr;
-  Result := Konwers(q, 2 + 2 + 4 + 1, QA);
-  if Result = stOk then
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
   begin
     FileSize := GetLongInt(QA[2]);
   end;
 end;
 
 function TDevItem.SeCloseFile(SesId: TSesID; FileNr: TFileNr): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameFile;
 begin
+  setLength(q, 2 + 2 + 4 + 1);
   q[0] := FDevNr;
   q[1] := crdClose;
   p := PSEAskFrameFile(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
   p^.FileNr := FileNr;
-  Result := Konwers(q, 2 + 2 + 4 + 1, QA);
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
 end;
 
 function TDevItem.SeGetGuid(SesId: TSesID; FileNr: TFileNr; var Guid: TSeGuid): TStatus;
-
 var
-  q: TByteAr;
-  QA: TByteAr;
+  q: TBytes;
+  QA: TBytes;
   p: PSEAskFrameFile;
 begin
+  setLength(q, 2 + 2 + 4 + 1);
   q[0] := FDevNr;
   q[1] := crdGetGuid;
   p := PSEAskFrameFile(@q[2]);
   p^.AskCnt := swap(GetNewAskNr);
   p^.SesionID := DSwap(SesId);
   p^.FileNr := FileNr;
-  Result := Konwers(q, 2 + 2 + 4 + 1, QA);
-  Guid.d1 := DSwap(pCardinal(@QA[2])^);
-  Guid.d2 := DSwap(pCardinal(@QA[6])^);
+  setLength(QA, 0);
+  Result := Konwers(q, QA);
+  if Result = stOK then
+  begin
+    Guid.d1 := DSwap(pCardinal(@QA[2])^);
+    Guid.d2 := DSwap(pCardinal(@QA[6])^);
+  end;
 end;
 
 // ---------------------  TDevAcces ---------------------------
@@ -2299,7 +2387,7 @@ end;
 
 function TDevList.GetBoudRate(BdTxt: String; var Baund: TBaudRate): boolean;
 begin
-  Result := True;
+  Result := true;
   if BdTxt = '110' then
     Baund := br110
   else if BdTxt = '300' then
@@ -2332,7 +2420,7 @@ end;
 
 function TDevList.GetMdbMode(BdTxt: String; var MdbMode: TMdbMode): boolean;
 begin
-  Result := True;
+  Result := true;
   if BdTxt = 'RTU' then
     MdbMode := mdbRTU
   else if BdTxt = 'ASCII' then
@@ -2343,7 +2431,7 @@ end;
 
 function TDevList.GetParity(BdTxt: String; var Parity: TParity): boolean;
 begin
-  Result := True;
+  Result := true;
   if BdTxt = 'N' then
     Parity := paNONE
   else if BdTxt = 'E' then
@@ -2354,12 +2442,37 @@ begin
     Result := false;
 end;
 
+function TDevList.GetBitCnt(Txt: String; var BitCnt: TBitCnt): boolean;
+begin
+  Result := true;
+  if Txt = '8' then
+    BitCnt := bit8
+  else if Txt = '7' then
+    BitCnt := bit7
+  else if Txt = '6' then
+    BitCnt := bit6
+  else
+    Result := false;
+end;
+
+function TDevList.GetMdbMemAccess(Txt: String; var MemAcc: TMdbMemAccess): boolean;
+begin
+  Result := true;
+  if Txt = 'GEKA' then
+    MemAcc := mdbmemGEKA
+  else if Txt = 'DPC06' then
+    MemAcc := mdbmemDPC06
+  else
+    Result := false;
+
+end;
+
 function TDevList.GetTocken(s: PAnsiChar; var p: integer): String;
 begin
   Result := '';
   while (s[p] <> ';') and (s[p] <> #0) and (p <= length(s)) do
   begin
-    Result := Result + char(s[p]);
+    Result := Result + Char(s[p]);
     inc(p);
   end;
   inc(p);
@@ -2375,66 +2488,82 @@ end;
 // MCOM;1;7;115200;RTU;N
 
 function TDevList.AddDevice(ConnectStr: PAnsiChar): TAccId;
+  function GetJsonVal(jObj: TJsonObject; Name: string; var valStr: string): boolean;
+  var
+    jPair: TJSonPair;
+  begin
+    jPair := jObj.Get(Name);
+    Result := Assigned(jPair);
+    if Result then
+      valStr := jPair.JsonValue.Value;
+  end;
+
+  function GetComNr(s: string; var ComNr: integer): boolean;
+  begin
+    Result := TryStrToInt(copy(s, 4, length(s) - 3), ComNr);
+  end;
+
 var
-  ComNr: TComPort;
-  DevNr: integer;
-  BaudRate: TBaudRate;
-  OkStr: boolean;
+  OpenParams: TDevItem.TOpenParams;
+
   DevItem: TDevItem;
-  MdbMode: TMdbMode;
-  Parity: TParity;
   SL: TStringList;
+  jVal: TJSONValue;
+  jObj: TJsonObject;
+  jObj2: TJsonObject;
+  tmpStr: string;
+  q: boolean;
 begin
-  OkStr := false;
-  SL := TStringList.Create;
+  Result := -1;
   try
-    SL.Delimiter := ';';
-    SL.DelimitedText := String(ConnectStr);
-    if SL.Count >= 3 then
+    jVal := TJsonObject.ParseJSONValue(String(ConnectStr));
+    jObj := jVal as TJsonObject;
+    OpenParams.InitDefault;
+
+    q := false;
+    if Assigned(jObj) then
     begin
-      if SL.Strings[0] = DRIVER_SHORT_NAME then
+      jObj2 := jObj.Get(CONNECTION_PARAMS_NAME).JsonValue as TJsonObject;
+      if Assigned(jObj2) then
       begin
-        OkStr := True;
-        MdbMode := mdbRTU;
-        Parity := paNONE;
-        BaudRate := br115200;
-        try
-          ComNr := TComPort(StrToInt(SL.Strings[1]));
-          DevNr := StrToInt(SL.Strings[2]);
-          if SL.Count > 3 then
-          begin
-            OkStr := GetBoudRate(SL.Strings[3], BaudRate);
-          end;
-          if SL.Count > 4 then
-          begin
-            OkStr := OkStr and GetMdbMode(SL.Strings[4], MdbMode);
-          end;
-          if SL.Count > 5 then
-          begin
-            OkStr := OkStr and GetParity(SL.Strings[5], Parity);
-          end;
-        except
-          OkStr := false;
-        end;
+        if GetJsonVal(jObj2, UARTPARAM_COMNR, tmpStr) then
+          q := GetComNr(tmpStr, OpenParams.ComNr);
+        q := q and GetJsonVal(jObj2, UARTPARAM_BAUDRATE, tmpStr);
+        if q then
+          q := GetBoudRate(tmpStr, OpenParams.BaudRate);
+        if GetJsonVal(jObj2, UARTPARAM_PARITY, tmpStr) then
+          q := q and GetParity(tmpStr, OpenParams.Parity);
+        if GetJsonVal(jObj2, UARTPARAM_BITCNT, tmpStr) then
+          q := q and GetBitCnt(tmpStr, OpenParams.BitCnt);
+
+        q := q and GetJsonVal(jObj2, MODBUS_DEVNR, tmpStr);
+        if q then
+          q := TryStrToInt(tmpStr, OpenParams.DevNr);
+
+        if GetJsonVal(jObj2, MODBUS_MODE, tmpStr) then
+          q := q and GetMdbMode(tmpStr, OpenParams.MdbMode);
+
+        if GetJsonVal(jObj2, MODBUS_MEMACCESS, tmpStr) then
+          q := q and GetMdbMemAccess(tmpStr, OpenParams.MdbMemAccess);
+
       end;
 
     end;
-  finally
-    SL.Free;
-  end;
 
-  Result := -1;
-  if OkStr then
-  begin
-    try
-      EnterCriticalSection(FCriSection);
-      DevItem := TDevItem.Create(GetId, ComNr, DevNr, BaudRate, MdbMode, Parity);
-      Add(DevItem);
-      Result := DevItem.AccId;
-    finally
-      LeaveCriticalSection(FCriSection);
-    end;
-  end
+    if q then
+    begin
+      try
+        EnterCriticalSection(FCriSection);
+        DevItem := TDevItem.Create(GetId, OpenParams);
+        Add(DevItem);
+        Result := DevItem.AccId;
+      finally
+        LeaveCriticalSection(FCriSection);
+      end;
+    end
+  except
+    Result := -1;
+  end;
 end;
 
 function TDevList.DelDevice(AccId: TAccId): TStatus;
@@ -2454,7 +2583,7 @@ begin
         ComNr := t.ComNr;
         t.Close;
         Delete(i);
-        Result := stOk;
+        Result := stOK;
         GlobDevList.UpdateCom(ComNr);
         break;
       end;
@@ -2503,7 +2632,7 @@ begin
 
       if (dev.ComNr = ComNr) and dev.isOpen then
       begin
-        Result := True;
+        Result := true;
         break;
       end;
     end;

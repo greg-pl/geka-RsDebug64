@@ -46,7 +46,7 @@ object AnalogFrame: TAnalogFrame
         object Label3: TLabel
           Left = 8
           Top = 8
-          Width = 58
+          Width = 56
           Height = 13
           Caption = 'ilo'#347#263' kolumn'
         end
@@ -67,6 +67,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'DWord'
       ImageIndex = 3
       OnShow = DWordSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object DWordGrid: TStringGrid
         Left = 0
         Top = 0
@@ -89,6 +93,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'FLOAT'
       ImageIndex = 2
       OnShow = FloatSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object FloatGrid: TStringGrid
         Left = 0
         Top = 0
@@ -111,6 +119,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'DFLOAT'
       ImageIndex = 8
       OnShow = DFloatSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object DFloatGrid: TStringGrid
         Left = 0
         Top = 0
@@ -133,6 +145,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'DspProg'
       ImageIndex = 4
       OnShow = DspProgSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object DspProgGrid: TStringGrid
         Left = 0
         Top = 0
@@ -152,6 +168,10 @@ object AnalogFrame: TAnalogFrame
       Caption = '1.15'
       ImageIndex = 5
       OnShow = F1_15SheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object F1_15Grid: TStringGrid
         Left = 0
         Top = 0
@@ -172,6 +192,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'Chart'
       ImageIndex = 6
       OnShow = ChartSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Panel1: TPanel
         Left = 0
         Top = 0
@@ -202,7 +226,7 @@ object AnalogFrame: TAnalogFrame
           object Label1: TLabel
             Left = 0
             Top = 0
-            Width = 67
+            Width = 65
             Height = 13
             Align = alTop
             Caption = 'Ilo'#347#263' kana'#322#243'w'
@@ -311,17 +335,18 @@ object AnalogFrame: TAnalogFrame
           Top = 33
           Width = 554
           Height = 530
-          BackWall.Brush.Color = clWhite
           BackWall.Brush.Style = bsClear
+          Legend.Visible = False
           Title.Text.Strings = (
             'TChart')
           Title.Visible = False
-          Legend.Visible = False
           View3D = False
           View3DWalls = False
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 0
+          DefaultCanvas = 'TGDIPlusCanvas'
+          ColorPaletteIndex = 13
           object MeasurePanel: TPanel
             Left = 96
             Top = 168
@@ -380,7 +405,7 @@ object AnalogFrame: TAnalogFrame
             Top = 5
             Width = 49
             Height = 21
-            EditLabel.Width = 30
+            EditLabel.Width = 28
             EditLabel.Height = 13
             EditLabel.Caption = 'X_Min'
             LabelPosition = lpLeft
@@ -392,7 +417,7 @@ object AnalogFrame: TAnalogFrame
             Top = 5
             Width = 49
             Height = 21
-            EditLabel.Width = 33
+            EditLabel.Width = 32
             EditLabel.Height = 13
             EditLabel.Caption = 'X_Max'
             LabelPosition = lpLeft
@@ -404,7 +429,7 @@ object AnalogFrame: TAnalogFrame
             Top = 5
             Width = 49
             Height = 21
-            EditLabel.Width = 30
+            EditLabel.Width = 28
             EditLabel.Height = 13
             EditLabel.Caption = 'Y_Min'
             LabelPosition = lpLeft
@@ -416,7 +441,7 @@ object AnalogFrame: TAnalogFrame
             Top = 5
             Width = 49
             Height = 21
-            EditLabel.Width = 33
+            EditLabel.Width = 32
             EditLabel.Height = 13
             EditLabel.Caption = 'Y_Max'
             LabelPosition = lpLeft
@@ -520,6 +545,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'Wektory'
       ImageIndex = 7
       OnShow = WekSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Panel3: TPanel
         Left = 0
         Top = 0
@@ -531,7 +560,7 @@ object AnalogFrame: TAnalogFrame
         object Label2: TLabel
           Left = 0
           Top = 0
-          Width = 113
+          Width = 72
           Height = 13
           Align = alTop
           Caption = 'Ilo'#347#263' wektor'#243'w'
@@ -574,8 +603,10 @@ object AnalogFrame: TAnalogFrame
         Top = 0
         Width = 378
         Height = 410
-        BackWall.Brush.Color = clWhite
         BackWall.Brush.Style = bsClear
+        Legend.ColorWidth = 80
+        Legend.LegendStyle = lsValues
+        Legend.Symbol.Width = 80
         Title.Text.Strings = (
           'TChart')
         Title.Visible = False
@@ -583,8 +614,6 @@ object AnalogFrame: TAnalogFrame
         BottomAxis.LabelStyle = talValue
         LeftAxis.LabelsSize = 4
         LeftAxis.MinorTickCount = 5
-        Legend.ColorWidth = 80
-        Legend.LegendStyle = lsValues
         TopAxis.LabelsMultiLine = True
         TopAxis.LabelsSeparation = 90
         TopAxis.LabelsSize = 2
@@ -593,41 +622,31 @@ object AnalogFrame: TAnalogFrame
         View3D = False
         Align = alClient
         TabOrder = 1
+        DefaultCanvas = 'TGDIPlusCanvas'
+        ColorPaletteIndex = 13
         object WekSeries: TArrowSeries
           HorizAxis = aTopAxis
-          Marks.ArrowLength = 0
           Marks.Frame.Visible = False
           Marks.Transparent = True
-          Marks.Visible = False
           SeriesColor = clRed
+          ClickableLine = False
           Pointer.HorizSize = 5
           Pointer.InflateMargins = False
           Pointer.Style = psRectangle
           Pointer.VertSize = 10
-          Pointer.Visible = True
           XValues.DateTime = False
           XValues.Name = 'X'
-          XValues.Multiplier = 1.000000000000000000
           XValues.Order = loAscending
-          YValues.DateTime = False
           YValues.Name = 'Y'
-          YValues.Multiplier = 1.000000000000000000
           YValues.Order = loNone
-          EndXValues.DateTime = True
           EndXValues.Name = 'EndX'
-          EndXValues.Multiplier = 1.000000000000000000
           EndXValues.Order = loNone
-          EndYValues.DateTime = False
           EndYValues.Name = 'EndY'
-          EndYValues.Multiplier = 1.000000000000000000
           EndYValues.Order = loNone
           StartXValues.DateTime = False
           StartXValues.Name = 'X'
-          StartXValues.Multiplier = 1.000000000000000000
           StartXValues.Order = loAscending
-          StartYValues.DateTime = False
           StartYValues.Name = 'Y'
-          StartYValues.Multiplier = 1.000000000000000000
           StartYValues.Order = loNone
         end
       end

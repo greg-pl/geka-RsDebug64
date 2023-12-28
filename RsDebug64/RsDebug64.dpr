@@ -12,7 +12,6 @@ uses
   CommThreadUnit in 'Tools\CommThreadUnit.pas',
   ComTradeUnit in 'Tools\ComTradeUnit.pas',
   CommonDef in 'Tools\CommonDef.pas',
-  CrcUnit in 'Tools\CrcUnit.pas',
   SettingUnit in 'Dialogs\SettingUnit.pas' {SettingForm},
   EditTypeItemUnit in 'Dialogs\EditTypeItemUnit.pas' {EditTypeItemForm},
   EditVarItemUnit in 'Dialogs\EditVarItemUnit.pas' {EditVarItemForm},
@@ -30,15 +29,15 @@ uses
   Rz40EventsUnit in 'Forms\Rz40EventsUnit.pas' {Rz40EventsForm},
   RmtChildUnit in 'Forms\RmtChildUnit.pas' {ChildForm},
   RfcUnit in 'Forms\RfcUnit.pas' {RfcForm},
-  Wykres3Unit in '..\Wykres3\Wykres3Unit.pas',
-  WykresEngUnit in '..\Wykres3\WykresEngUnit.pas',
-  WrtControlUnit in 'Forms\WrtControlUnit.pas' {WrtControlForm},
   TypeDefEditUnit in 'Forms\TypeDefEditUnit.pas' {TypeDefEditForm},
-  UpLoadDefUnit in 'Tools\UpLoadDefUnit.pas',
   WavGenUnit in 'Forms\WavGenUnit.pas' {WavGenForm},
   VarListUnit in 'Forms\VarListUnit.pas' {VarListForm},
   UpLoadFileUnit in 'Forms\UpLoadFileUnit.pas' {UpLoadFileForm},
+  Wykres3Unit in '..\Wykres3\Wykres3Unit.pas',
+  WykresEngUnit in '..\Wykres3\WykresEngUnit.pas',
+  UpLoadDefUnit in 'Tools\UpLoadDefUnit.pas',
   Rsd64Definitions in '..\Common\Rsd64Definitions.pas',
+  CrcUnit in '..\Common\CrcUnit.pas',
   OpenConnectionDlgUnit in 'Dialogs\OpenConnectionDlgUnit.pas' {OpenConnectionDlg},
   SttObjectDefUnit in '..\JSonSTT\SttObjectDefUnit.pas',
   SttFrameUartUnit in '..\JSonSTT\SttFrameUartUnit.pas' {SttFrameUart},
@@ -49,7 +48,9 @@ uses
   SttFrameBoolUnit in '..\JSonSTT\SttFrameBoolUnit.pas' {SttFrameBool: TFrame},
   SttFrameIpUnit in '..\JSonSTT\SttFrameIpUnit.pas' {SttFrameIp: TFrame},
   SttFrameAddrIpUnit in '..\JSonSTT\SttFrameAddrIpUnit.pas' {SttFrameAddrIp: TFrame},
-  SttScrollBoxUnit in '..\JSonSTT\SttScrollBoxUnit.pas';
+  SttScrollBoxUnit in '..\JSonSTT\SttScrollBoxUnit.pas',
+  ExtG2MemoUnit in 'DComp\ExtG2MemoUnit.pas',
+  JSonUtils in '..\Common\JSonUtils.pas';
 
 {$R *.res}
 

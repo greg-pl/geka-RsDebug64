@@ -12,7 +12,8 @@ uses
   RsdDll,
   Grids, 
   CommonDef,
-  AnalogFrameUnit;
+  Rsd64Definitions,
+  AnalogFrameUnit, System.Actions, System.ImageList;
 
 
 type
@@ -148,7 +149,7 @@ var
   Size : integer;
   tab  : array[0..3] of byte;
 begin
-  case AreaDefItem.PtrSize of
+  case ProgCfg.PtrSize of
   ps8  : Size:=1;
   ps16 : Size:=2;
   ps32 : Size:=4;
@@ -158,10 +159,10 @@ begin
   if Dev.ReadDevMem(Handle,tab[0],A,Size)<>stOK then
     raise Exception.Create('Blad odczytu wskaznika');
 
-  case AreaDefItem.PtrSize of
+  case ProgCfg.PtrSize of
   ps8  : Result := Tab[0];
-  ps16 : Result := GetWord(@Tab,AreaDefItem.ByteOrder);
-  ps32 : Result := GetDWord(@Tab,AreaDefItem.ByteOrder);
+  ps16 : Result := GetWord(@Tab,ProgCfg.ByteOrder);
+  ps32 : Result := GetDWord(@Tab,ProgCfg.ByteOrder);
   else
     raise Exception.Create('Nieproawidlowa wartosc PtrSize');
   end;

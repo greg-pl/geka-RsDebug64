@@ -7,7 +7,9 @@ uses
   Grids, ComCtrls, TeEngine, Series, StdCtrls, Spin, CheckLst, TeeProcs,IniFiles,
   Chart, ExtCtrls, Menus,Buttons,
   CommonDef,
-  ArrowCha;
+  ArrowCha, VclTee.TeeGDIPlus,
+  System.JSON,
+  JSonUtils;
 
 const
   MAX_MEM_BOX =3;
@@ -179,7 +181,6 @@ type
     MemState     : array of TCellState;
     MemBuf       : array of word;
     MemBufCopy   : array of word;
-    MemTypeStr   : String;
     CharMinMaxTab : array[0..MAX_MEM_BOX-1] of TRect;
     WordOrder     : TWordOrder;
 
@@ -198,6 +199,8 @@ type
     procedure Fill(val: word);
     property  ActivPage : integer read FGetActivPage write FSetActivPage;
     procedure SaveToIni(Ini : TMemIniFile; SName : string);
+    function GetJSONObject: TJSONObject;
+
     procedure LoadFromIni(Ini : TMemIniFile; SName : string);
     procedure CopyToStringList(SL : TStrings);
     procedure doParamVisible(vis : boolean);
@@ -257,7 +260,7 @@ function TAnalogFrame.GetByte(n : integer):byte;
 var
   Val : OleVariant;
 begin
-  if FOnToValue(MemTypeStr,@MemBuf[n],'B',Val)=0 then
+  if FOnToValue('B',@MemBuf[n],'B',Val)=0 then
   begin
     Result := Val;
   end
@@ -266,7 +269,7 @@ begin
 end;
 procedure TAnalogFrame.SetByte(n : integer; B:byte);
 begin
-  FOnToBin(MemTypeStr,@MemBuf[N],1,'B',B);
+  FOnToBin('B',@MemBuf[N],1,'B',B);
 end;
 
 function TAnalogFrame.GetWord(n : integer):word;
@@ -351,7 +354,7 @@ function TAnalogFrame.GetDouble(n : integer) : Double;
 var
   Val : OleVariant;
 begin
-  if FOnToValue(MemTypeStr,@MemBuf[n],'E',Val)=0 then
+  if FOnToValue('B',@MemBuf[n],'E',Val)=0 then
   begin
     Result := Val;
   end
@@ -676,7 +679,7 @@ begin
   WordGrid.RowCount  := 1+(FMemBufSize+NN-1) div NN;
   WordGrid.ColCount  := 1+NN;
 
-  WordGrid.Cells[0,0]:=MemTypeStr;
+  WordGrid.Cells[0,0]:='B';
   WordGrid.ColWidths[0]:=FIRST_COL_WIDTH;
   for i:=0 to NN-1 do
   begin
@@ -736,7 +739,7 @@ var
   x,y : integer;
 begin
   DWordGrid.RowCount := 1+(FMemBufSize+15) div 16;
-  DWordGrid.Cells[0,0]:=MemTypeStr;
+  DWordGrid.Cells[0,0]:='B';
   DWordGrid.ColWidths[0]:=FIRST_COL_WIDTH;
   for i:=0 to 7 do
   begin
@@ -793,7 +796,7 @@ var
   s   : string;
 begin
   FloatGrid.RowCount := 1+(FMemBufSize+15) div 16;
-  FloatGrid.Cells[0,0]:=MemTypeStr;
+  FloatGrid.Cells[0,0]:='B';
   FloatGrid.ColWidths[0]:=FIRST_COL_WIDTH;
   for i:=0 to 7 do
      FloatGrid.Cells[i+1,0]:='     +'+IntToHex(LiczFirstRow(1+2*i),2);
@@ -857,7 +860,7 @@ var
   s   : string;
 begin
   DFloatGrid.RowCount := 1+(FMemBufSize+15) div 16;
-  DFloatGrid.Cells[0,0]:=MemTypeStr;
+  DFloatGrid.Cells[0,0]:='B';
   DFloatGrid.ColWidths[0]:=FIRST_COL_WIDTH;
   for i:=0 to 7 do
      DFloatGrid.Cells[i+1,0]:='     +'+IntToHex(LiczFirstRow(1+2*i),2);
@@ -923,7 +926,7 @@ var
   b1,b2,b3 : byte;
 begin
   DspProgGrid.RowCount := 1+(FMemBufSize+15) div 16;
-  DspProgGrid.Cells[0,0]:=MemTypeStr;
+  DspProgGrid.Cells[0,0]:='B';
   DspProgGrid.ColWidths[0]:=FIRST_COL_WIDTH;
   for i:=0 to 7 do
      DspProgGrid.Cells[i+1,0]:=' +'+IntToHex(LiczFirstRow(1+2*i),2);
@@ -958,7 +961,7 @@ var
   x,y : integer;
 begin
   F1_15Grid.RowCount  := 1+(FMemBufSize+15) div 16;
-  F1_15Grid.Cells[0,0]:=MemTypeStr;
+  F1_15Grid.Cells[0,0]:='B';
   F1_15Grid.ColWidths[0]:=FIRST_COL_WIDTH;
   for i:=0 to 15 do
   begin
@@ -1739,6 +1742,90 @@ begin
 
 end;
 
+function TAnalogFrame.GetJSONObject: TJSONObject;
+var
+  i: integer;
+  n: string;
+  SL: TStringList;
+  jObj: TJSONObject;
+  jObj2: TJSONObject;
+  jArr: TJSONArray;
+  IntArr: TIntDynArr;
+begin
+  Result := TJSONObject.Create;
+
+  // zak³adka WORD
+  jObj := TJSONObject.Create;
+  jObj.AddPair(CreateJsonPairInt('Col_Cnt', WordColCntEdit.Value));
+  Result.AddPair('WordPage', jObj);
+
+  // zak³adka CHART
+  jObj := TJSONObject.Create;
+  jObj.AddPair(CreateJsonPairInt('Chart_Cnt', SerCntEdit.Value));
+
+  jArr := TJSONArray.Create;
+  FSetChartSerCount(SerCntEdit.Value);
+  for i := 0 to SerCntEdit.Value - 1 do
+  begin
+    jObj2 := TJSONObject.Create;
+    jObj2.AddPair('Name', SeriesListBox.Items.Strings[i]);
+    JSonAddPairColor(jObj2, 'Color', (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor);
+    jArr.AddElement(jObj2);
+  end;
+  jObj.AddPair('Signals', jArr);
+
+  JSonAddPair(jObj, 'Auto', AutoXYBox.Checked);
+  JSonAddPair(jObj, 'MinX', MinXEdit.Text);
+  JSonAddPair(jObj, 'MaxX', MaxXEdit.Text);
+  JSonAddPair(jObj, 'MinY', MinYEdit.Text);
+  JSonAddPair(jObj, 'MaxY', MaxYEdit.Text);
+  JSonAddPair(jObj, 'DataType', DataTypeBox.ItemIndex);
+  JSonAddPair(jObj, 'SereiesType', SerieTypeBox.ItemIndex);
+  JSonAddPair(jObj, 'DataSize', DataSizeBox.ItemIndex);
+  JSonAddPair(jObj, 'RZ30Data', RZ30MemBox.Checked);
+  JSonAddPair(jObj, 'Points', PointsBox.Checked);
+
+  jArr := TJSONArray.Create;
+  for i := 0 to MAX_MEM_BOX - 1 do
+  begin
+    jObj2 := CreateJsonObjectTRect(CharMinMaxTab[i]);
+    jArr.AddElement(jObj2);
+  end;
+  jObj.AddPair('CharRanges', jArr);
+
+  jObj2 := TJSONObject.Create;
+  JSonAddPair(jObj2, LasPosPoint);
+  JSonAddPair(jObj2, 'W', MeasurePanel.Width);
+  JSonAddPair(jObj2, 'H', MeasurePanel.Height);
+  SL := TStringList.Create;
+  try
+    SL.Assign(MeasureGrid.Cols[1]);
+    SL.Delete(0);
+    JSonAddPair(jObj2, 'Names', SL);
+  finally
+    SL.Free;
+  end;
+
+  SetLength(IntArr, MeasureGrid.ColCount - 1);
+  for i := 0 to MeasureGrid.ColCount - 2 do
+    IntArr[i] := MeasureGrid.ColWidths[i + 1];
+  JSonAddPair(jObj2, 'ColWidth', IntArr);
+
+  jObj.AddPair('MeasGrid', jObj2);
+  Result.AddPair('Chart', jObj);
+
+  FSetWekSerCount(WekCntEdit.Value);
+  for i := 0 to WekCntEdit.Value - 1 do
+  begin
+    jObj2 := TJSONObject.Create;
+    JSonAddPair(jObj2, 'Name', WekListBox.Items.Strings[i]);
+    JSonAddPairColor(jObj2, 'Color', integer(WekListBox.Items.Objects[i]));
+    jArr.AddElement(jObj2);
+  end;
+  jObj.AddPair('Signals', jArr);
+  Result.AddPair('Vector', jObj);
+
+end;
 
 procedure TAnalogFrame.LoadFromIni(Ini : TMemIniFile; SName : string);
 var

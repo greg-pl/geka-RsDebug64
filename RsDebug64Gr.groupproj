@@ -12,9 +12,6 @@
         <Projects Include="..\ANOT-12\Delphi\Anot12\Anot12.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="CmmDrivers\MbusCom2\MBusCom2.dproj">
-            <Dependencies/>
-        </Projects>
         <Projects Include="CmmDrivers\MbusCom\MBusCom.dproj">
             <Dependencies/>
         </Projects>
@@ -53,15 +50,6 @@
     <Target Name="Anot12:Make">
         <MSBuild Projects="..\ANOT-12\Delphi\Anot12\Anot12.dproj" Targets="Make"/>
     </Target>
-    <Target Name="MBusCom2">
-        <MSBuild Projects="CmmDrivers\MbusCom2\MBusCom2.dproj"/>
-    </Target>
-    <Target Name="MBusCom2:Clean">
-        <MSBuild Projects="CmmDrivers\MbusCom2\MBusCom2.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="MBusCom2:Make">
-        <MSBuild Projects="CmmDrivers\MbusCom2\MBusCom2.dproj" Targets="Make"/>
-    </Target>
     <Target Name="MBusCom">
         <MSBuild Projects="CmmDrivers\MbusCom\MBusCom.dproj"/>
     </Target>
@@ -72,13 +60,13 @@
         <MSBuild Projects="CmmDrivers\MbusCom\MBusCom.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="RsDebug64;StLink;Anot12;MBusCom2;MBusCom"/>
+        <CallTarget Targets="RsDebug64;StLink;Anot12;MBusCom"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="RsDebug64:Clean;StLink:Clean;Anot12:Clean;MBusCom2:Clean;MBusCom:Clean"/>
+        <CallTarget Targets="RsDebug64:Clean;StLink:Clean;Anot12:Clean;MBusCom:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="RsDebug64:Make;StLink:Make;Anot12:Make;MBusCom2:Make;MBusCom:Make"/>
+        <CallTarget Targets="RsDebug64:Make;StLink:Make;Anot12:Make;MBusCom:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

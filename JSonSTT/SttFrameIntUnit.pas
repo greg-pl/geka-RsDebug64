@@ -14,28 +14,44 @@ type
   TSttFrameInt = class(TSttFrameBase)
     SttIntEdit: TLabeledEdit;
   private
-    { Private declarations }
+    minVal: integer;
+    maxVal: integer;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    procedure getData(obj: TJSONObject); override;
+    function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
   end;
-
 
 implementation
 
 {$R *.dfm}
 
-
 procedure TSttFrameInt.LoadField(ParamList: TSttObjectListJson);
+var
+  obj: TSttIntObjectJson;
 begin
   inherited;
-  LoadIntEditItem(SttIntEdit, ParamList, FItemName);
+  obj := InitIntEditItem(SttIntEdit, ParamList, FItemName);
+  if Assigned(obj) then
+  begin
+    minVal := obj.minVal;
+    maxVal := obj.maxVal;
+  end;
 end;
 
-procedure TSttFrameInt.getData(obj: TJSONObject);
+function TSttFrameInt.getData(obj: TJSONObject): boolean;
+var
+  v: integer;
 begin
-  obj.AddPair(TJSONPair.Create(FItemName, SttIntEdit.Text));
+  Result := false;
+  if tryStrToInt(SttIntEdit.Text, v) then
+  begin
+    Result := (v >= minVal) and (v <= maxVal);
+  end;
+  if Result then
+    obj.AddPair(TJSONPair.Create(FItemName, IntToStr(v)))
+  else
+    SttIntEdit.SetFocus;
 end;
 
 procedure TSttFrameInt.setData(obj: TJSONObject);
@@ -43,8 +59,8 @@ begin
   LoadValIntEditJSon(obj, FItemName, SttIntEdit);
 end;
 
-
 initialization
-  RegisterSttFrame(sttINTEGER,TSttFrameInt);
+
+RegisterSttFrame(sttINTEGER, TSttFrameInt);
 
 end.

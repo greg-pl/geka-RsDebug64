@@ -1,8 +1,6 @@
 inherited RfcForm: TRfcForm
   Left = 1984
   Top = 290
-  Width = 265
-  Height = 434
   Caption = 'RfcForm'
   OldCreateOrder = True
   Position = poDefaultPosOnly
@@ -12,36 +10,32 @@ inherited RfcForm: TRfcForm
   PixelsPerInch = 96
   TextHeight = 13
   inherited StatusBar: TStatusBar
-    Top = 376
-    Width = 249
+    ExplicitTop = 376
+    ExplicitWidth = 249
   end
   inherited ToolBar1: TToolBar
-    Width = 249
     inherited ParamPanelBtn: TToolButton
       Visible = False
     end
-    inherited AreaSelect: TComboBox
-      Visible = False
-    end
     object ToolButton1: TToolButton
-      Left = 178
+      Left = 58
       Top = 0
       Action = RunFunctionAct
     end
     object ToolButton2: TToolButton
-      Left = 201
+      Left = 81
       Top = 0
       Action = ReadResultAct
     end
     object ToolButton4: TToolButton
-      Left = 224
+      Left = 104
       Top = 0
       Action = ShowBufferAct
     end
   end
   inherited ParamPanel: TPanel
-    Width = 249
     Height = 148
+    ExplicitHeight = 148
     object Label1: TLabel
       Left = 8
       Top = 8
@@ -84,7 +78,6 @@ inherited RfcForm: TRfcForm
       Font.Height = -13
       Font.Name = 'Lucida Console'
       Font.Style = []
-      ItemHeight = 13
       ParentFont = False
       PopupMenu = SelectFunPopupMenu
       TabOrder = 2
@@ -107,8 +100,8 @@ inherited RfcForm: TRfcForm
   object ParameterList: TStringGrid [3]
     Left = 0
     Top = 177
-    Width = 249
-    Height = 199
+    Width = 419
+    Height = 105
     Align = alClient
     ColCount = 4
     DefaultColWidth = 30
@@ -116,6 +109,8 @@ inherited RfcForm: TRfcForm
     RowCount = 17
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
     TabOrder = 3
+    ExplicitWidth = 249
+    ExplicitHeight = 199
     ColWidths = (
       30
       50
@@ -155,7 +150,7 @@ inherited RfcForm: TRfcForm
     Left = 272
     Top = 32
     Bitmap = {
-      494C010110001300040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101100013000C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

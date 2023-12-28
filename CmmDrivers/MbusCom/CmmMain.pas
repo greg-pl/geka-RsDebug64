@@ -13,18 +13,6 @@ uses
   ComUnit,
   LibUtils;
 
-const
-
-  LibPropertyStrV2: AnsiString = '<?xml version="1.0" standalone="yes"?>' + '<CMM_DESCR>' +
-    '<CMM_INFO TYPE="RS" DESCR="Port RS (protocol Modbus+)" SIGN="MCOM"/>' + '<GROUP>' +
-    '<ITEM NAME="COM" TYPE="COM_NR" DESCR="Port number" DEFVALUE="1" />' +
-    '<ITEM NAME="DEV_NR" TYPE="INT" DESCR="Device number" DEFVALUE="1" MIN="1" MAX="240" />' +
-    '<ITEM NAME="RS_SPEED" TYPE="SELECT" DESCR="Baudrate" DEFVALUE="19200" ' +
-    'ITEMS="115200|57600|56000|38400|19200|14400|9600|4800|2400|1200|600|300|110"/>' +
-    '<ITEM NAME="MODE" DESCR="Mode RTU/ASCII" TYPE="SELECT" ITEMS="RTU|ASCII" DEFVALUE="RTU"/>' +
-    '<ITEM NAME="PARITY" DESCR="Parity" TYPE="SELECT" ITEMS="N|E|O" ITEMDESCR="No parity|Even|Odd"  DEFVALUE="N"/>' +
-    '</GROUP>' + '</CMM_DESCR>';
-
 {$INCLUDE ..\CmmCommon\CmmBaseDef.inc}
 {$INCLUDE ..\CmmCommon\FileAccessDef.inc}
 {$INCLUDE ..\CmmCommon\StdModbusDef.inc}
@@ -300,6 +288,28 @@ begin
     Result := stBadId;
 end;
 
+function TerminalSetPipe(Id: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
+var
+  Dev: TDevItem;
+begin
+  Dev := GlobDevList.FindId(Id);
+  if Dev <> nil then
+    Result := Dev.TerminalSetPipe(TerminalNr, PipeHandle)
+  else
+    Result := stBadId;
+end;
+
+function TerminalSetRunFlag(Id: TAccId; TerminalNr: integer; RunFlag: boolean): TStatus; stdcall;
+var
+  Dev: TDevItem;
+begin
+  Dev := GlobDevList.FindId(Id);
+  if Dev <> nil then
+    Result := Dev.TerminalSetRunFlag(TerminalNr, RunFlag)
+  else
+    Result := stBadId;
+end;
+
 
 // ----File function ---------------------------------------------------------------------
 
@@ -477,40 +487,40 @@ begin
   case Code of
     stOk:
       R := 'Ok';
-    stAttSemError:
-      R := 'B³¹d semafora dostêpowego';
-    stMaxAttachCom:
-      R := 'Zbyt du¿o otwartych dostêpów.';
-    stSemafErr:
-      R := 'B³¹d semafora dostêpu do portu.';
-    stCommErr:
-      R := 'B³¹d otwarcia portu.';
     stBadId:
-      R := 'Po³¹czenie nie nawi¹zane.';
+      R := 'Identificator error.';
     stTimeErr:
       R := 'Time Out.';
     stNotOpen:
-      R := 'Port nie otwarty.';
+      R := 'Port not open.';
     stSetupErr:
-      R := 'Z³e parametry portu.';
+      R := 'Invalid parameters.';
     stUserBreak:
-      R := 'Operacja przerwana.';
+      R := 'Break used';
     stNoSemafor:
-      R := 'Brak dostêpu do semafora portu.';
+      R := 'Port access error.';
     stBadRepl:
-      R := 'Nieprawid³owa odpowiedŸ urz¹dzenia.';
+      R := 'Improper slave answer.';
     stBadArguments:
-      R := 'Z³e argumenty dla zapytania MODBUS.';
+      R := 'Incorrect Modbus ask parameters.';
+    stBufferToSmall:
+      R := 'Buffer too small';
+    stToBigTerminalNr:
+      R := 'Terminal Nr too big';
+    stEND_OFF_DIR:
+      R := 'End off dir';
+    stDelphiError:
+      R := 'Delphi error';
   else
     Result := false;
     if (Code >= stMdbError) and (Code < stMdbExError) then
     begin
-      R := Format('B³¹d protoko³u MODBUS :%u', [Code - stMdbError]);
+      R := Format('MODBUS protocol error :%u', [Code - stMdbError]);
       Result := True;
     end;
     if (Code >= stMdbExError) and (Code < stMdbExError + 256) then
     begin
-      R := Format('B³¹d protoko³u MODBUS_EX :%u', [Code - stMdbExError]);
+      R := Format('MODBUS_EX protocol error :%u', [Code - stMdbExError]);
       Result := True;
     end;
   end;
@@ -530,7 +540,7 @@ begin
   end;
   if not(Result) then
   begin
-    R := 'B³¹d' + ' ' + IntToStr(Code);
+    R := 'Error' + ' ' + IntToStr(Code);
   end;
   System.AnsiStrings.StrPLCopy(s, AnsiString(R), Max);
 end;
@@ -554,13 +564,15 @@ begin
   Params.SubGroups := [subBASE, subMEMORY, subTERMINAL, subMODBUS_STD, subMODBUS_FILE];
 
   Params.ConnectionParams.Add(TSttIntObjectJson.Create(UARTPARAM_COMNR, 'Port number', 1, NAN_INT, NAN_INT));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_PARITY, 'Parity', ['N', 'E', 'O'],'N'));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BAUDRATE, 'Transmision speed', [300, 600, 1200, 2400, 4800,
-    9600, 19200, 38400, 56000, 57600, 115200],115200));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BITCNT, 'Count of data bits', [6, 7, 8],8));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_PARITY, 'Parity', ['N', 'E', 'O'], 'N'));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BAUDRATE, 'Transmision speed',
+    [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 56000, 57600, 115200], 115200));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BITCNT, 'Count of data bits', [6, 7, 8], 8));
 
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create('MdbMode', 'Modbus mode', ['RTU', 'ASCI'],'RTU'));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create('MemAccessMode', 'Memory access mode', ['GEKA', 'DPC06'],'DPC06'));
+  Params.ConnectionParams.Add(TSttIntObjectJson.Create(MODBUS_DEVNR, 'Numer on modbus', 1, 254, 1));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(MODBUS_MODE, 'Modbus mode', ['RTU', 'ASCI'], 'RTU'));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(MODBUS_MEMACCESS, 'Memory access mode', ['GEKA', 'DPC06'],
+    'DPC06'));
 end;
 
 procedure BuildLibProperty;

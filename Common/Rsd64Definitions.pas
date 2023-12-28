@@ -25,27 +25,32 @@ const
   stBadRepl = 7;
   stBadArguments = 8;
   stBufferToSmall = 9; // publiczny - rozpoznawany przez warstwê wy¿sza
-
+  stToBigTerminalNr =10; //
+  stEND_OFF_DIR = 11;
+  stDelphiError = 12;
   stMdbError = 50;
   stMdbExError = 100;
-  stDelphiError = 101;
-  stEND_OFF_DIR = 102;
-  stAttSemError = 103;
-  stMaxAttachCom = 104;
-  stSemafErr = 105;
-  stCommErr = 106;
 
-  evProgress = 0;
-  evFlow = 1;
-  evWorkOnOff = 4;
+
+  stAPL_BASE = 500;
+
+  stNoImpl = stAPL_BASE + 0;
+  stError = stAPL_BASE + 1;
+  stUndefCommand = stAPL_BASE + 2;
+
+  evWorkOnOff = 0;
+  evProgress = 1;
+  evFlow = 2;
+
+  TERMINAL_ZERO = 0;
 
 const
   CONNECTION_PARAMS_NAME = 'ConnectionParams';
   CONNECTION_DRIVER_NAME = 'DriverName';
 
   UARTPARAM_COMNR = 'ComNr';
-  UARTPARAM_PARITY = 'Parity';
   UARTPARAM_BAUDRATE = 'BaudRate';
+  UARTPARAM_PARITY = 'Parity';
   UARTPARAM_BITCNT = 'BitCnt';
 
   IPPARAM_IP = 'Ip';
@@ -69,9 +74,6 @@ type
   TGetMemFunction = function(LibID: integer; MemSize: integer): pointer; stdcall;
 
 type
-
-
-
   // ----------------------------------------------------------------------------
 
   TUartParity = (parityNONE, parityODD, parityEVEN);
@@ -100,6 +102,8 @@ type
     function LoadFromTxt(txt: string): boolean;
   end;
 
+function ExtractDriverName(ConnectJson: string; var driverName: string): boolean;
+function ExtractConnInfoStr(ConnectJson: string; var ConnInfoStr: string): boolean;
 
 implementation
 
@@ -226,6 +230,66 @@ begin
   arr := myObj.Get('ConectionParams').JSonValue as TJSONArray;
   ConnectionParamsLoadfromArr(arr);
 
+end;
+
+function ExtractDriverName(ConnectJson: string; var driverName: string): boolean;
+var
+  jVal: TJSONValue;
+  jobj: TJsonObject;
+begin
+  Result := false;
+  try
+    jVal := TJsonObject.ParseJSONValue(ConnectJson);
+    if Assigned(jVal) then
+    begin
+      jobj := jVal as TJsonObject;
+      driverName := jobj.Get(CONNECTION_DRIVER_NAME).JSonValue.Value;
+      Result := true;
+    end;
+  except
+  end;
+end;
+
+function ExtractConnInfoStr(ConnectJson: string; var ConnInfoStr: string): boolean;
+var
+  jVal: TJSONValue;
+  jobj: TJsonObject;
+  paramObj: TJsonObject;
+  item: TJsonPair;
+begin
+  Result := false;
+  try
+    jVal := TJsonObject.ParseJSONValue(ConnectJson);
+    if Assigned(jVal) then
+    begin
+      jobj := jVal as TJsonObject;
+      paramObj := jobj.Get(CONNECTION_PARAMS_NAME).JSonValue as TJsonObject;
+      if Assigned(paramObj) then
+      begin
+        item := paramObj.Get(UARTPARAM_COMNR);
+        if Assigned(item) then
+        begin
+          ConnInfoStr := item.JSonValue.Value;
+          Result := true;
+        end
+        else
+        begin
+          item := paramObj.Get(IPPARAM_IP);
+          if Assigned(item) then
+          begin
+            ConnInfoStr := item.JSonValue.Value;
+            Result := true;
+            item := paramObj.Get(IPPARAM_PORT);
+            if Assigned(item) then
+              ConnInfoStr := ConnInfoStr + ':' + item.JSonValue.Value;
+          end;
+        end;
+      end;
+
+    end;
+  except
+
+  end;
 end;
 
 end.

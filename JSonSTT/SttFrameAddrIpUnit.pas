@@ -22,7 +22,7 @@ type
   public
     procedure AddObjectsName(SL: TStrings); override;
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    procedure getData(obj: TJSONObject); override;
+    function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
   end;
 
@@ -38,13 +38,14 @@ end;
 
 procedure TSttFrameAddrIp.LoadField(ParamList: TSttObjectListJson);
 begin
-  LoadIPEditItem(AddressIpEdit,  ParamList, IPPARAM_IP);
-  LoadIntEditItem(PortNrEdit,  ParamList, IPPARAM_PORT);
+  InitIPEditItem(AddressIpEdit,  ParamList, IPPARAM_IP);
+  InitIntEditItem(PortNrEdit,  ParamList, IPPARAM_PORT);
 end;
-procedure TSttFrameAddrIp.getData(obj: TJSONObject);
+function TSttFrameAddrIp.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(IPPARAM_IP, AddressIpEdit.Text));
   obj.AddPair(TJSONPair.Create(IPPARAM_PORT, PortNrEdit.Text));
+  Result :=true;
 end;
 
 procedure TSttFrameAddrIp.setData(obj: TJSONObject);

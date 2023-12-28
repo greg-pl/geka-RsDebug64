@@ -289,13 +289,34 @@ begin
 end;
 
 function TerminalRead(Id: TAccId; Buf: PAnsiChar; var rdcnt: integer): TStatus; stdcall;
-
 var
   Dev: TDevItem;
 begin
   Dev := GlobDevList.FindId(Id);
   if Dev <> nil then
     Result := Dev.TerminalRead(Buf, rdcnt)
+  else
+    Result := stBadId;
+end;
+
+
+function TerminalSetPipe(Id: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
+var
+  Dev: TDevItem;
+begin
+  Dev := GlobDevList.FindId(Id);
+  if Dev <> nil then
+    Result := Dev.TerminalSetPipe(TerminalNr, PipeHandle)
+  else
+    Result := stBadId;
+end;
+function TerminalSetRunFlag(Id: TAccId; TerminalNr: integer; RunFlag: boolean): TStatus; stdcall;
+var
+  Dev: TDevItem;
+begin
+  Dev := GlobDevList.FindId(Id);
+  if Dev <> nil then
+    Result := Dev.TerminalSetRunFlag(TerminalNr, RunFlag)
   else
     Result := stBadId;
 end;

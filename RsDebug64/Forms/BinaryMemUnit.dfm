@@ -1,8 +1,6 @@
 inherited BinaryMemForm: TBinaryMemForm
   Left = 2396
   Top = 316
-  Width = 802
-  Height = 439
   Caption = 'BinaryMemForm'
   OldCreateOrder = True
   PixelsPerInch = 96
@@ -10,28 +8,34 @@ inherited BinaryMemForm: TBinaryMemForm
   inline MemFrame: TBinaryFrame [0]
     Left = 0
     Top = 65
-    Width = 786
-    Height = 316
+    Width = 419
+    Height = 217
     Align = alClient
     TabOrder = 0
+    ExplicitTop = 65
+    ExplicitWidth = 786
+    ExplicitHeight = 316
     inherited ByteGrid: TStringGrid
       Width = 786
       Height = 283
+      ExplicitWidth = 786
+      ExplicitHeight = 283
     end
     inherited ByteGridPanel: TPanel
       Width = 786
+      ExplicitWidth = 786
+      inherited Label4: TLabel
+        Width = 58
+        ExplicitWidth = 58
+      end
     end
   end
   inherited StatusBar: TStatusBar [1]
-    Top = 381
-    Width = 786
+    ExplicitTop = 381
+    ExplicitWidth = 786
   end
   inherited ToolBar1: TToolBar [2]
-    Width = 786
     TabOrder = 2
-    inherited AreaSelect: TComboBox
-      Visible = False
-    end
     object ReadMemBtn: TToolButton
       Left = 178
       Top = 0
@@ -122,9 +126,10 @@ inherited BinaryMemForm: TBinaryMemForm
     end
   end
   inherited ParamPanel: TPanel [3]
-    Width = 786
     Height = 36
     TabOrder = 3
+    ExplicitWidth = 786
+    ExplicitHeight = 36
     object Label5: TLabel
       Left = 344
       Top = 8
@@ -151,7 +156,6 @@ inherited BinaryMemForm: TBinaryMemForm
       Top = 4
       Width = 57
       Height = 21
-      ItemHeight = 13
       TabOrder = 2
       Text = '250'
       OnExit = ComboBoxExit
@@ -165,7 +169,6 @@ inherited BinaryMemForm: TBinaryMemForm
       Top = 4
       Width = 126
       Height = 21
-      ItemHeight = 13
       TabOrder = 0
       Text = '0'
       OnChange = AdresBoxChange
@@ -181,7 +184,6 @@ inherited BinaryMemForm: TBinaryMemForm
       Top = 4
       Width = 109
       Height = 21
-      ItemHeight = 13
       TabOrder = 1
       Text = '0x100'
       OnExit = ComboBoxExit
@@ -304,7 +306,7 @@ inherited BinaryMemForm: TBinaryMemForm
     Left = 40
     Top = 264
     Bitmap = {
-      494C010110001300040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101100013000C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

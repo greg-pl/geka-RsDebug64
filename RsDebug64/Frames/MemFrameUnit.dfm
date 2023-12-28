@@ -13,13 +13,9 @@ object MemFrame: TMemFrame
     Align = alClient
     TabOrder = 0
     TabPosition = tpBottom
-    ExplicitWidth = 499
-    ExplicitHeight = 436
     object ByteSheet: TTabSheet
       Caption = 'BYTE'
       OnShow = ByteSheetShow
-      ExplicitWidth = 491
-      ExplicitHeight = 410
       object ByteGrid: TStringGrid
         Left = 0
         Top = 33
@@ -37,8 +33,6 @@ object MemFrame: TMemFrame
         OnKeyDown = GridKeyDown
         OnSelectCell = ByteGridSelectCell
         OnSetEditText = ByteGridSetEditText
-        ExplicitWidth = 491
-        ExplicitHeight = 377
       end
       object ByteGridPanel: TPanel
         Left = 0
@@ -48,7 +42,6 @@ object MemFrame: TMemFrame
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitWidth = 491
         object Label4: TLabel
           Left = 8
           Top = 8
@@ -73,8 +66,6 @@ object MemFrame: TMemFrame
       Caption = 'WORD'
       ImageIndex = 1
       OnShow = WordSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object WordGRid: TStringGrid
         Left = 0
         Top = 33
@@ -92,8 +83,6 @@ object MemFrame: TMemFrame
         OnGetEditText = GridGetEditText
         OnKeyDown = GridKeyDown
         OnSetEditText = WordGRidSetEditText
-        ExplicitWidth = 545
-        ExplicitHeight = 377
       end
       object WordGridPanel: TPanel
         Left = 0
@@ -103,7 +92,6 @@ object MemFrame: TMemFrame
         Align = alTop
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitWidth = 545
         object Label3: TLabel
           Left = 8
           Top = 8
@@ -128,8 +116,6 @@ object MemFrame: TMemFrame
       Caption = 'DWord'
       ImageIndex = 3
       OnShow = DWordSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object DWordGrid: TStringGrid
         Left = 0
         Top = 0
@@ -146,16 +132,12 @@ object MemFrame: TMemFrame
         OnGetEditText = GridGetEditText
         OnKeyDown = GridKeyDown
         OnSetEditText = DWordGridSetEditText
-        ExplicitWidth = 545
-        ExplicitHeight = 410
       end
     end
     object FloatSheet: TTabSheet
       Caption = 'FLOAT'
       ImageIndex = 2
       OnShow = FloatSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object FloatGrid: TStringGrid
         Left = 0
         Top = 0
@@ -172,16 +154,12 @@ object MemFrame: TMemFrame
         OnGetEditText = GridGetEditText
         OnKeyDown = GridKeyDown
         OnSetEditText = FloatGridSetEditText
-        ExplicitWidth = 545
-        ExplicitHeight = 410
       end
     end
     object DFloatSheet: TTabSheet
       Caption = 'DFLOAT'
       ImageIndex = 8
       OnShow = DFloatSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object DFloatGrid: TStringGrid
         Left = 0
         Top = 0
@@ -198,16 +176,12 @@ object MemFrame: TMemFrame
         OnGetEditText = GridGetEditText
         OnKeyDown = GridKeyDown
         OnSetEditText = DFloatGridSetEditText
-        ExplicitWidth = 545
-        ExplicitHeight = 410
       end
     end
     object DspProgSheet: TTabSheet
       Caption = 'DspProg'
       ImageIndex = 4
       OnShow = DspProgSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object DspProgGrid: TStringGrid
         Left = 0
         Top = 0
@@ -221,16 +195,12 @@ object MemFrame: TMemFrame
         TabOrder = 0
         OnDrawCell = GridDrawCell
         OnGetEditText = GridGetEditText
-        ExplicitWidth = 545
-        ExplicitHeight = 410
       end
     end
     object F1_15Sheet: TTabSheet
       Caption = '1.15'
       ImageIndex = 5
       OnShow = F1_15SheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object F1_15Grid: TStringGrid
         Left = 0
         Top = 0
@@ -251,8 +221,6 @@ object MemFrame: TMemFrame
       Caption = 'Chart'
       ImageIndex = 6
       OnShow = ChartSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object Panel1: TPanel
         Left = 0
         Top = 0
@@ -261,7 +229,6 @@ object MemFrame: TMemFrame
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
-        ExplicitLeft = 2
         object SeriesListBox: TCheckListBox
           Left = 0
           Top = 49
@@ -272,7 +239,6 @@ object MemFrame: TMemFrame
           ItemHeight = 13
           PopupMenu = ChartListMenu
           TabOrder = 0
-          ExplicitWidth = 97
         end
         object Panel2: TPanel
           Left = 0
@@ -282,7 +248,6 @@ object MemFrame: TMemFrame
           Align = alTop
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitWidth = 97
           object Label1: TLabel
             Left = 0
             Top = 0
@@ -317,7 +282,6 @@ object MemFrame: TMemFrame
             '16-bit'
             '32-bit')
           TabOrder = 2
-          ExplicitTop = 393
         end
         object SerieTypeBox: TRadioGroup
           Left = 0
@@ -331,7 +295,6 @@ object MemFrame: TMemFrame
             'abcabcabc'
             'aaabbbccc')
           TabOrder = 3
-          ExplicitTop = 345
         end
         object DataTypeBox: TRadioGroup
           Left = 0
@@ -355,7 +318,6 @@ object MemFrame: TMemFrame
           Height = 119
           Align = alTop
           TabOrder = 5
-          ExplicitTop = 458
           object Button1: TButton
             Left = 0
             Top = 52
@@ -402,9 +364,6 @@ object MemFrame: TMemFrame
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitLeft = 97
-        ExplicitWidth = 448
-        ExplicitHeight = 410
         object MainChart: TChart
           Left = 0
           Top = 33
@@ -420,8 +379,6 @@ object MemFrame: TMemFrame
           Align = alClient
           BevelOuter = bvNone
           TabOrder = 0
-          ExplicitWidth = 448
-          ExplicitHeight = 377
           DefaultCanvas = 'TGDIPlusCanvas'
           ColorPaletteIndex = 13
           object MeasurePanel: TPanel
@@ -453,8 +410,6 @@ object MemFrame: TMemFrame
               Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goRowMoving, goRowSelect]
               ParentFont = False
               TabOrder = 0
-              ExplicitLeft = 0
-              ExplicitTop = -71
               ColWidths = (
                 25
                 82
@@ -479,7 +434,6 @@ object MemFrame: TMemFrame
           BevelInner = bvLowered
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitWidth = 448
           object MinXEdit: TLabeledEdit
             Left = 96
             Top = 5
@@ -625,8 +579,6 @@ object MemFrame: TMemFrame
       Caption = 'Wektory'
       ImageIndex = 7
       OnShow = WekSheetShow
-      ExplicitWidth = 545
-      ExplicitHeight = 410
       object Panel3: TPanel
         Left = 0
         Top = 0
@@ -635,7 +587,6 @@ object MemFrame: TMemFrame
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
-        ExplicitHeight = 410
         object Label2: TLabel
           Left = 0
           Top = 0
@@ -702,8 +653,6 @@ object MemFrame: TMemFrame
         View3D = False
         Align = alClient
         TabOrder = 1
-        ExplicitWidth = 432
-        ExplicitHeight = 410
         DefaultCanvas = 'TGDIPlusCanvas'
         ColorPaletteIndex = 13
         object WekSeries: TArrowSeries

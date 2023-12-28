@@ -1,90 +1,153 @@
 inherited MemForm: TMemForm
   Left = 2542
   Top = 291
-  Width = 623
-  Height = 706
   Caption = 'MemForm'
+  ClientHeight = 477
+  ClientWidth = 723
   OldCreateOrder = True
+  OnCreate = FormCreate
+  ExplicitWidth = 739
+  ExplicitHeight = 516
   PixelsPerInch = 96
   TextHeight = 13
   inline MemFrame: TMemFrame [0]
     Left = 0
     Top = 89
-    Width = 607
-    Height = 559
+    Width = 723
+    Height = 369
     Align = alClient
     TabOrder = 0
+    ExplicitTop = 89
+    ExplicitWidth = 419
+    ExplicitHeight = 193
     inherited ShowTypePageCtrl: TPageControl
-      Width = 607
-      Height = 559
+      Width = 723
+      Height = 369
       PopupMenu = GridPopUp
       TabStop = False
       OnChange = MemFrameShowTypePageCtrlChange
+      ExplicitWidth = 419
+      ExplicitHeight = 193
       inherited ByteSheet: TTabSheet
         inherited ByteGrid: TStringGrid
-          Width = 599
-          Height = 500
           PopupMenu = GridPopUp
         end
         inherited ByteGridPanel: TPanel
-          Width = 599
+          inherited Label4: TLabel
+            Width = 58
+            ExplicitWidth = 58
+          end
         end
       end
       inherited WordSheet: TTabSheet
         inherited WordGRid: TStringGrid
-          Width = 594
-          Height = 278
           PopupMenu = GridPopUp
+        end
+        inherited WordGridPanel: TPanel
+          inherited Label3: TLabel
+            Width = 58
+            ExplicitWidth = 58
+          end
         end
       end
       inherited DWordSheet: TTabSheet
         inherited DWordGrid: TStringGrid
-          Width = 594
-          Height = 278
           PopupMenu = GridPopUp
         end
       end
       inherited FloatSheet: TTabSheet
         inherited FloatGrid: TStringGrid
-          Width = 594
-          Height = 278
           PopupMenu = GridPopUp
         end
       end
       inherited DFloatSheet: TTabSheet
         inherited DFloatGrid: TStringGrid
-          Width = 594
-          Height = 278
           PopupMenu = GridPopUp
         end
       end
       inherited DspProgSheet: TTabSheet
         inherited DspProgGrid: TStringGrid
-          Width = 594
-          Height = 278
           PopupMenu = GridPopUp
         end
       end
       inherited F1_15Sheet: TTabSheet
         inherited F1_15Grid: TStringGrid
-          Width = 594
-          Height = 278
           PopupMenu = GridPopUp
         end
       end
       inherited ChartSheet: TTabSheet
+        ExplicitWidth = 411
+        ExplicitHeight = 167
         inherited Panel1: TPanel
-          inherited PointsBox: TCheckBox
-            OnClick = MemFramePointsBoxClick
+          Height = 343
+          ExplicitHeight = 167
+          inherited Panel2: TPanel
+            inherited Label1: TLabel
+              ExplicitWidth = 67
+            end
+          end
+          inherited Panel6: TPanel
+            inherited PointsBox: TCheckBox
+              OnClick = MemFramePointsBoxClick
+            end
           end
         end
         inherited Panel4: TPanel
+          Width = 565
+          Height = 343
+          ExplicitWidth = 261
+          ExplicitHeight = 167
           inherited MainChart: TChart
-            Width = 502
-            Height = 500
+            Width = 565
+            Height = 310
+            ExplicitWidth = 261
+            ExplicitHeight = 134
+            inherited MeasurePanel: TPanel
+              Top = 88
+              Height = 169
+              ExplicitTop = 88
+              ExplicitHeight = 169
+              inherited MeasureGrid: TStringGrid
+                Height = 167
+                ExplicitLeft = 0
+                ExplicitTop = -3
+              end
+            end
           end
           inherited Panel5: TPanel
-            Width = 502
+            Width = 565
+            ExplicitWidth = 261
+            inherited MinXEdit: TLabeledEdit
+              EditLabel.Width = 30
+              EditLabel.ExplicitLeft = 63
+              EditLabel.ExplicitTop = 9
+              EditLabel.ExplicitWidth = 30
+            end
+            inherited MaxXEdit: TLabeledEdit
+              EditLabel.Width = 33
+              EditLabel.ExplicitLeft = 164
+              EditLabel.ExplicitTop = 9
+              EditLabel.ExplicitWidth = 33
+            end
+            inherited MinYEdit: TLabeledEdit
+              EditLabel.Width = 30
+              EditLabel.ExplicitLeft = 263
+              EditLabel.ExplicitTop = 9
+              EditLabel.ExplicitWidth = 30
+            end
+            inherited MaxYEdit: TLabeledEdit
+              EditLabel.Width = 33
+              EditLabel.ExplicitLeft = 364
+              EditLabel.ExplicitTop = 9
+              EditLabel.ExplicitWidth = 33
+            end
+          end
+        end
+      end
+      inherited WekSheet: TTabSheet
+        inherited Panel3: TPanel
+          inherited Label2: TLabel
+            ExplicitWidth = 71
           end
         end
       end
@@ -103,35 +166,35 @@ inherited MemForm: TMemForm
     end
   end
   inherited StatusBar: TStatusBar [1]
-    Top = 648
-    Width = 607
+    Top = 458
+    Width = 723
   end
   inherited ToolBar1: TToolBar [2]
-    Width = 607
+    Width = 723
     TabOrder = 2
     object ReadMemBtn: TToolButton
-      Left = 178
+      Left = 58
       Top = 0
       Action = ReadMemAct
     end
     object ToolButton4: TToolButton
-      Left = 201
+      Left = 81
       Top = 0
       Action = RdNextAct
     end
     object ToolButton5: TToolButton
-      Left = 224
+      Left = 104
       Top = 0
       Action = RdBackAct
     end
     object AutoRepBtn: TToolButton
-      Left = 247
+      Left = 127
       Top = 0
       Action = AutoRepAct
       Style = tbsCheck
     end
     object ToolButton6: TToolButton
-      Left = 270
+      Left = 150
       Top = 0
       Width = 12
       Caption = 'ToolButton6'
@@ -139,17 +202,17 @@ inherited MemForm: TMemForm
       Style = tbsSeparator
     end
     object WrMemBtn: TToolButton
-      Left = 282
+      Left = 162
       Top = 0
       Action = WrMemAct
     end
     object ToolButton1: TToolButton
-      Left = 305
+      Left = 185
       Top = 0
       Action = SaveBufAct
     end
     object ToolButton7: TToolButton
-      Left = 328
+      Left = 208
       Top = 0
       Width = 8
       Caption = 'ToolButton7'
@@ -157,30 +220,30 @@ inherited MemForm: TMemForm
       Style = tbsSeparator
     end
     object ToolButton2: TToolButton
-      Left = 336
+      Left = 216
       Top = 0
       Action = FillFFAct
     end
     object ToolButton8: TToolButton
-      Left = 359
+      Left = 239
       Top = 0
       Action = FillZeroAct
     end
     object ToolButton15: TToolButton
-      Left = 382
+      Left = 262
       Top = 0
       Action = FillxxAct
     end
     object FillValueEdit: TEdit
-      Left = 405
+      Left = 285
       Top = 0
       Width = 37
       Height = 22
-      TabOrder = 1
+      TabOrder = 0
       Text = '0x01'
     end
     object ToolButton9: TToolButton
-      Left = 442
+      Left = 322
       Top = 0
       Width = 8
       Caption = 'ToolButton9'
@@ -188,22 +251,22 @@ inherited MemForm: TMemForm
       Style = tbsSeparator
     end
     object ToolButton10: TToolButton
-      Left = 450
+      Left = 330
       Top = 0
       Action = SaveMemAct
     end
     object ToolButton14: TToolButton
-      Left = 473
+      Left = 353
       Top = 0
       Action = SaveMemTxtAct
     end
     object ToolButton11: TToolButton
-      Left = 496
+      Left = 376
       Top = 0
       Action = LoadMemAct
     end
     object ToolButton12: TToolButton
-      Left = 519
+      Left = 399
       Top = 0
       Width = 22
       Caption = 'ToolButton12'
@@ -212,9 +275,10 @@ inherited MemForm: TMemForm
     end
   end
   inherited ParamPanel: TPanel [3]
-    Width = 607
+    Width = 723
     Height = 60
     TabOrder = 3
+    ExplicitHeight = 60
     object Label5: TLabel
       Left = 360
       Top = 8
@@ -241,7 +305,6 @@ inherited MemForm: TMemForm
       Top = 28
       Width = 57
       Height = 21
-      ItemHeight = 13
       TabOrder = 3
       Text = '250'
       OnExit = ComboBoxExit
@@ -257,7 +320,6 @@ inherited MemForm: TMemForm
       Height = 21
       Style = csDropDownList
       DropDownCount = 20
-      ItemHeight = 13
       Sorted = True
       TabOrder = 1
       OnChange = VarListBoxChange
@@ -271,7 +333,6 @@ inherited MemForm: TMemForm
       Top = 4
       Width = 126
       Height = 21
-      ItemHeight = 13
       TabOrder = 0
       Text = '0'
       OnChange = AdresBoxChange
@@ -287,7 +348,6 @@ inherited MemForm: TMemForm
       Top = 28
       Width = 109
       Height = 21
-      ItemHeight = 13
       TabOrder = 2
       Text = '0x100'
       OnExit = ComboBoxExit
@@ -420,7 +480,7 @@ inherited MemForm: TMemForm
     Left = 40
     Top = 264
     Bitmap = {
-      494C010110001300040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101100013000C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

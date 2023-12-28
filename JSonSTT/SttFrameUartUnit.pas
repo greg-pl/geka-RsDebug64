@@ -26,7 +26,7 @@ type
   public
     procedure AddObjectsName(SL: TStrings); override;
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    procedure getData(obj: TJSONObject); override;
+    function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
   end;
 
@@ -53,17 +53,18 @@ begin
   if ComNrBox.Items.Count > 0 then
     ComNrBox.ItemIndex := 0;
 
-  LoadComboBoxItem(BoudRateBox, nil, ParamList, UARTPARAM_BAUDRATE);
-  LoadComboBoxItem(ParityBox, nil, ParamList, UARTPARAM_PARITY);
-  LoadComboBoxItem(BitCntBox, nil, ParamList, UARTPARAM_BITCNT);
+  InitComboBoxItem(BoudRateBox, nil, ParamList, UARTPARAM_BAUDRATE);
+  InitComboBoxItem(ParityBox, nil, ParamList, UARTPARAM_PARITY);
+  InitComboBoxItem(BitCntBox, nil, ParamList, UARTPARAM_BITCNT);
 end;
 
-procedure TSttFrameUart.getData(obj: TJSONObject);
+function TSttFrameUart.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(UARTPARAM_COMNR, ComNrBox.Text));
   obj.AddPair(TJSONPair.Create(UARTPARAM_BAUDRATE, BoudRateBox.Text));
   obj.AddPair(TJSONPair.Create(UARTPARAM_PARITY, ParityBox.Text));
   obj.AddPair(TJSONPair.Create(UARTPARAM_BITCNT, BitCntBox.Text));
+  Result :=true;
 end;
 
 procedure TSttFrameUart.setData(obj: TJSONObject);

@@ -9,7 +9,9 @@ uses
   MapParserUnit,
   RsdDll,
   ToolsUnit,
-  TypeDefUnit, ImgList, Buttons, Spin, ActnList, Menus, ToolWin;
+  Rsd64Definitions,
+  TypeDefUnit, ImgList, Buttons, Spin, ActnList, Menus, ToolWin,
+  System.ImageList, System.Actions;
 
 type
   TStructShowForm = class(TChildForm)
@@ -283,7 +285,7 @@ begin
   s := '';
   if GetNodeProp(Node,Adr,Ofs,Size) then
   begin
-    PhAadr := AreaDefItem.GetPhAdr(Adr);
+    PhAadr := Adr;
     s := Format('PhAdr=0x%.6X  Adr=0x%.6X  ofs=%u  size=%u',[PhAadr+ofs,adr+ofs,ofs,size]);
   end;
   StatusBar.Panels[2].Text := s;
@@ -317,7 +319,7 @@ begin
   begin
     p := @MemBuf[THType(N.Data).DtOfset];
     //Result := THType(N.Data).SimplToText(p,TxMode)
-    Result := THType(N.Data).ToText(AreaDefItem.ByteOrder,p,GlobTypeList,TxMode);
+    Result := THType(N.Data).ToText(ProgCfg.ByteOrder,p,GlobTypeList,TxMode);
   end;
 end;
 
@@ -437,7 +439,6 @@ begin
     raise exception.Create('èle wprowadzony adres');
   if Length(MemBuf)<>0 then
   begin
-    A := AreaDefItem.GetPhAdr(A);
     st := Dev.ReadDevMem(Handle,MemBuf[0],A,Length(MemBuf));
     BufSt := (St=stOK);
     if not(BufSt) then
@@ -521,7 +522,6 @@ begin
   inherited;
   if GetNodeProp(StructTreeView.Selected,Adr,Ofs,Size) then
   begin
-    AdrCpx.AreaName := AreaDefItem.Name;
     AdrCpx.Adres := Adr+Ofs;
     PostMessage(Application.MainForm.Handle,wm_ShowmemWin,integer(@AdrCpx),0);
   end;
@@ -578,14 +578,14 @@ begin
   inherited;
   if GetNodeProp(StructTreeView.Selected,Adr,Ofs,Size) then
   begin
-    PhAdr := AreaDefItem.GetPhAdr(Adr);
+    PhAdr := Adr;
     M := THType(StructTreeView.Selected.Data);
     p := pbyte(@MemBuf[Ofs]);
-    s := M.ToText(AreaDefItem.ByteOrder, p,GlobTypeList,smDEFAULT);
+    s := M.ToText(ProgCfg.ByteOrder, p,GlobTypeList,smDEFAULT);
     if InputQuery(M.FldName,'Podaj nowπ wartoúÊ:',s) then
     begin
       p := pbyte(@MemBuf[Ofs]);
-      if M.LoadFromText(AreaDefItem.ByteOrder, p,GlobTypeList,smDEFAULT,s) then
+      if M.LoadFromText(ProgCfg.ByteOrder, p,GlobTypeList,smDEFAULT,s) then
       begin
         DoMsg(Format('WriteMem, adr=0x%X, size=%u',[Adr+Ofs,Size]));
         st := Dev.WriteDevMem(Handle,MemBuf[ofs],PhAdr+Ofs,Size);

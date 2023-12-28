@@ -3,73 +3,104 @@ unit UpLoadDefUnit;
 interface
 
 uses
-  SysUtils,Contnrs,
+  SysUtils, Contnrs,
+  System.JSON,
+
   ProgCfgUnit;
 
 type
   TUpLoadItem = class(TObject)
-    Name     : string;
-    FileName : string;
-    Adres    : string;
-    MaxSize  : integer;
-    StoreWin : boolean;
+    Name: string;
+    FileName: string;
+    Adres: string;
+    MaxSize: integer;
+    StoreWin: boolean;
     StoreMenu: boolean;
-    procedure SaveToIni(Ini : TDotIniFile; SName : string);
-    procedure LoadFromIni(Ini : TDotIniFile; SName : string);
+    procedure SaveToIni(Ini: TDotIniFile; SName: string);
+    function GetJSONObject: TJSonValue;
+
+    procedure LoadFromIni(Ini: TDotIniFile; SName: string);
   end;
 
   TUpLoadList = class(TObjectList)
   private
-    function  GetSName(nr : integer):string;
-    function  GetItem(Index: Integer): TUpLoadItem;
+    function GetSName(nr: integer): string;
+    function GetItem(Index: integer): TUpLoadItem;
   public
-    property Items[Index: Integer]: TUpLoadItem read GetItem;
-    procedure SaveToIni(Ini : TDotIniFile);
-    procedure LoadFromIni(Ini : TDotIniFile);
+    property Items[Index: integer]: TUpLoadItem read GetItem;
+    procedure SaveToIni(Ini: TDotIniFile);
+    function GetJSONObject: TJSonValue;
+    procedure LoadFromIni(Ini: TDotIniFile);
   end;
 
 var
- UpLoadList : TUpLoadList;
+  UpLoadList: TUpLoadList;
 
 implementation
 
-procedure TUpLoadItem.SaveToIni(Ini : TDotIniFile; SName : string);
+uses
+  JSonUtils;
+
+procedure TUpLoadItem.SaveToIni(Ini: TDotIniFile; SName: string);
 begin
-  Ini.WriteString(SName,'Name',Name);
-  Ini.WriteString(SName,'FileName',FileName);
-  Ini.WriteString(SName,'Adres',Adres);
-  Ini.WriteInteger(SName,'MaxSize',MaxSize);
-  Ini.WriteBool(SName,'StoreWin',StoreWin);
-  Ini.WriteBool(SName,'StoreMenu',StoreMenu);
+  Ini.WriteString(SName, 'Name', Name);
+  Ini.WriteString(SName, 'FileName', FileName);
+  Ini.WriteString(SName, 'Adres', Adres);
+  Ini.WriteInteger(SName, 'MaxSize', MaxSize);
+  Ini.WriteBool(SName, 'StoreWin', StoreWin);
+  Ini.WriteBool(SName, 'StoreMenu', StoreMenu);
 end;
 
-procedure TUpLoadItem.LoadFromIni(Ini : TDotIniFile; SName : string);
+function TUpLoadItem.GetJSONObject: TJSonValue;
 begin
-  Name := Ini.ReadString(SName,'Name',Name);
-  FileName := Ini.ReadString(SName,'FileName',FileName);
-  Adres := Ini.ReadString(SName,'Adres',Adres);
-  MaxSize :=  Ini.ReadInteger(SName,'MaxSize',MaxSize);
-  StoreWin := Ini.ReadBool(SName,'StoreWin',StoreWin);
-  StoreMenu := Ini.ReadBool(SName,'StoreMenu',StoreMenu);
+  Result := TJSONObject.Create;
+  (Result as TJSONObject).AddPair('Name', Name);
+  (Result as TJSONObject).AddPair('FileName', FileName);
+  (Result as TJSONObject).AddPair('Adres', Adres);
+  (Result as TJSONObject).AddPair(CreateJsonPairInt('MaxSize', MaxSize));
+  (Result as TJSONObject).AddPair(CreateJsonPairBool('StoreWin', StoreWin));
+  (Result as TJSONObject).AddPair(CreateJsonPairBool('StoreMenu', StoreMenu));
 end;
 
-function  TUpLoadList.GetItem(Index: Integer): TUpLoadItem;
+procedure TUpLoadItem.LoadFromIni(Ini: TDotIniFile; SName: string);
+begin
+  Name := Ini.ReadString(SName, 'Name', Name);
+  FileName := Ini.ReadString(SName, 'FileName', FileName);
+  Adres := Ini.ReadString(SName, 'Adres', Adres);
+  MaxSize := Ini.ReadInteger(SName, 'MaxSize', MaxSize);
+  StoreWin := Ini.ReadBool(SName, 'StoreWin', StoreWin);
+  StoreMenu := Ini.ReadBool(SName, 'StoreMenu', StoreMenu);
+end;
+
+function TUpLoadList.GetItem(Index: integer): TUpLoadItem;
 begin
   Result := inherited Items[Index] as TUpLoadItem;
 end;
 
-function TUpLoadList.GetSName(nr : integer):string;
+function TUpLoadList.GetSName(nr: integer): string;
 begin
-  Result := 'UPLOAD_DEF_'+IntToStr(nr);
+  Result := 'UPLOAD_DEF_' + IntToStr(nr);
 end;
 
-procedure TUpLoadList.SaveToIni(Ini : TDotIniFile);
+function TUpLoadList.GetJSONObject: TJSonValue;
 var
-  i     : integer;
+  i: integer;
 begin
-  for i:=0 to Count-1 do
+  Result := TJSonArray.Create;
+  for i := 0 to Count - 1 do
   begin
-    Items[i].SaveToIni(Ini,GetSName(i));
+    (Result as TJSonArray).AddElement(Items[i].GetJSONObject);
+  end;
+
+end;
+
+procedure TUpLoadList.SaveToIni(Ini: TDotIniFile);
+var
+  i: integer;
+begin
+  for i := 0 to Count - 1 do
+  begin
+    Items[i].SaveToIni(Ini, GetSName(i));
   end;
   i := Count;
   while Ini.SectionExists(GetSName(i)) do
@@ -79,26 +110,27 @@ begin
   end;
 end;
 
-
-procedure TUpLoadList.LoadFromIni(Ini : TDotIniFile);
+procedure TUpLoadList.LoadFromIni(Ini: TDotIniFile);
 var
-  i  : integer;
-  V  : TUpLoadItem;
+  i: integer;
+  V: TUpLoadItem;
 begin
   i := 0;
   while Ini.SectionExists(GetSName(i)) do
   begin
     V := TUpLoadItem.Create;
-    V.LoadFromIni(Ini,GetSname(i));
+    V.LoadFromIni(Ini, GetSName(i));
     Add(V);
     inc(i);
   end;
 end;
 
 initialization
-  UpLoadList := TUpLoadList.Create;
-finalization
-  UpLoadList.Free;
 
+UpLoadList := TUpLoadList.Create;
+
+finalization
+
+UpLoadList.Free;
 
 end.

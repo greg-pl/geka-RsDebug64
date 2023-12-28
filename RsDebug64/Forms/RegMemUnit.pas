@@ -11,6 +11,7 @@ uses
   ToolsUnit,
   RsdDll,
   CommonDef,
+  Rsd64Definitions,
   AnalogFrameUnit, System.Actions, System.ImageList;
   // CfgFrameUnit, CFrameAnalogUnit;
 
@@ -160,7 +161,7 @@ function TRegMemForm.OnToBinProc(MemName : string; Mem : pbyte; Size:integer; Ty
 
 procedure SetDWord(Mem : pbyte; W :cardinal);
 begin
-  if AreaDefItem.ByteOrder=boBig then
+  if ProgCfg.ByteOrder=boBig then
   begin
     PByteAr(Mem)^[0] := byte(w shr 24);
     PByteAr(Mem)^[1] := byte(w shr 16);
@@ -173,7 +174,7 @@ end;
 
 procedure SetWord(Mem : pbyte; W :cardinal);
 begin
-  if AreaDefItem.ByteOrder=boBig then
+  if ProgCfg.ByteOrder=boBig then
   begin
     PByteAr(Mem)^[0] := byte(w shr 8);
     PByteAr(Mem)^[1] := byte(w);
@@ -211,7 +212,7 @@ function TRegMemForm.OnToValueProc(MemName : string; Buf : pByte; TypeSign:char;
 
 function GetDWord(Buf : pByte):Cardinal;
 begin
-  if AreaDefItem.ByteOrder=boBig then
+  if ProgCfg.ByteOrder=boBig then
   begin
     Result := (Buf^) shl 24;
     inc(Buf);
@@ -227,7 +228,7 @@ end;
 
 function GetWord(Dt : pbyte): word;
 begin
-  if AreaDefItem.ByteOrder=boBig then
+  if ProgCfg.ByteOrder=boBig then
   begin
     Result := (Dt^) shl 8;
     inc(Dt);
@@ -266,7 +267,7 @@ end;
 
 function TRegMemForm.GetPhAdr(Adr : cardinal):cardinal;
 begin
-  Result := AreaDefItem.GetPhAdr(Adr);
+  Result := Adr;
 end;
 
 function  TRegMemForm.ReadPtrValue(A : cardinal): cardinal;
@@ -274,7 +275,7 @@ var
   Size : integer;
   tab  : array[0..3] of byte;
 begin
-  case AreaDefItem.PtrSize of
+  case ProgCfg.PtrSize of
   ps8  : Size:=1;
   ps16 : Size:=2;
   ps32 : Size:=4;
@@ -284,10 +285,10 @@ begin
   if Dev.ReadDevMem(Handle,tab[0],A,Size)<>stOK then
     raise Exception.Create('Blad odczytu wskaznika');
 
-  case AreaDefItem.PtrSize of
+  case ProgCfg.PtrSize of
   ps8  : Result := Tab[0];
-  ps16 : Result := GetWord(@Tab,AreaDefItem.ByteOrder);
-  ps32 : Result := GetDWord(@Tab,AreaDefItem.ByteOrder);
+  ps16 : Result := GetWord(@Tab,ProgCfg.ByteOrder);
+  ps32 : Result := GetDWord(@Tab,ProgCfg.ByteOrder);
   else
     raise Exception.Create('Nieproawidlowa wartosc PtrSize');
   end;
@@ -315,7 +316,6 @@ var
 begin
   inherited;
   GetFromText(Adr,ShowAdr,Size);
-  MemFrame.MemTypeStr   := AreaDefItem.Name;
   MemFrame.MemSize      := Size;
   MemFrame.SrcAdr       := ShowAdr;
 

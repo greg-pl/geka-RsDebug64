@@ -20,26 +20,39 @@ object MainForm: TMainForm
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
-  object Splitter1: TSplitter
+  object SplitterBottom: TSplitter
     Left = 0
-    Top = 380
+    Top = 509
     Width = 714
     Height = 4
     Cursor = crVSplit
     Align = alBottom
     Color = clBtnFace
     ParentColor = False
+    ExplicitTop = 380
   end
   object StatusBar1: TStatusBar
     Left = 0
     Top = 513
     Width = 714
     Height = 19
-    Panels = <>
+    Panels = <
+      item
+        Width = 50
+      end
+      item
+        Width = 150
+      end
+      item
+        Width = 50
+      end
+      item
+        Width = 50
+      end>
   end
   object WinTabPanel: TPanel
     Left = 0
-    Top = 358
+    Top = 487
     Width = 714
     Height = 22
     Align = alBottom
@@ -65,7 +78,7 @@ object MainForm: TMainForm
       item
         Control = ButtonBar
         ImageIndex = -1
-        Width = 712
+        Width = 717
       end>
     Color = clBtnFace
     EdgeInner = esNone
@@ -101,29 +114,12 @@ object MainForm: TMainForm
         Top = 0
         Action = ConnectionconfigAct
       end
-      object ToolButton5: TToolButton
+      object ConnectBtn: TToolButton
         Left = 92
         Top = 0
         Action = ConnectAct
       end
     end
-  end
-  object ExtMemo: TExtGMemo
-    Left = 0
-    Top = 384
-    Width = 714
-    Height = 129
-    Align = alBottom
-    BevelInner = bvRaised
-    BevelOuter = bvNone
-    Caption = 'ExtMemo'
-    TabOrder = 3
-    LogFileName = 'C:\Program Files GK\Borland\Delphi7\Bin\delphi32.log'
-    Logging = False
-    MaxLogFileSize = 500000
-    LogHistoryDeep = 3
-    AutoShow = False
-    Flat = False
   end
   object ActionList1: TActionList
     Images = ImageList1
@@ -230,12 +226,6 @@ object MainForm: TMainForm
       Category = 'DebugWin'
       Caption = 'Upload/Download'
       OnExecute = UploadWinActExecute
-      OnUpdate = MemoryWinActUpdate
-    end
-    object ControlWinAct: TAction
-      Category = 'DebugWin'
-      Caption = 'Rozkazy kontrolne'
-      OnExecute = ControlWinActExecute
       OnUpdate = MemoryWinActUpdate
     end
     object SaveSettingsAct: TAction
@@ -412,10 +402,6 @@ object MainForm: TMainForm
         Action = UploadWinAct
         GroupIndex = 31
       end
-      object Rozkazykontrolne1: TMenuItem
-        Action = ControlWinAct
-        GroupIndex = 31
-      end
       object RfcExecute1: TMenuItem
         Action = RfcWinAct
         GroupIndex = 31
@@ -492,7 +478,7 @@ object MainForm: TMainForm
     Left = 185
     Top = 56
     Bitmap = {
-      494C010106000900300010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101060009004C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

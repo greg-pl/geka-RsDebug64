@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Grids,RmtChildUnit,IniFiles,
-  RsdDll,ProgCfgUnit;
+  RsdDll,ProgCfgUnit,Rsd64Definitions;
 
 type
   TEditDrvParamsForm = class(TForm)
@@ -31,7 +31,7 @@ constructor TEditDrvParamsForm.CreateIterf(AMainWinInterf  : IMainWinInterf; AOw
 begin
   inherited Create(AOwner);
   MainWinInterf := AMainWinInterf;
-  Caption := MainWinInterf.GetDev.ConnectStr;
+  //Caption := MainWinInterf.GetDev.ConnectStr; TODO
 end;
 
 procedure TEditDrvParamsForm.FormClose(Sender: TObject;
@@ -104,12 +104,12 @@ var
   SecName : string;
   i       : integer;
 begin
-  SecName := MainWinInterf.FindIniDrvPrmSection(MainWinInterf.GetDev.ConnectStr);
+  SecName := MainWinInterf.FindIniDrvPrmSection(MainWinInterf.GetDev.getDriverShortName);
   if SecName='' then
     SecName := MainWinInterf.FindIniDrvPrmSection('');
   Ini := TIniFile.Create(ProgCfg.MainIniFName);
   try
-    Ini.WriteString(SecName,INI_PARAM_DEV_STR,MainWinInterf.GetDev.ConnectStr);
+    Ini.WriteString(SecName,INI_PARAM_DEV_STR,MainWinInterf.GetDev.getDriverShortName);
     for i:=1 to ParamGrid.RowCount-1 do
     begin
       if ParamGrid.Cells[1,i]<>'' then

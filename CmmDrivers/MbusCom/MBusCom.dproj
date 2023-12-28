@@ -98,6 +98,7 @@
         <DCCReference Include="ComUnit.pas"/>
         <DCCReference Include="LibUtils.pas"/>
         <DCCReference Include="..\..\JSonSTT\SttObjectDefUnit.pas"/>
+        <DCCReference Include="..\..\Common\CrcUnit.pas"/>
         <None Include="..\CmmCommon\CmmBaseDef.inc"/>
         <None Include="..\CmmCommon\FileAccessDef.inc"/>
         <None Include="..\CmmCommon\MemoryAccessDef.inc"/>

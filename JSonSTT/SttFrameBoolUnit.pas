@@ -17,7 +17,7 @@ type
     { Private declarations }
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    procedure getData(obj: TJSONObject); override;
+    function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
   end;
 
@@ -28,12 +28,13 @@ implementation
 procedure TSttFrameBool.LoadField(ParamList: TSttObjectListJson);
 begin
   inherited;
-  LoadCheckBoxItem(SttCheckBox, ParamList, FItemName);
+  InitCheckBoxItem(SttCheckBox, ParamList, FItemName);
 end;
 
-procedure TSttFrameBool.getData(obj: TJSONObject);
+function TSttFrameBool.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, JSonBoolToStr(SttCheckBox.Checked)));
+  Result :=true;
 end;
 
 procedure TSttFrameBool.setData(obj: TJSONObject);

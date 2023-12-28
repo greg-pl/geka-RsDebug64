@@ -25,6 +25,7 @@ object OpenConnectionDlg: TOpenConnectionDlg
     Default = True
     ModalResult = 1
     TabOrder = 0
+    OnClick = OKBtnClick
   end
   object CancelBtn: TButton
     Left = 385
@@ -50,12 +51,14 @@ object OpenConnectionDlg: TOpenConnectionDlg
       'ST-LINK')
     TabIndex = 0
     OnChange = TabControlChange
+    OnChanging = TabControlChanging
     object Panel1: TPanel
       Left = 4
       Top = 24
       Width = 470
       Height = 25
       Align = alTop
+      ParentBackground = False
       TabOrder = 0
       object LibDescrLabel: TLabel
         Left = 5

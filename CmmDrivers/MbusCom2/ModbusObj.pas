@@ -33,6 +33,7 @@ type
 
   TDevItem = class(TObject)
   private
+    CriSection: TRTLCriticalSection;
     AccId: integer;
     ComNr: integer;
     FDevNr: integer;
@@ -96,6 +97,8 @@ type
       MaxLen: integer; var Len: integer): TStatus;
     function SeReadFileHd(SesId: TSesID; FileNr: TFileNr; var Buf; var Cnt: integer): TStatus;
     function SeWriteFileHd(SesId: TSesID; FileNr: TFileNr; const Buf; var Cnt: integer): TStatus;
+    procedure LockComm;
+    procedure UnlockComm;
   protected
     procedure GoBackFunct(Ev: integer; R: real);
     procedure SetProgress(F: real); overload;
@@ -146,6 +149,8 @@ type
 
     // obsluga terminala
     function TerminalSendKey(key: AnsiChar): TStatus;
+    function TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
+    function TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
     function TerminalRead(Buf: PAnsiChar; var rdcnt: integer): TStatus;
 
     // dostep do sesji i plików
@@ -247,12 +252,23 @@ begin
   MaxTime := 5000;
   CountDivide := 128;
   MdbStdCndDiv := MAX_MDB_STD_FRAME_SIZE;
+  InitializeCriticalSection(CriSection);
 end;
 
 destructor TDevItem.Destroy;
 begin
   inherited Destroy;
+  DeleteCriticalSection(CriSection);
+end;
 
+procedure TDevItem.LockComm;
+begin
+  EnterCriticalSection(CriSection);
+end;
+
+procedure TDevItem.UnlockComm;
+begin
+  LeaveCriticalSection(CriSection);
 end;
 
 function TDevItem.ValidHandle: boolean;
@@ -410,7 +426,6 @@ function TDevItem.isOpen: boolean;
 begin
   Result := (ComHandle <> INVALID_HANDLE_VALUE)
 end;
-
 
 procedure TDevItem.SetSmallInt(const b; Val: Smallint);
 var
@@ -1708,6 +1723,19 @@ begin
   else
     rdcnt := 0;
 end;
+
+function TDevItem.TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
+begin
+
+end;
+
+function TDevItem.TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
+begin
+
+end;
+
+
+// -- Files -----------------------------------------------------------------------------------------------
 
 const
   crdOpenSesion = 50;

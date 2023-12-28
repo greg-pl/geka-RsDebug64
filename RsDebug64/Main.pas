@@ -19,18 +19,19 @@ uses
   UpLoadFileUnit,
   WavGenUnit,
   UpLoadDefUnit,
-  WrtControlUnit,
   RfcUnit,
   About,
   Registry,
-  ExtGMemoUnit, ImgList, System.ImageList, System.Actions;
+  System.JSON,
+  ExtGMemoUnit, ImgList, System.ImageList, System.Actions,
+  ExtG2MemoUnit;
 
 type
   TMainForm = class(TForm, IMainWinInterf)
     ActionList1: TActionList;
     OpenCloseDevAct: TAction;
     StatusBar1: TStatusBar;
-    Splitter1: TSplitter;
+    SplitterBottom: TSplitter;
     MainMenu1: TMainMenu;
     Fiel1: TMenuItem;
     Exit1: TMenuItem;
@@ -61,7 +62,6 @@ type
     SplitWindowitem: TMenuItem;
     ala1: TMenuItem;
     SygGenItem: TMenuItem;
-    Rozkazykontrolne1: TMenuItem;
     Oprogramie1: TMenuItem;
     EditConnectionAct: TAction;
     ConnectAct: TAction;
@@ -89,14 +89,12 @@ type
     N7: TMenuItem;
     erminal1: TMenuItem;
     TerminalAct: TAction;
-    ExtMemo: TExtGMemo;
     PictureWinAct: TAction;
     MemoryWinAct: TAction;
     VarListWinAct: TAction;
     StructWinAct: TAction;
     GeneratorWinAct: TAction;
     UploadWinAct: TAction;
-    ControlWinAct: TAction;
     N8: TMenuItem;
     Obraz1: TMenuItem;
     ButtonBar: TToolBar;
@@ -124,7 +122,7 @@ type
     RfcWinAct: TAction;
     RfcExecute1: TMenuItem;
     ConnectionconfigAct: TAction;
-    ToolButton5: TToolButton;
+    ConnectBtn: TToolButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
@@ -154,7 +152,6 @@ type
     procedure StructWinActExecute(Sender: TObject);
     procedure GeneratorWinActExecute(Sender: TObject);
     procedure UploadWinActExecute(Sender: TObject);
-    procedure ControlWinActExecute(Sender: TObject);
     procedure PictureWinActExecute(Sender: TObject);
     procedure SaveSettingsActExecute(Sender: TObject);
     procedure SettingsActExecute(Sender: TObject);
@@ -182,7 +179,9 @@ type
     FirstConnectBtn: TToolButton;
     TerminalChecked: boolean;
     TerminalValid: boolean;
+    ExtMemo: TExtG2Memo;
     procedure OnWriteIniProc(Ini: TDotIniFile);
+    function OnWriteJsonCfgProc: TJsonObject;
     procedure OnActivateAplic(Sender: TObject);
     procedure OnReadIniProc(Ini: TDotIniFile);
     procedure OnReOpenClickProc(Sender: TObject);
@@ -192,7 +191,10 @@ type
     procedure SetDriverParamsFromIni;
     procedure CloseEditDrvParamsForm;
     procedure SetupWinTabs;
-    function ReOpenConnection: boolean;
+    function isDevConnected: boolean;
+    function isDllReady: boolean;
+    procedure UpdateStatusBarConnInfoStr;
+    procedure AfterConnChanged;
   public
     Dev: TCmmDevice;
     CommThread: TCommThread;
@@ -218,13 +220,15 @@ implementation
 {$R *.dfm}
 
 uses
+  Rsd64Definitions,
   Rz40EventsUnit,
   EditDrvParamsUnit,
   PictureView,
   TerminalUnit,
   RegMemUnit,
   BinaryMemUnit,
-  OpenConnectionDlgUnit;
+  OpenConnectionDlgUnit,
+  JSonUtils;
 
 function GetComNr(s: string): Integer;
 begin
@@ -234,15 +238,18 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   FirstTime := true;
-  ProgCfg.OnReadIni := OnReadIniProc;
-  ProgCfg.OnWriteIni := OnWriteIniProc;
+  ProgCfg.OnReadData := OnReadIniProc;
+  ProgCfg.OnWriteData := OnWriteIniProc;
+  ProgCfg.OnWriteJsonCfg := OnWriteJsonCfgProc;
   Application.OnActivate := OnActivateAplic;
   MapParser.OnReloaded := OnReloadedProc;
-  Dev := TCmmDevice.Create(Handle, ProgCfg.DevString);
-  CommThread := TCommThread.Create(Dev);
+  Dev := nil;
+  CommThread := TCommThread.Create;
+  ExtMemo := TExtG2Memo.Create(self);
+  ExtMemo.Parent := self;
+  ExtMemo.Align := alBottom;
 
 end;
-
 
 procedure TMainForm.FormActivate(Sender: TObject);
 begin
@@ -254,7 +261,49 @@ begin
     ProgCfg.ReOpenBaseList.Konfig(0, FilemapItem, OnReOpenClickProc);
     SetupWinTabs;
     ExtMemo.SetCharSet;
+    UpdateStatusBarConnInfoStr;
   end
+end;
+
+procedure TMainForm.ConnectActExecute(Sender: TObject);
+var
+  st: TStatus;
+  memConnected: boolean;
+begin
+  memConnected := isDevConnected;
+  if isDevConnected then
+  begin
+    Dev.CloseDev;
+    FreeAndNil(Dev);
+  end
+  else
+  begin
+    if Assigned(Dev) then
+    begin
+      NL(Format('CloseDev [%s]=%s', [Dev.getDriverShortName, Dev.GetErrStr(Dev.CloseDev)]));
+    end;
+    FreeAndNil(Dev);
+
+    Dev := TCmmDevice.Create(Handle, ProgCfg.DevString);
+    CommThread.SetDev(Dev);
+
+    st := Dev.OpenDev;
+    NL(Format('OpenDev [%s]=%s', [Dev.getDriverShortName, Dev.GetErrStr(st)]));
+    if st = stOK then
+    begin
+      SetDriverParamsFromIni;
+      CloseEditDrvParamsForm;
+      TerminalChecked := false;
+    end
+    else
+    begin
+      FreeAndNil(Dev);
+      CommThread.SetDev(Dev);
+    end
+  end;
+  ConnectBtn.Down := isDevConnected;
+  if memConnected <> isDevConnected then
+    AfterConnChanged;
 end;
 
 procedure TMainForm.OnActivateAplic(Sender: TObject);
@@ -326,7 +375,7 @@ var
   i: Integer;
   pName, pVal: string;
 begin
-  SecName := FindIniDrvPrmSection(Dev.ConnectStr);
+  SecName := FindIniDrvPrmSection(Dev.getDriverShortName);
   if SecName <> '' then
   begin
     Ini := TIniFile.Create(ProgCfg.MainIniFName);
@@ -345,6 +394,19 @@ begin
     finally
       Ini.Free;
       SL.Free;
+    end;
+  end;
+end;
+
+procedure TMainForm.AfterConnChanged;
+var
+  i: Integer;
+begin
+  for i := 0 to MDIChildCount - 1 do
+  begin
+    if MDIChildren[i] is TChildForm then
+    begin
+      (MDIChildren[i] as TChildForm).AfterConnChanged;
     end;
   end;
 end;
@@ -411,7 +473,7 @@ begin
     q := ProgCfg.AutoRefreshMap;
     if q = crASK then
     begin
-      s := 'Plik MAP ulegl zmianie.' + #13 + 'Cz za³adowaæ go ponownie ?';
+      s := 'Plik MAP ulegl zmianie.' + #13 + 'Czy za³adowaæ go ponownie ?';
       R := Application.MessageBox(pchar(s), 'OnActivate', mb_yesNo);
       case R of
         idYes:
@@ -492,65 +554,19 @@ begin
   ExtMemo.Print(s);
 end;
 
-
-procedure TMainForm.ConnectActExecute(Sender: TObject);
-begin
-  ReOpenConnection;
-
-end;
-
-
-function TMainForm.ReOpenConnection: boolean;
-var
-  DevStr: string;
-  st: TStatus;
-  i: Integer;
-begin
-  if Dev.IsDevStrOk then
-  begin
-    NL(Format('CloseDev [%s]=%s', [Dev.ConnectStr, Dev.GetErrStr(Dev.CloseDev)]));
-  end;
-  FreeAndNil(Dev);
-
-
-  DevStr := ProgCfg.DevString;
-
-  Dev := TCmmDevice.Create(Handle, DevStr);
-  CommThread.SetDev(Dev);
-
-  if Dev.IsDevStrOk then
-  begin
-    st := Dev.OpenDev;
-    NL(Format('OpenDev [%s]=%s', [Dev.ConnectStr, Dev.GetErrStr(st)]));
-    if st <> stOK then
-    begin
-      FreeAndNil(Dev);
-      Dev := TCmmDevice.Create(Handle, '');
-      CommThread.SetDev(Dev);
-    end
-    else
-    begin
-      SetDriverParamsFromIni;
-      CloseEditDrvParamsForm;
-      TerminalChecked := false;
-    end;
-  end;
-end;
-
 procedure TMainForm.Exit1Click(Sender: TObject);
 begin
   Close;
 end;
 
-
 procedure TMainForm.EditConnectionActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := not(Dev.IsDevStrOk);
+  (Sender as TAction).Enabled := not(isDllReady);
 end;
 
 procedure TMainForm.MemoryWinActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := Dev.Connected;
+  (Sender as TAction).Enabled := isDevConnected;
 end;
 
 procedure TMainForm.WMShowMemWin(var Msg: TMessage);
@@ -570,7 +586,6 @@ var
 begin
   Win := TStructShowForm.CreateIterf(self, self);
   AdrCpx1 := PAdrCpx(Msg.WParam)^;
-  Win.SetArea(AdrCpx1.AreaName);
   Win.SetStruct(AdrCpx1.Adres, THType(Msg.LParam));
 end;
 
@@ -643,6 +658,8 @@ begin
   Ini.WriteInteger('MAIN', 'Left', Left);
   Ini.WriteInteger('MAIN', 'Width', Width);
   Ini.WriteInteger('MAIN', 'Height', Height);
+  Ini.WriteInteger('MAIN', 'MemoHeight', ExtMemo.Height);
+
   UpLoadList.SaveToIni(Ini);
 
   N := 1;
@@ -663,6 +680,27 @@ begin
   GlobTypeList.SaveToIni(Ini);
 end;
 
+function TMainForm.OnWriteJsonCfgProc: TJsonObject;
+var
+  jArr :TJSonArray;
+  i : integer;
+begin
+  Result := TJsonObject.Create;
+  JSONAddPair_TLWH(Result,self);
+  JSONAddPair(Result,'MemoHeight', ExtMemo.Height);
+  Result.AddPair(TJSONPair.Create('UpLoadList',UpLoadList.GetJSONObject));
+
+  jArr := TJSonArray.Create;
+  for i := 0 to MDIChildCount - 1 do
+  begin
+    if MDIChildren[i] is TChildForm then
+    begin
+      jArr.AddElement((MDIChildren[i] as TChildForm).GetJSONObject);
+    end;
+  end;
+  Result.AddPair(TJSONPair.Create('ChildForms',jArr));
+end;
+
 procedure TMainForm.OnReadIniProc(Ini: TDotIniFile);
 var
   WinType: string;
@@ -680,6 +718,10 @@ begin
   Left := Ini.ReadInteger('MAIN', 'Left', Left);
   Width := Ini.ReadInteger('MAIN', 'Width', Width);
   Height := Ini.ReadInteger('MAIN', 'Height', Height);
+  ExtMemo.Height := Ini.ReadInteger('MAIN', 'MemoHeight', ExtMemo.Height);
+
+  ExtMemo.Top := 1; // ExtMemo above StatusBar
+  SplitterBottom.Top := 1; // SplitterBottom above ExtMemo
 
   N := 1;
   while Ini.SectionExists(GetSName(N)) do
@@ -694,8 +736,6 @@ begin
       Dlg := TStructShowForm.CreateIterf(self, self);
     if WinType = 'TWavGenForm' then
       Dlg := TWavGenForm.CreateIterf(self, self);
-    if WinType = 'TWrtControlForm' then
-      Dlg := TWrtControlForm.CreateIterf(self, self);
     if WinType = 'TTerminalForm' then
       Dlg := TTerminalForm.CreateIterf(self, self);
     if WinType = 'TPictureViewForm' then
@@ -716,6 +756,17 @@ begin
     inc(N);
   end;
 end;
+
+function TMainForm.isDevConnected: boolean;
+begin
+  Result := Assigned(Dev) and Dev.Connected;
+end;
+
+function TMainForm.isDllReady: boolean;
+begin
+  Result := Assigned(Dev) and Dev.IsDllReady;
+end;
+
 
 procedure TMainForm.OnReOpenClickProc(Sender: TObject);
 var
@@ -935,12 +986,6 @@ begin
   F.BringToFront;
 end;
 
-
-procedure TMainForm.ControlWinActExecute(Sender: TObject);
-begin
-  TWrtControlForm.CreateIterf(self, self);
-end;
-
 procedure TMainForm.Oprogramie1Click(Sender: TObject);
 begin
   ShowAboutDlg;
@@ -973,7 +1018,7 @@ end;
 
 procedure TMainForm.GetDrvParamsActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := Dev.Connected;
+  (Sender as TAction).Enabled := isDevConnected;
 end;
 
 procedure TMainForm.SetDrvParamsActExecute(Sender: TObject);
@@ -1004,7 +1049,7 @@ begin
     if MDIChildren[i] is TEditDrvParamsForm then
     begin
       Form := MDIChildren[i] as TEditDrvParamsForm;
-      if Form.Caption <> Dev.ConnectStr then
+      if Form.Caption <> Dev.getDriverShortName then
         Form.Close;
     end;
   end;
@@ -1042,9 +1087,9 @@ begin
   if not(TerminalChecked) then
   begin
     TerminalValid := false;
-    if Dev.Connected then
+    if isDevConnected then
     begin
-      TerminalValid := Dev.CheckTerminalValid;
+      TerminalValid := Dev.isTerminalFunctions;
       TerminalChecked := true;
     end;
   end;
@@ -1063,7 +1108,7 @@ end;
 
 procedure TMainForm.IsModbusStdActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := Dev.isStdModbus;
+  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isStdModbus;
 end;
 
 procedure TMainForm.MemBinaryInputActExecute(Sender: TObject);
@@ -1111,21 +1156,35 @@ end;
 procedure TMainForm.ConnectionconfigActExecute(Sender: TObject);
 var
   Dlg: TOpenConnectionDlg;
+  dStr: string;
 begin
   Dlg := TOpenConnectionDlg.Create(self);
   try
     Dlg.SetConfig(ProgCfg.DevString);
     if Dlg.ShowModal = mrOk then
-      ProgCfg.DevString:= Dlg.GetConfig;
+    begin
+      if Dlg.GetConfig(dStr) then
+      begin
+        ProgCfg.DevString := dStr;
+        UpdateStatusBarConnInfoStr;
+      end;
+    end;
   finally
     Dlg.Free;
   end;
 end;
 
+procedure TMainForm.UpdateStatusBarConnInfoStr;
+var
+  ConnInfoStr: string;
+begin
+  if ExtractConnInfoStr(ProgCfg.DevString, ConnInfoStr) then
+    StatusBar1.Panels[1].Text := ConnInfoStr;
+end;
 
 procedure TMainForm.ConnectionconfigActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := not Dev.Connected;
+  (Sender as TAction).Enabled := not(isDevConnected);
 end;
 
 end.

@@ -6,21 +6,10 @@ uses
   Classes, Windows, Messages, SysUtils, Contnrs, Registry,
   GkStrUtils,
   ProgCfgUnit,
+  System.JSON,
   Rsd64Definitions;
 
-const
-  stOk = 0;
-  stError = 100;
-  stNotOpen = 101;
-  stUndefCommand = 102;
-  stNoImpl = 217;
-
 type
-  TAccId = integer;
-  TStatus = integer;
-
-  PCmmDevice = ^TCmmDevice;
-
   TCmmDevice = class(TObject)
   private
     FID: TAccId;
@@ -28,25 +17,30 @@ type
     FConnected: boolean;
     FToTrnsSize: integer;
     ProgressHandle: THandle;
-    FConnectStr: string;
+    FShortDriverName: string;
+    SubGroups: TSubGroups;
   public
-    constructor Create(AHandle: THandle; ConnectStr: string);
+    constructor Create(AHandle: THandle; ConnectParamJson: string);
     destructor Destroy; override;
     function OpenDev: TStatus; virtual;
     function CloseDev: TStatus; virtual;
-    function GetDevNr: byte;
 
     property ID: TAccId read FID;
     function GetErrStr(Code: TStatus; S: pAnsiChar; Max: integer): boolean; overload;
     function GetErrStr(Code: TStatus): string; overload;
     procedure SetProgress(Ev: integer; R: real);
     property Connected: boolean read FConnected;
-    property ConnectStr: string read FConnectStr;
 
-    function IsDevStrOk: boolean;
+    function IsDllReady: boolean;
+    function getDriverShortName: string;
+
+    function GetDrvParamList(ToSet: boolean): string; stdcall;
+    function SetDrvParam(ParamName, ParamValue: string): TStatus; stdcall;
+    function GetDrvStatus(ParamName: string; var ParamValue: string): TStatus; stdcall;
 
   public
     // funkcje podstawowe Modbusa
+    function isStdModbus: boolean;
     function RdOutTable(RHan: THandle; var Buf; Adress: word; Count: word): TStatus;
     function RdInpTable(RHan: THandle; var Buf; Adress: word; Count: word): TStatus;
     function RdReg(RHan: THandle; var Buf; Adress: word; Count: word): TStatus;
@@ -58,27 +52,16 @@ type
       WrCount: word): TStatus;
 
     // Funkcje dodatkowe
-    function ReadS(RHan: THandle; var S: string; var Vec: Cardinal): TStatus;
+    function isMemFunctions: boolean;
     function ReadDevMem(RHan: THandle; var Buffer; adr: Cardinal; size: Cardinal): TStatus;
-    function ReadDevWord(RHan: THandle; adr: Cardinal; var w: word): TStatus;
-    function ReadDevByte(RHan: THandle; adr: Cardinal; var w: byte): TStatus;
-
     function WriteDevMem(RHan: THandle; const Buffer; adr: Cardinal; size: Cardinal): TStatus;
-    function WriteDWord(RHan: THandle; adr: Cardinal; w: Cardinal): TStatus;
-    function WriteWord(RHan: THandle; adr: Cardinal; w: word): TStatus;
-    function WriteByte(RHan: THandle; adr: Cardinal; w: byte): TStatus;
 
-    function ReadCtrl(RHan: THandle; nr: byte; var b: byte): TStatus;
-    function WriteCtrl(RHan: THandle; nr: byte; b: byte): TStatus;
-
-    function GetDrvParamList(ToSet: boolean): string; stdcall;
-    function SetDrvParam(ParamName, ParamValue: string): TStatus; stdcall;
-    function GetDrvStatus(ParamName: string; var ParamValue: string): TStatus; stdcall;
+    // terminal
+    function isTerminalFunctions: boolean;
     function TerminalSendKey(RHan: THandle; key: char): TStatus;
     function TerminalRead(RHan: THandle; var Buf; var rdcnt: integer): TStatus;
-    function CheckTerminalValid: boolean;
-
-    function isStdModbus: boolean;
+    function TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
+    function TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
 
   end;
 
@@ -120,7 +103,7 @@ type
     procedure ScanLibrary;
     property Items[Index: integer]: TCmmLibrary read FGetItem;
     procedure SetLoggerHandle(H: THandle);
-    function FindLibraryByName(Name: string): THandle;
+    function FindLibraryByName(Name: string): TCmmLibrary;
     function FindLibraryByLibID(LibID: integer): TCmmLibrary;
     function LibraryGetMemFunc(LibID: integer; size: integer): pointer;
     procedure LoadDriverList(LibList: TStrings);
@@ -186,15 +169,8 @@ type
   // Terminal
   TTerminalSendKey = function(ID: TAccId; key: char): TStatus; stdcall;
   TTerminalRead = function(ID: TAccId; var Buffer; var rdcnt: integer): TStatus; stdcall;
-
-  // obsoleted
-  TReadS = function(ID: TAccId; var Sign; var Vec: Cardinal): TStatus; stdcall;
-  TReadReg = function(ID: TAccId; var Buffer): TStatus; stdcall;
-  TFillMem = function(ID: TAccId; adr: Cardinal; size: word; Sign: byte): TStatus; stdcall;
-  TMoveMem = function(ID: TAccId; src: Cardinal; Des: Cardinal; size: word): TStatus; stdcall;
-  TSemaforWr = function(ID: TAccId; nr: byte; b: byte): TStatus; stdcall;
-  TSemaforRd = function(ID: TAccId; nr: byte; var b: byte): TStatus; stdcall;
-  TGetDevNr = function(ID: TAccId): byte; stdcall;
+  TTerminalSetPipe = function(ID: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
+  TTerminalSetRunFlag = function(ID: TAccId; TerminalNr: integer; RunFlag: boolean): TStatus; stdcall;
 
 function TCmmDevList.GetItem(Index: integer): TCmmDevice;
 begin
@@ -222,52 +198,43 @@ begin
     Dev.SetProgress(Ev, R);
 end;
 
-constructor TCmmDevice.Create(AHandle: THandle; ConnectStr: string);
+constructor TCmmDevice.Create(AHandle: THandle; ConnectParamJson: string);
 var
   _AddDev: TAddDev;
   _RegBeck: TRegisterCallBackFun;
-  SL: TStringList;
   S: string;
   channel: integer;
   AnsiConnectStr: AnsiString;
+  driverName: string;
+  CmmLib: TCmmLibrary;
 begin
   inherited Create;
   ProgressHandle := AHandle;
-  FConnectStr := ConnectStr;
   FID := -1;
-  SL := TStringList.Create;
-  try
-    DllHandle := INVALID_HANDLE_VALUE;
-    ExtractStrings([';'], [], pchar(ConnectStr), SL);
-    if SL.Count > 0 then
-    begin
-      DllHandle := CmmLibraryList.FindLibraryByName(SL.Strings[0]);
+  DllHandle := INVALID_HANDLE_VALUE;
+  FShortDriverName := '';
 
-      if DllHandle <> INVALID_HANDLE_VALUE then
+  if ExtractDriverName(ConnectParamJson, driverName) then
+  begin
+    FShortDriverName := driverName;
+    CmmLib := CmmLibraryList.FindLibraryByName(driverName);
+    if Assigned(CmmLib) then
+    begin
+      DllHandle := CmmLib.CmmHandle;
+      SubGroups := CmmLib.LibParams.SubGroups;
+      AnsiConnectStr := AnsiString(ConnectParamJson);
+      @_AddDev := GetProcAddress(DllHandle, 'AddDev');
+      if Assigned(_AddDev) then
+        FID := _AddDev(pAnsiChar(AnsiConnectStr));
+      if FID >= 0 then
       begin
-        AnsiConnectStr := AnsiString(ConnectStr);
-        @_AddDev := GetProcAddress(DllHandle, 'AddDev');
-        if Assigned(_AddDev) then
-          FID := _AddDev(pAnsiChar(AnsiConnectStr));
         _RegBeck := GetProcAddress(DllHandle, 'RegisterCallBackFun');
         if Assigned(_RegBeck) then
           _RegBeck(FID, Cardinal(TCmmDevice), CallBackFunc);
-        if SL.Count > 3 then
-        begin
-          S := SL.Strings[3];
-          if length(S) >= 1 then
-          begin
-            channel := ord(S[1]) - ord('A');
-            if (channel >= 0) and (channel < 10) then
-              FID := FID + channel;
-          end;
-        end;
         CmmDevList.Add(self);
       end;
     end;
-  finally
-    SL.free;
-  end;
+  end
 end;
 
 destructor TCmmDevice.Destroy;
@@ -281,7 +248,12 @@ begin
   inherited;
 end;
 
-function TCmmDevice.IsDevStrOk: boolean;
+function TCmmDevice.getDriverShortName: string;
+begin
+  Result := FShortDriverName;
+end;
+
+function TCmmDevice.IsDllReady: boolean;
 begin
   Result := (DllHandle <> INVALID_HANDLE_VALUE);
 end;
@@ -290,14 +262,16 @@ function TCmmDevice.OpenDev: TStatus;
 var
   _OpenDev: TOpenDev;
 begin
-  @_OpenDev := GetProcAddress(DllHandle, 'OpenDev');
-  if Assigned(_OpenDev) then
+  Result := stNoImpl;
+  if IsDllReady then
   begin
-    Result := _OpenDev(FID);
-    FConnected := (Result = stOk);
-  end
-  else
-    Result := stNoImpl;
+    @_OpenDev := GetProcAddress(DllHandle, 'OpenDev');
+    if Assigned(_OpenDev) then
+    begin
+      Result := _OpenDev(FID);
+    end;
+  end;
+  FConnected := (Result = stOk);
 end;
 
 function TCmmDevice.CloseDev: TStatus;
@@ -307,45 +281,13 @@ begin
   @_CloseDev := GetProcAddress(DllHandle, 'CloseDev');
   if Assigned(_CloseDev) then
     _CloseDev(FID);
-  FConnected := False;
+  FConnected := false;
   Result := stOk;
 end;
 
-function TCmmDevice.GetDevNr: byte;
-var
-  _GetDevNr: TGetDevNr;
-begin
-  @_GetDevNr := GetProcAddress(DllHandle, 'GetDevNr');
-  if Assigned(_GetDevNr) then
-    Result := _GetDevNr(FID)
-  else
-    Result := 255;
-end;
-
 function TCmmDevice.isStdModbus: boolean;
-var
-  _RdOutTable: TRdOutTable;
-  _RdInpTable: TRdInpTable;
-  _RdReg: TRdReg;
-  _RdAnalogInp: TRdAnalogInp;
-  _WrOutput: TWrOutput;
-  _WrReg: TWrReg;
-  _WrMultiReg: TWrMultiReg;
 begin
-  if DllHandle <> 0 then
-  begin
-    @_RdOutTable := GetProcAddress(DllHandle, 'RdOutTable');
-    @_RdInpTable := GetProcAddress(DllHandle, 'RdInpTable');
-    @_RdReg := GetProcAddress(DllHandle, 'RdReg');
-    @_RdAnalogInp := GetProcAddress(DllHandle, 'RdAnalogInp');
-    @_WrOutput := GetProcAddress(DllHandle, 'WrOutput');
-    @_WrReg := GetProcAddress(DllHandle, 'WrReg');
-    @_WrMultiReg := GetProcAddress(DllHandle, 'WrMultiReg');
-    Result := Assigned(_RdOutTable) and Assigned(_RdInpTable) and Assigned(_RdReg) and Assigned(_RdAnalogInp) and
-      Assigned(_WrOutput) and Assigned(_WrReg) and Assigned(_WrMultiReg);
-  end
-  else
-    Result := False;
+  Result := subMODBUS_STD in SubGroups;
 end;
 
 function TCmmDevice.RdOutTable(RHan: THandle; var Buf; Adress: word; Count: word): TStatus;
@@ -465,21 +407,9 @@ begin
     Result := stNoImpl;
 end;
 
-function TCmmDevice.ReadS(RHan: THandle; var S: string; var Vec: Cardinal): TStatus;
-var
-  _ReadS: TReadS;
+function TCmmDevice.isMemFunctions: boolean;
 begin
-  ProgressHandle := RHan;
-  @_ReadS := GetProcAddress(DllHandle, 'ReadS');
-  if Assigned(_ReadS) then
-  begin
-    FToTrnsSize := 20;
-    setlength(S, 20);
-    Result := _ReadS(FID, S[1], Vec);
-    setlength(S, strlen(pchar(S)));
-  end
-  else
-    Result := stNoImpl;
+  Result := subMEMORY in SubGroups;
 end;
 
 function TCmmDevice.ReadDevMem(RHan: THandle; var Buffer; adr: Cardinal; size: Cardinal): TStatus;
@@ -497,16 +427,6 @@ begin
     Result := stNoImpl;
 end;
 
-function TCmmDevice.ReadDevWord(RHan: THandle; adr: Cardinal; var w: word): TStatus;
-begin
-  Result := ReadDevMem(RHan, w, adr, sizeof(w));
-end;
-
-function TCmmDevice.ReadDevByte(RHan: THandle; adr: Cardinal; var w: byte): TStatus;
-begin
-  Result := ReadDevMem(RHan, w, adr, sizeof(w));
-end;
-
 function TCmmDevice.WriteDevMem(RHan: THandle; const Buffer; adr: Cardinal; size: Cardinal): TStatus;
 var
   _WriteMem: TWriteMem;
@@ -517,49 +437,6 @@ begin
   begin
     FToTrnsSize := size;
     Result := _WriteMem(FID, Buffer, adr, size);
-  end
-  else
-    Result := stNoImpl;
-end;
-
-function TCmmDevice.WriteDWord(RHan: THandle; adr: Cardinal; w: Cardinal): TStatus;
-begin
-  Result := WriteDevMem(RHan, w, adr, sizeof(w));
-end;
-
-function TCmmDevice.WriteWord(RHan: THandle; adr: Cardinal; w: word): TStatus;
-begin
-  Result := WriteDevMem(RHan, w, adr, sizeof(w));
-end;
-
-function TCmmDevice.WriteByte(RHan: THandle; adr: Cardinal; w: byte): TStatus;
-begin
-  Result := WriteDevMem(RHan, w, adr, sizeof(w));
-end;
-
-function TCmmDevice.WriteCtrl(RHan: THandle; nr: byte; b: byte): TStatus;
-var
-  _SemaforWr: TSemaforWr;
-begin
-  ProgressHandle := RHan;
-  @_SemaforWr := GetProcAddress(DllHandle, 'WriteCtrl');
-  if Assigned(_SemaforWr) then
-  begin
-    Result := _SemaforWr(FID, nr, b);
-  end
-  else
-    Result := stNoImpl;
-end;
-
-function TCmmDevice.ReadCtrl(RHan: THandle; nr: byte; var b: byte): TStatus;
-var
-  _SemaforRd: TSemaforRd;
-begin
-  ProgressHandle := RHan;
-  @_SemaforRd := GetProcAddress(DllHandle, 'ReadCtrl');
-  if Assigned(_SemaforRd) then
-  begin
-    Result := _SemaforRd(FID, nr, b);
   end
   else
     Result := stNoImpl;
@@ -579,6 +456,32 @@ begin
     Result := stNoImpl;
 end;
 
+function TCmmDevice.TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
+var
+  _TerminalSetPipe: TTerminalSetPipe;
+begin
+  @_TerminalSetPipe := GetProcAddress(DllHandle, 'TerminalSetPipe');
+  if Assigned(_TerminalSetPipe) then
+  begin
+    Result := _TerminalSetPipe(FID, TerminalNr, PipeHandle);
+  end
+  else
+    Result := stNoImpl;
+end;
+
+function TCmmDevice.TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
+var
+  _TerminalSetRunFlag: TTerminalSetRunFlag;
+begin
+  @_TerminalSetRunFlag := GetProcAddress(DllHandle, 'TerminalSetRunFlag');
+  if Assigned(_TerminalSetRunFlag) then
+  begin
+    Result := _TerminalSetRunFlag(FID, TerminalNr, RunFlag);
+  end
+  else
+    Result := stNoImpl;
+end;
+
 function TCmmDevice.TerminalSendKey(RHan: THandle; key: char): TStatus;
 var
   _TerminalSendKey: TTerminalSendKey;
@@ -593,9 +496,9 @@ begin
     Result := stNoImpl;
 end;
 
-function TCmmDevice.CheckTerminalValid: boolean;
+function TCmmDevice.isTerminalFunctions: boolean;
 begin
-  Result := (TerminalSendKey(INVALID_HANDLE_VALUE, #0) = stOk);
+  Result := subTERMINAL in SubGroups;
 end;
 
 function TCmmDevice.GetErrStr(Code: TStatus; S: pAnsiChar; Max: integer): boolean;
@@ -606,7 +509,7 @@ begin
   if Assigned(_GetErrStr) then
     Result := _GetErrStr(FID, Code, S, Max)
   else
-    Result := False;
+    Result := false;
 end;
 
 function TCmmDevice.GetErrStr(Code: TStatus): string;
@@ -674,29 +577,23 @@ begin
   if (ProgressHandle <> INVALID_HANDLE_VALUE) then
   begin
     case Ev of
-      0:
-        begin
-          P := round(10 * R);
-          SendMessage(ProgressHandle, wm_TrnsProgress, P, 0);
-        end;
-      1:
-        begin
-
-        end;
-      2:
-        begin
-
-        end;
-      3:
-        begin
-
-        end;
-      4:
+      evWorkOnOff:
         begin
           if R = 0 then
             SendMessage(ProgressHandle, wm_TrnsStartStop, 0, 0)
           else
             SendMessage(ProgressHandle, wm_TrnsStartStop, 1, 0);
+        end;
+      evProgress:
+        begin
+          P := round(10 * R);
+          SendMessage(ProgressHandle, wm_TrnsProgress, P, 0);
+        end;
+      evFlow:
+        begin
+          SendMessage(ProgressHandle, wm_TrnsFlow, trunc(R), 0);
+
+
         end;
     end;
   end;
@@ -786,7 +683,7 @@ function TCmmLibrary.FreeLibMemory(ptr: pointer): boolean;
 var
   idx: integer;
 begin
-  Result := False;
+  Result := false;
   idx := FindMemoryObj(ptr);
   if idx >= 0 then
   begin
@@ -841,16 +738,16 @@ begin
     (Items[i] as TCmmLibrary).SetLoggerHandle(H);
 end;
 
-function TCmmLibraryList.FindLibraryByName(Name: string): THandle;
+function TCmmLibraryList.FindLibraryByName(Name: string): TCmmLibrary;
 var
   i: integer;
 begin
-  Result := INVALID_HANDLE_VALUE;
+  Result := nil;
   for i := 0 to Count - 1 do
   begin
     if (Items[i] as TCmmLibrary).LibParams.shortName = Name then
     begin
-      Result := (Items[i] as TCmmLibrary).CmmHandle;
+      Result := (Items[i] as TCmmLibrary);
       break;
     end;
   end;
@@ -899,7 +796,7 @@ var
   pRdGuid: PGUID;
   CmmLibrary: TCmmLibrary;
 begin
-  Result := False;
+  Result := false;
   H := LoadLibrary(pchar(FName));
 
   @_LibIdentify := GetProcAddress(H, 'LibIdentify');
@@ -993,7 +890,7 @@ end;
 
 initialization
 
-CmmDevList := TCmmDevList.Create(False);
+CmmDevList := TCmmDevList.Create(false);
 CmmLibraryList := TCmmLibraryList.Create;
 CmmLibraryList.ScanLibrary;
 
