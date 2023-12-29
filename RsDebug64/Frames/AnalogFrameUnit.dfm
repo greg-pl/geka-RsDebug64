@@ -17,6 +17,10 @@ object AnalogFrame: TAnalogFrame
       Caption = 'WORD'
       ImageIndex = 1
       OnShow = WordSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object WordGRid: TStringGrid
         Left = 0
         Top = 33

@@ -43,8 +43,6 @@ type
     { Public declarations }
   end;
 
-var
-  SettingForm: TSettingForm;
 
 implementation
 

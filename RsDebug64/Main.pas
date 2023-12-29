@@ -177,14 +177,10 @@ type
     function FindIniDrvPrmSection(s: string): string;
   private
     FirstTime: boolean;
-    TerminalChecked: boolean;
-    TerminalValid: boolean;
     ExtMemo: TExtG2Memo;
-    procedure OnWriteIniProc(Ini: TDotIniFile);
     function OnWriteJsonCfgProc: TJSONBuilder;
     procedure OnReadJsonCfgProc(jLoader: TJSONLoader);
     procedure OnActivateAplic(Sender: TObject);
-    procedure OnReadIniProc(Ini: TDotIniFile);
     procedure OnReOpenClickProc(Sender: TObject);
     procedure OnReloadedProc(Sender: TObject);
     function GetSName(N: Integer): string;
@@ -239,8 +235,6 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   FirstTime := true;
-  ProgCfg.OnReadData := OnReadIniProc;
-  ProgCfg.OnWriteData := OnWriteIniProc;
   ProgCfg.OnWriteJsonCfg := OnWriteJsonCfgProc;
   ProgCfg.OnReadJsonCfg := OnReadJsonCfgProc;
   Application.OnActivate := OnActivateAplic;
@@ -295,7 +289,6 @@ begin
     begin
       SetDriverParamsFromIni;
       CloseEditDrvParamsForm;
-      TerminalChecked := false;
     end
     else
     begin
@@ -651,37 +644,6 @@ begin
   Result := Format('Win_%u', [N]);
 end;
 
-procedure TMainForm.OnWriteIniProc(Ini: TDotIniFile);
-var
-  i: Integer;
-  N: Integer;
-begin
-  Ini.WriteInteger('MAIN', 'Top', Top);
-  Ini.WriteInteger('MAIN', 'Left', Left);
-  Ini.WriteInteger('MAIN', 'Width', Width);
-  Ini.WriteInteger('MAIN', 'Height', Height);
-  Ini.WriteInteger('MAIN', 'MemoHeight', ExtMemo.Height);
-
-  UpLoadList.SaveToIni(Ini);
-
-  N := 1;
-  for i := 0 to MDIChildCount - 1 do
-  begin
-    if MDIChildren[i] is TChildForm then
-    begin
-      Ini.EraseSection(GetSName(N));
-      (MDIChildren[i] as TChildForm).SaveToIni(Ini, GetSName(N));
-      inc(N);
-    end;
-  end;
-  while Ini.SectionExists(GetSName(N)) do
-  begin
-    Ini.EraseSection(GetSName(N));
-    inc(N);
-  end;
-  GlobTypeList.SaveToIni(Ini);
-end;
-
 function TMainForm.OnWriteJsonCfgProc: TJSONBuilder;
 var
   jArr: TJSonArray;
@@ -701,6 +663,7 @@ begin
     end;
   end;
   Result.Add('ChildForms', jArr);
+  //GlobTypeList.SaveToIni(Ini);
 end;
 
 function TMainForm.CreateChildForm(WinType: string): TChildForm;
@@ -764,38 +727,6 @@ begin
   end;
 end;
 
-procedure TMainForm.OnReadIniProc(Ini: TDotIniFile);
-var
-  WinType: string;
-  Dlg: TChildForm;
-  N: Integer;
-begin
-  if ProgCfg.WorkingMap <> '' then
-    if MapParser.LoadMapFile(ProgCfg.WorkingMap) then
-      NL('Load map file :' + MapParser.FileName);
-
-  GlobTypeList.LoadfromIni(Ini);
-  UpLoadList.LoadfromIni(Ini);
-
-  Top := Ini.ReadInteger('MAIN', 'Top', Top);
-  Left := Ini.ReadInteger('MAIN', 'Left', Left);
-  Width := Ini.ReadInteger('MAIN', 'Width', Width);
-  Height := Ini.ReadInteger('MAIN', 'Height', Height);
-  ExtMemo.Height := Ini.ReadInteger('MAIN', 'MemoHeight', ExtMemo.Height);
-
-  ExtMemo.Top := 1; // ExtMemo above StatusBar
-  SplitterBottom.Top := 1; // SplitterBottom above ExtMemo
-
-  N := 1;
-  while Ini.SectionExists(GetSName(N)) do
-  begin
-    WinType := Ini.ReadString(GetSName(N), 'WinType', '');
-    Dlg := CreateChildForm(WinType);
-    if Dlg <> nil then
-      Dlg.LoadfromIni(Ini, GetSName(N));
-    inc(N);
-  end;
-end;
 
 function TMainForm.isDevConnected: boolean;
 begin
@@ -1123,16 +1054,7 @@ end;
 
 procedure TMainForm.TerminalActUpdate(Sender: TObject);
 begin
-  if not(TerminalChecked) then
-  begin
-    TerminalValid := false;
-    if isDevConnected then
-    begin
-      TerminalValid := Dev.isTerminalFunctions;
-      TerminalChecked := true;
-    end;
-  end;
-  (Sender as TAction).Enabled := TerminalValid;
+  (Sender as TAction).Enabled := isDevConnected and Dev.isTerminalFunctions;
 end;
 
 procedure TMainForm.TerminalActExecute(Sender: TObject);

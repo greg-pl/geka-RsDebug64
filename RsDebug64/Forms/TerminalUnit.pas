@@ -28,9 +28,9 @@ type
     TermMemo: TExtG2Memo;
     procedure TerminalKeyPressEventProc(Sender: TObject; var Key: Char);
   public
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
     function GetJSONObject: TJSONBuilder; override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+    procedure LoadfromJson(jParent: TJSONLoader); override;
+
     procedure AfterConnChanged; override;
   end;
 
@@ -106,11 +106,6 @@ begin
   end;
 end;
 
-procedure TTerminalForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-
-end;
 
 function TTerminalForm.GetJSONObject: TJSONBuilder;
 begin
@@ -118,10 +113,12 @@ begin
 
 end;
 
-procedure TTerminalForm.LoadFromIni(Ini: TDotIniFile; SName: string);
+procedure TTerminalForm.LoadfromJson(jParent: TJSONLoader);
 begin
   inherited;
+
 end;
+
 
 procedure TTerminalForm.ReadBtnClick(Sender: TObject);
 var

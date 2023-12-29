@@ -108,8 +108,6 @@ type
     procedure wmReadMem1(var Msg: TMessage); message wm_ReadMem1;
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
   public
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
 
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
@@ -359,65 +357,6 @@ begin
   Result := 'PIC : ' + AdresBox.Text;
 end;
 
-procedure TPictureViewForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  Ini.WriteString(SName, 'Adr', AdresBox.Text);
-  Ini.WriteString(SName, 'Adrs', AdresBox.Items.CommaText);
-  Ini.WriteInteger(SName, 'AdrMode', AdrModeGroup.ItemIndex);
-
-  Ini.WriteString(SName, 'PicWidth', WidthBoxEdit.Text);
-  Ini.WriteString(SName, 'PicWidths', WidthBoxEdit.Items.CommaText);
-
-  Ini.WriteString(SName, 'PicHeight', HeightBoxEdit.Text);
-  Ini.WriteString(SName, 'PicHeights', HeightBoxEdit.Items.CommaText);
-
-  Ini.WriteInteger(SName, 'PicZoomBox', ZoomBox.ItemIndex);
-
-  Ini.WriteBool(SName, 'Stretch', StretchBox.Checked);
-  Ini.WriteBool(SName, 'Proportional', ProportionalBox.Checked);
-  Ini.WriteInteger(SName, 'BitPerPixel', GetBitPerPixel);
-
-  Ini.WriteInteger(SName, 'Color1', ColorTab[0]);
-  Ini.WriteInteger(SName, 'Color2', ColorTab[1]);
-  Ini.WriteInteger(SName, 'Color3', ColorTab[2]);
-  Ini.WriteInteger(SName, 'Color4', ColorTab[3]);
-
-  Ini.WriteInteger(SName, 'LH', HLGroup.ItemIndex);
-end;
-
-
-procedure TPictureViewForm.LoadFromIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  AdresBox.Items.CommaText := Ini.ReadString(SName, 'Adrs', '0,4000,8000,800000');
-  AdresBox.Text := Ini.ReadString(SName, 'Adr', '0');
-  AdrModeGroup.ItemIndex := Ini.ReadInteger(SName, 'AdrMode', 0);
-
-  WidthBoxEdit.Items.CommaText := Ini.ReadString(SName, 'PicWidths', WidthBoxEdit.Items.CommaText);
-  WidthBoxEdit.Text := Ini.ReadString(SName, 'PicWidth', WidthBoxEdit.Text);
-
-  HeightBoxEdit.Items.CommaText := Ini.ReadString(SName, 'PicHeights', HeightBoxEdit.Items.CommaText);
-  HeightBoxEdit.Text := Ini.ReadString(SName, 'PicHeight', HeightBoxEdit.Text);
-
-  ZoomBox.ItemIndex := Ini.ReadInteger(SName, 'PicZoomBox', ZoomBox.ItemIndex);
-
-  StretchBox.Checked := Ini.ReadBool(SName, 'Stretch', StretchBox.Checked);
-  ProportionalBox.Checked := Ini.ReadBool(SName, 'Proportional', ProportionalBox.Checked);
-  SetBitPerPixel(Ini.ReadInteger(SName, 'BitPerPixel', GetBitPerPixel));
-
-  ColorTab[0] := Ini.ReadInteger(SName, 'Color1', ColorTab[0]);
-  ColorTab[1] := Ini.ReadInteger(SName, 'Color2', ColorTab[1]);
-  ColorTab[2] := Ini.ReadInteger(SName, 'Color3', ColorTab[2]);
-  ColorTab[3] := Ini.ReadInteger(SName, 'Color4', ColorTab[3]);
-
-  HLGroup.ItemIndex := Ini.ReadInteger(SName, 'LH', HLGroup.ItemIndex);
-
-  bmp.Width := GetWidth;
-  bmp.Height := GetHeight;
-  StretchBoxClick(nil);
-  DrukImage.Picture.Assign(bmp);
-end;
 
 function TPictureViewForm.GetJSONObject: TJSONBuilder;
 begin

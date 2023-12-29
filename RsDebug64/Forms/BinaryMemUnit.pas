@@ -86,9 +86,6 @@ type
     function ReadPtrValue(A: cardinal): cardinal;
     procedure GetFromText(var Adr: cardinal; var ShowAdr: cardinal; var Size: cardinal; var RegSize: cardinal);
   public
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
-
     procedure LoadfromJson(jLoader: TJSONLoader); override;
     function GetJSONObject: TJSONBuilder; override;
 
@@ -405,33 +402,6 @@ begin
     AutoRepTimer.Enabled := True
   else
     AutoRepAct.Checked := false;
-end;
-
-procedure TBinaryMemForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  Ini.WriteString(SName, 'MemType', BinaryMemName[MemType]);
-  Ini.WriteString(SName, 'Adr', AdresBox.Text);
-  Ini.WriteString(SName, 'Adrs', AdresBox.Items.CommaText);
-  Ini.WriteString(SName, 'Size', SizeBox.Text);
-  Ini.WriteString(SName, 'Sizes', SizeBox.Items.CommaText);
-  Ini.WriteString(SName, 'RepTime', AutoRepTmEdit.Text);
-  Ini.WriteString(SName, 'RepTimes', AutoRepTmEdit.Items.CommaText);
-  MemFrame.SaveToIni(Ini, SName);
-end;
-
-procedure TBinaryMemForm.LoadFromIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  SetMemType(GetMemType(Ini.ReadString(SName, 'MemType', BinaryMemName[MemType])));
-  AdresBox.Text := Ini.ReadString(SName, 'Adr', '0');
-  SizeBox.Text := Ini.ReadString(SName, 'Size', '100');
-  AdresBox.Items.CommaText := Ini.ReadString(SName, 'Adrs', '0,4000,8000,800000');
-  SizeBox.Items.CommaText := Ini.ReadString(SName, 'Sizes', '100,200,400,1000');
-  AutoRepTmEdit.Items.CommaText := Ini.ReadString(SName, 'RepTimes', '');
-  MemFrame.LoadFromIni(Ini, SName);
-  ShowCaption;
-
 end;
 
 function TBinaryMemForm.GetJSONObject: TJSONBuilder;

@@ -48,9 +48,11 @@ type
     function FGetCommThread: TCommThread;
   protected
     Title: string;
+
     AdrCpx: TAdrCpx;
     procedure DoMsg(s: string);
     procedure ShowCaption; virtual;
+    function getChildSign: string; virtual;
     procedure FSetTrnLamp(ALamp: boolean);
     function IsConnected: boolean;
     procedure doParamsVisible(vis: boolean); virtual;
@@ -61,8 +63,6 @@ type
     property CommThread: TCommThread read FGetCommThread;
 
     procedure Start; virtual;
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); virtual;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); virtual;
 
     function GetJSONObject: TJSONBuilder; virtual;
     procedure LoadfromJson(jParent: TJSONLoader); virtual;
@@ -130,21 +130,6 @@ begin
   Result := '';
 end;
 
-procedure TChildForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  Ini.WriteString(SName, 'WinType', ClassName);
-  Ini.WriteString(SName, 'Title', Title);
-  Ini.WriteInteger(SName, 'WinState', ord(WindowState));
-  Ini.WriteBool(SName, 'ParamPanel', ParamPanelBtn.Down);
-  if WindowState = wsNormal then
-  begin
-    Ini.WriteInteger(SName, 'Top', Top);
-    Ini.WriteInteger(SName, 'Left', Left);
-    Ini.WriteInteger(SName, 'Width', Width);
-    Ini.WriteInteger(SName, 'Height', Height);
-  end;
-end;
-
 function TChildForm.GetJSONObject: TJSONBuilder;
 begin
   Result.Init;
@@ -157,31 +142,10 @@ begin
     Result.Add_TLWH(self);
 end;
 
-procedure TChildForm.LoadFromIni(Ini: TDotIniFile; SName: string);
-var
-  s: string;
-  N: integer;
-begin
-  WindowState := TWindowState(Ini.ReadInteger(SName, 'WinState', ord(wsNormal)));
-  Title := Ini.ReadString(SName, 'Title', '');
-  Top := Ini.ReadInteger(SName, 'Top', Top);
-  Left := Ini.ReadInteger(SName, 'Left', Left);
-  Width := Ini.ReadInteger(SName, 'Width', Width);
-  Height := Ini.ReadInteger(SName, 'Height', Height);
-  ParamPanelBtn.Down := Ini.ReadBool(SName, 'ParamPanel', ParamPanelBtn.Down);
-  ParamPanel.Visible := ParamPanelBtn.Down;
-  ShowParamAct.Checked := ParamPanelBtn.Down;
-
-  ShowCaption;
-end;
-
 procedure TChildForm.LoadfromJson(jParent: TJSONLoader);
-var
-  s: string;
-  N: integer;
 begin
-  WindowState := TWindowState(jParent.LoadDef('WinState',ord(wsNormal)));
-  jParent.Load('Title',Title);
+  WindowState := TWindowState(jParent.LoadDef('WinState', ord(wsNormal)));
+  jParent.Load('Title', Title);
   jParent.Load_TLWH(self);
   jParent.LoadBtnDown('ParamPanel', ParamPanelBtn);
   ParamPanel.Visible := ParamPanelBtn.Down;
@@ -314,10 +278,22 @@ begin
   end;
 end;
 
+function TChildForm.getChildSign: string;
+begin
+  Result := '';
+end;
+
 procedure TChildForm.ShowCaption;
+var
+  txt: string;
 begin
   if Title <> '' then
-    Caption := Title
+  begin
+    txt := getChildSign;
+    if txt <> '' then
+      txt := txt + ': ';
+    Caption := txt + Title
+  end
   else
     Caption := GetDefaultCaption;
   PostMessage(Application.MainForm.Handle, wm_ChildCaption, integer(self), 0);

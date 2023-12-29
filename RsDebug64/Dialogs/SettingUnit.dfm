@@ -46,10 +46,6 @@ object SettingForm: TSettingForm
     TabOrder = 2
     object TabSheet1: TTabSheet
       Caption = 'Og'#243'lne'
-      ExplicitLeft = 2
-      ExplicitTop = 29
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Label1: TLabel
         Left = 74
         Top = 8
@@ -130,10 +126,10 @@ object SettingForm: TSettingForm
         Style = csDropDownList
         ItemIndex = 0
         TabOrder = 1
-        Text = 'TAK'
+        Text = 'NIE'
         Items.Strings = (
-          'TAK'
           'NIE'
+          'TAK'
           'PYTAJ')
       end
       object AutoSaveBox: TComboBox
@@ -144,10 +140,10 @@ object SettingForm: TSettingForm
         Style = csDropDownList
         ItemIndex = 0
         TabOrder = 2
-        Text = 'TAK'
+        Text = 'NIE'
         Items.Strings = (
-          'TAK'
           'NIE'
+          'TAK'
           'PYTAJ')
       end
       object GroupBox1: TGroupBox

@@ -5574,6 +5574,7 @@ begin
       FSplitPanelList.Delete(i);
   end;
   FDigitalPanel.Series.Clear;
+  AnalogPanels.Clear;
   if Assigned(FTagList) then
     FTagList.Clear;
 end;

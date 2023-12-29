@@ -84,8 +84,9 @@ type
     procedure ReadMem;
     function GetNodeProp(Node: TTreeNode; var Adr : integer; var Ofs : integer; var Size : integer): boolean;
   public
-    procedure SaveToIni(Ini : TDotIniFile; SName : string); override;
-    procedure LoadFromIni(Ini : TDotIniFile; SName : string); override;
+    procedure SaveToIni(Ini : TDotIniFile; SName : string);
+    procedure LoadFromIni(Ini : TDotIniFile; SName : string); //todo
+
     procedure ReloadMapParser; override;
     procedure TypeDefChg; override;
     function  GetDefaultCaption : string; override;

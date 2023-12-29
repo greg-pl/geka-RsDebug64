@@ -1763,7 +1763,7 @@ begin
   jBuild.Add('MinY', MinYEdit.Text);
   jBuild.Add('MaxY', MaxYEdit.Text);
   jBuild.Add('DataType', DataTypeBox.ItemIndex);
-  jBuild.Add('SereiesType', SerieTypeBox.ItemIndex);
+  jBuild.Add('SeriesType', SerieTypeBox.ItemIndex);
   jBuild.Add('DataSize', DataSizeBox.ItemIndex);
   jBuild.Add('RZ30Data', RZ30MemBox.Checked);
   jBuild.Add('Points', PointsBox.Checked);
@@ -1782,13 +1782,13 @@ begin
   jBuild2.Add('W', MeasurePanel.Width);
   jBuild2.Add('H', MeasurePanel.Height);
 
-
+  SetLength(IntArr, MeasureGrid.ColCount - 1);
   for i := 0 to MeasureGrid.ColCount - 2 do
     IntArr[i] := MeasureGrid.ColWidths[i + 1];
   jBuild2.Add('ColWidth', IntArr);
 
-  jBuild.Add('MeasGrid', jBuild2.jobj);
-  Result.Add('Chart', jBuild.jobj);
+  jBuild.Add('MeasGrid', jBuild2.jObj);
+  Result.Add('Chart', jBuild.jObj);
 
   // zak³adka WEKTORY
   jBuild.Init;
@@ -1800,10 +1800,10 @@ begin
     jBuild2.Init;
     jBuild2.Add('Name', WekListBox.Items.Strings[i]);
     jBuild2.Add('Color', integer(WekListBox.Items.Objects[i]));
-    jArr.AddElement(jBuild2.jobj);
+    jArr.AddElement(jBuild2.jObj);
   end;
   jBuild.Add('Signals', jArr);
-  Result.Add('Vector', jBuild.jobj);
+  Result.Add('Vector', jBuild.jObj);
 end;
 
 procedure TAnalogFrame.LoadfromJson(jParent: TJSONLoader);
@@ -1857,7 +1857,7 @@ begin
     jLoader.Load('MaxY', MaxYEdit);
 
     jLoader.Load('DataType', DataTypeBox);
-    jLoader.Load('SereiesType', SerieTypeBox);
+    jLoader.Load('SeriesType', SerieTypeBox);
     jLoader.Load('DataSize', DataSizeBox);
 
     jLoader.Load('RZ30Data', RZ30MemBox);

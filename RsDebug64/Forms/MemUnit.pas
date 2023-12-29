@@ -95,11 +95,8 @@ type
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
     procedure wmWriteMem2(var Msg: TMessage); message wm_WriteMem2;
   public
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
-
     function GetJSONObject: TJSONBuilder; override;
-
+    procedure LoadfromJson(jLoader: TJSONLoader); override;
 
     procedure SettingChg; override;
     procedure ReloadMapParser; override;
@@ -321,7 +318,8 @@ begin
   if Size <> 0 then
   begin
     MemFrame.ClrData;
-    CommThread.AddToDoItem(TWorkRdMemItem.Create(Handle, wm_ReadMem1, AdrModeGroup.ItemIndex = 1,MemFrame.MemBuf[0], Adr, Size));
+    CommThread.AddToDoItem(TWorkRdMemItem.Create(Handle, wm_ReadMem1, AdrModeGroup.ItemIndex = 1, MemFrame.MemBuf[0],
+      Adr, Size));
   end;
 end;
 
@@ -522,21 +520,6 @@ begin
     AutoRepAct.Checked := false;
 end;
 
-procedure TMemForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  Ini.WriteString(SName, 'Adr', AdresBox.Text);
-  Ini.WriteString(SName, 'Adrs', AdresBox.Items.CommaText);
-  Ini.WriteString(SName, 'Size', SizeBox.Text);
-  Ini.WriteString(SName, 'Sizes', SizeBox.Items.CommaText);
-  Ini.WriteString(SName, 'RepTime', AutoRepTmEdit.Text);
-  Ini.WriteString(SName, 'RepTimes', AutoRepTmEdit.Items.CommaText);
-  Ini.WriteInteger(SName, 'ViewPage', MemFrame.ActivPage);
-  Ini.WriteInteger(SName, 'AdrMode', AdrModeGroup.ItemIndex);
-  Ini.WriteString(SName, 'FillValue', FillValueEdit.Text);
-  MemFrame.SaveToIni(Ini, SName);
-end;
-
 function TMemForm.GetJSONObject: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
@@ -552,20 +535,22 @@ begin
   Result.Add('MemFrame', MemFrame.GetJSONObject);
 end;
 
-procedure TMemForm.LoadFromIni(Ini: TDotIniFile; SName: string);
+procedure TMemForm.LoadfromJson(jLoader: TJSONLoader);
+var
+  jChild: TJSONLoader;
 begin
   inherited;
-  AdresBox.Text := Ini.ReadString(SName, 'Adr', '0');
-  SizeBox.Text := Ini.ReadString(SName, 'Size', '100');
-  FillValueEdit.Text := Ini.ReadString(SName, 'FillValue', '0x01');
-  AdresBox.Items.CommaText := Ini.ReadString(SName, 'Adrs', '0,4000,8000,800000');
-  SizeBox.Items.CommaText := Ini.ReadString(SName, 'Sizes', '100,200,400,1000');
-  AutoRepTmEdit.Items.CommaText := Ini.ReadString(SName, 'RepTimes', '');
-  MemFrame.ActivPage := Ini.ReadInteger(SName, 'ViewPage', 0);
-  AdrModeGroup.ItemIndex := Ini.ReadInteger(SName, 'AdrMode', 0);
-  MemFrame.LoadFromIni(Ini, SName);
+  AdresBox.Text := jLoader.LoadDef('Adr', '0');
+  SizeBox.Text := jLoader.LoadDef('Size', '100');
+  FillValueEdit.Text := jLoader.LoadDef('FillValue', '0x01');
+  jLoader.Load('Adrs', AdresBox.Items);
+  jLoader.Load('Sizes', SizeBox.Items);
+  jLoader.Load('RepTimes', AutoRepTmEdit.Items);
+  MemFrame.ActivPage := jLoader.LoadDef('ViewPage', 0);
+  AdrModeGroup.ItemIndex := jLoader.LoadDef('AdrMode', 0);
   ShowCaption;
-
+  jChild.Init(jLoader, 'MemFrame');
+  MemFrame.LoadfromJson(jChild);
 end;
 
 procedure TMemForm.VarListBoxChange(Sender: TObject);

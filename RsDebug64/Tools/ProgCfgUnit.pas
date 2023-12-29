@@ -74,7 +74,6 @@ type
     procedure GetList(SL: TStrings);
   end;
 
-  TIniIoProc = procedure(IniFile: TDotIniFile) of object;
   TGetJsonObject = function: TJSONBuilder of object;
   TReadJsonObject = procedure(jLoader: TJSONLoader) of object;
 
@@ -90,8 +89,6 @@ type
 
   TProgCfg = class(TObject)
   private
-    FOnReadIni: TIniIoProc;
-    FOnWriteIni: TIniIoProc;
     FOnWriteJsonCfg: TGetJsonObject;
     FOnReadJsonCfg: TReadJsonObject;
 
@@ -118,8 +115,6 @@ type
     procedure LoadMainCfg;
     procedure SaveMainCfg;
 
-    property OnReadData: TIniIoProc read FOnReadIni write FOnReadIni;
-    property OnWriteData: TIniIoProc read FOnWriteIni write FOnWriteIni;
     property OnWriteJsonCfg: TGetJsonObject read FOnWriteJsonCfg write FOnWriteJsonCfg;
     property OnReadJsonCfg: TReadJsonObject read FOnReadJsonCfg write FOnReadJsonCfg;
 
@@ -405,45 +400,12 @@ end;
 
 procedure TProgCfg.LoadMainCfg;
 var
-  IniFile: TDotIniFile;
-
   jVal: TJSONValue;
   txt: string;
   MS: TMemoryStream;
   jLoader: TJSONLoader;
   jLoader2: TJSONLoader;
 begin
-  IniFile := TDotIniFile.Create(MainIniFName);
-  try
-    DevString := IniFile.ReadString('MAIN_CFG', 'DEVSTR', '');
-
-    WorkingMap := IniFile.ReadString('MAIN_CFG', 'MAP_FILE', '');
-    SelectAsmVar := IniFile.ReadBool('MAIN_CFG', 'ASM_VAR', false);
-    SelectC_Var := IniFile.ReadBool('MAIN_CFG', 'C_VAR', True);
-    SelectSysVar := IniFile.ReadBool('MAIN_CFG', 'SYS_VAR', false);
-    AutoSaveCfg := IniFile.ReadYesNo('MAIN_CFG', 'AUTOSAVE', crYES);
-    AutoRefreshMap := IniFile.ReadYesNo('MAIN_CFG', 'AUTOREFRESH', crYES);
-    SelSectionMode := IniFile.ReadInteger('MAIN_CFG', 'SEL_SEC_MODE', 2);
-    ScalMemCnt := IniFile.ReadInteger('MAIN_CFG', 'SCAL_MEM', 5);
-    MaxVarSize := IniFile.ReadInteger('MAIN_CFG', 'MAX_VAR_SIZE', 4096);
-    try
-      WinTab := TWinTab(IniFile.ReadInteger('MAIN_CFG', 'WIN_TAB', ord(wtTOP)));
-    except
-      WinTab := wtTOP;
-    end;
-
-    SelSections.CommaText := 'bss,data';
-    IniFile.ReadTStrings('MAIN_CFG', 'SEL_SEC', SelSections);
-    ByteOrder := TByteOrder(IniFile.ReadInteger('MAIN_CFG', 'SYS_MOTOROLA', 0));
-
-    if Assigned(FOnReadIni) then
-      FOnReadIni(IniFile);
-
-    ReOpenBaseList.LoadFromIni(IniFile);
-
-  finally
-    IniFile.Free;
-  end;
 
   txt := '';
   MS := TMemoryStream.Create;
@@ -465,29 +427,30 @@ begin
       jLoader.Init(jVal);
       if jLoader2.Init(jLoader, 'MainCfg') then
       begin
-        jLoader2.Load('MAP_FILE', WorkingMap);
-        jVal := jLoader2.GetObject('DEVSTR');
+        jLoader2.Load('MapFile', WorkingMap);
+        jVal := jLoader2.GetObject('DevString');
         if Assigned(jVal) then
            DevString := jVal.ToString;
 
-        jLoader2.Load('ASM_VAR', SelectAsmVar);
-        jLoader2.Load('C_VAR', SelectC_Var);
-        jLoader2.Load('SYS_VAR', SelectSysVar);
-        jLoader2.Load('AUTOSAVE', AutoSaveCfg);
-        jLoader2.Load('AUTOREFRESH', AutoRefreshMap);
-        jLoader2.Load('SEL_SEC_MODE', SelSectionMode);
+        jLoader2.Load('AsmVariable', SelectAsmVar);
+        jLoader2.Load('CVariable', SelectC_Var);
+        jLoader2.Load('SysVariable', SelectSysVar);
+        jLoader2.Load('AutoSave', AutoSaveCfg);
+        jLoader2.Load('AutoRefresh', AutoRefreshMap);
+        jLoader2.Load('SectionsMode', SelSectionMode);
+        jLoader2.Load('Sections', SelSections);
 
-        jLoader2.Load('SCAL_MEM', ScalMemCnt);
-        jLoader2.Load('MAX_VAR_SIZE', MaxVarSize);
+
+        jLoader2.Load('MergeMemory', ScalMemCnt);
+        jLoader2.Load('MaxVarSize', MaxVarSize);
 
         try
-          WinTab := TWinTab(jLoader2.LoadDef('WIN_TAB', ord(WinTab)));
+          WinTab := TWinTab(jLoader2.LoadDef('WinTabPos', ord(WinTab)));
         except
           WinTab := wtTOP;
         end;
 
-        jLoader2.Load('SEL_SEC', SelSections);
-        ByteOrder := TByteOrder(jLoader2.LoadDef('BYTE_ORDER', ord(ByteOrder)));
+        ByteOrder := TByteOrder(jLoader2.LoadDef('ByteOrder', ord(ByteOrder)));
       end;
 
       if Assigned(FOnReadJsonCfg) then
@@ -506,8 +469,6 @@ end;
 
 procedure TProgCfg.SaveMainCfg;
 var
-  IniFile: TDotIniFile;
-
   jVal: TJSONValue;
   jBuild: TJSONBuilder;
   jBuild2: TJSONBuilder;
@@ -515,55 +476,27 @@ var
   MS: TMemoryStream;
 begin
 
-  IniFile := TDotIniFile.Create(MainIniFName);
-  try
-    IniFile.WriteString('MAIN_CFG', 'DEVSTR', DevString);
-
-    IniFile.WriteString('MAIN_CFG', 'MAP_FILE', WorkingMap);
-    IniFile.WriteBool('MAIN_CFG', 'ASM_VAR', SelectAsmVar);
-    IniFile.WriteBool('MAIN_CFG', 'C_VAR', SelectC_Var);
-    IniFile.WriteBool('MAIN_CFG', 'SYS_VAR', SelectSysVar);
-    IniFile.WriteYesNo('MAIN_CFG', 'AUTOSAVE', AutoSaveCfg);
-    IniFile.WriteYesNo('MAIN_CFG', 'AUTOREFRESH', AutoRefreshMap);
-    IniFile.WriteInteger('MAIN_CFG', 'SEL_SEC_MODE', SelSectionMode);
-    IniFile.WriteTStrings('MAIN_CFG', 'SEL_SEC', SelSections);
-    IniFile.WriteInteger('MAIN_CFG', 'BYTE_ORDER', ord(ByteOrder));
-    IniFile.WriteInteger('MAIN_CFG', 'SCAL_MEM', ScalMemCnt);
-    IniFile.WriteInteger('MAIN_CFG', 'MAX_VAR_SIZE', MaxVarSize);
-    IniFile.WriteInteger('MAIN_CFG', 'WIN_TAB', ord(WinTab));
-
-    if Assigned(FOnWriteIni) then
-      FOnWriteIni(IniFile);
-
-    ReOpenBaseList.SaveToIni(IniFile);
-  finally
-    IniFile.UpdateFile;
-    IniFile.Free;
-  end;
-
   jBuild.Init;
 
   jBuild2.Init;
 
   jVal := TJSONObject.ParseJSONValue(DevString);
 
-  jBuild2.Add('DEVSTR', jVal);
-  jBuild2.Add('MAP_FILE', WorkingMap);
-  jBuild2.Add('ASM_VAR', SelectAsmVar);
-  jBuild2.Add('C_VAR', SelectC_Var);
-  jBuild2.Add('SYS_VAR', SelectSysVar);
-  jBuild2.Add('AUTOSAVE', ord(AutoSaveCfg));
-  jBuild2.Add('AUTOREFRESH', ord(AutoRefreshMap));
-  jBuild2.Add('SEL_SEC_MODE', SelSectionMode);
+  jBuild2.Add('DevString', jVal);
+  jBuild2.Add('MapFile', WorkingMap);
+  jBuild2.Add('CVariable', SelectC_Var);
+  jBuild2.Add('AsmVariable', SelectAsmVar);
+  jBuild2.Add('SysVariable', SelectSysVar);
+  jBuild2.Add('AutoSave', ord(AutoSaveCfg));
+  jBuild2.Add('AutoRefresh', ord(AutoRefreshMap));
+  jBuild2.Add('SectionsMode', SelSectionMode);
 
-  jBuild2.Add('SEL_SEC', SelSections);
-  jBuild2.Add('SYS_MOTOROLA', ord(ByteOrder));
-  jBuild2.Add('SCAL_MEM', ScalMemCnt);
-  jBuild2.Add('MAX_VAR_SIZE', MaxVarSize);
-  jBuild2.Add('WIN_TAB', ord(WinTab));
+  jBuild2.Add('Sections', SelSections);
+  jBuild2.Add('ByteOrder', ord(ByteOrder));
+  jBuild2.Add('MergeMemory', ScalMemCnt);
+  jBuild2.Add('MaxVarSize', MaxVarSize);
+  jBuild2.Add('WinTabPos', ord(WinTab));
 
-  jBuild2.Add('SEL_SEC', SelSections);
-  jBuild2.Add('SYS_MOTOROLA', ord(ByteOrder));
 
   jBuild.Add('MainCfg', jBuild2);
 

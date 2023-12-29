@@ -15,7 +15,7 @@ uses
 type
   TIntDynArr = array of integer;
   TFloatDynArr = array of double;
-  TYesNoAsk = (crYES, crNO, crASK);
+  TYesNoAsk = (crNO, crYES, crASK);
 
   TJSONStringEx = class(TJSONString)
   public
@@ -57,7 +57,7 @@ type
     function Load(valName: string; var vVal: integer): boolean; overload;
     function Load(valName: string; var vVal: double): boolean; overload;
     function Load(valName: string; var vVal: boolean): boolean; overload;
-    function Load(valName: string; var vVal: TYesNoAsk): TYesNoAsk; overload;
+    function Load(valName: string; var vVal: TYesNoAsk): boolean; overload;
     function Load(valName: string; var intArr: TIntDynArr): boolean; overload;
     function Load(valName: string; SL: TStrings): boolean; overload;
 
@@ -74,10 +74,12 @@ type
     function Load_WH(ctrl: TControl): boolean;
     function Load_TLWH(ctrl: TControl): boolean;
     function LoadBtnDown(valName: string; btn: TToolButton): boolean;
+    function LoadColor(valName: string; var Color: TColor): boolean;
 
     function LoadDef(valName: string; vDefault: string = ''): string; overload;
     function LoadDef(valName: string; vDefault: integer): integer; overload;
     function LoadDef(valName: string; vDefault: boolean): boolean; overload;
+    function LoadColorDef(valName: string; vDefault: TColor): TColor; overload;
 
   end;
 
@@ -98,6 +100,15 @@ begin
   setLength(txt, idx);
   move(Data[0], txt[1], idx);
   Result := String(txt);
+end;
+
+function TryStrToInt0x(txt: string; var n: integer): boolean;
+begin
+  if (length(txt) > 3) and (copy(txt, 1, 2) = '0x') then
+  begin
+    txt := '$' + copy(txt, 3, length(txt) - 2);
+  end;
+  Result := TRyStrToInt(txt, n);
 end;
 
 function JSonStrToBool(txt: string; var q: boolean): boolean;
@@ -286,7 +297,7 @@ begin
   jVal := jobj.GetValue(valName);
   Result := Assigned(jVal);
   if Result then
-    Result := TryStrToInt(jVal.Value, vVal);
+    Result := TRyStrToInt(jVal.Value, vVal);
 end;
 
 function TJSONLoader.Load(valName: string; var vVal: double): boolean;
@@ -309,16 +320,15 @@ begin
     Result := JSonStrToBool(jVal.Value, vVal);
 end;
 
-function TJSONLoader.Load(valName: string; var vVal: TYesNoAsk): TYesNoAsk;
+function TJSONLoader.Load(valName: string; var vVal: TYesNoAsk): boolean;
 var
   v: integer;
 begin
   v := ord(vVal);
-  Load(valName, v);
-  if (v >= ord(low(TYesNoAsk))) and (v <= ord(high(TYesNoAsk))) then
-    Result := TYesNoAsk(v)
-  else
-    Result := vVal;
+  Result := Load(valName, v);
+  Result := Result and (v >= ord(low(TYesNoAsk))) and (v <= ord(high(TYesNoAsk)));
+  if Result then
+    vVal := TYesNoAsk(v);
 end;
 
 function TJSONLoader.Load(valName: string; CheckBox: TCheckBox): boolean;
@@ -467,6 +477,19 @@ begin
     btn.Down := q;
 end;
 
+function TJSONLoader.LoadColor(valName: string; var Color: TColor): boolean;
+var
+  txt: string;
+  n: integer;
+begin
+  Result := Load(valName, txt);
+  if Result then
+  begin
+    Result := TryStrToInt0x(txt, n);
+    Color := TColor(n);
+  end
+end;
+
 function TJSONLoader.LoadDef(valName: string; vDefault: string): string;
 begin
   Result := vDefault;
@@ -483,6 +506,12 @@ function TJSONLoader.LoadDef(valName: string; vDefault: boolean): boolean;
 begin
   Result := vDefault;
   Load(valName, Result);
+end;
+
+function TJSONLoader.LoadColorDef(valName: string; vDefault: TColor): TColor;
+begin
+  Result := vDefault;
+  LoadColor(valName, Result);
 end;
 
 end.

@@ -105,10 +105,10 @@ type
   public
     procedure ReloadMapParser; override;
     function GetDefaultCaption: string; override;
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONBuilder; override;
 
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+    function GetJSONObject: TJSONBuilder; override;
+    procedure LoadfromJson(jParent: TJSONLoader); override;
+
   end;
 
 var
@@ -228,46 +228,14 @@ begin
   Result := 'GENER : ' + AdresBox.Text;
 end;
 
-procedure TWavGenForm.SaveToIni(Ini: TDotIniFile; SName: string);
-var
-  i: integer;
-  s, sn: string;
-begin
-  inherited;
-  Ini.WriteString(SName, 'Adr', AdresBox.Text);
-  Ini.WriteString(SName, 'Adrs', AdresBox.Items.CommaText);
-  Ini.WriteString(SName, 'Size', SizeBox.Text);
-  Ini.WriteString(SName, 'Sizes', SizeBox.Items.CommaText);
-  Ini.WriteString(SName, 'S_Names', SeriesListBox.Items.CommaText);
-  Ini.WriteString(SName, 'S_Checked', GetChckedAsString(SeriesListBox));
-  Ini.WriteString(SName, 'S_Colour', GetPointerAsString(SeriesListBox));
-
-  Ini.WriteInteger(SName, 'KanCnt', KanalCntEdit.Value);
-  Ini.WriteInteger(SName, 'BitCnt', BitCntEdit.Value);
-  Ini.WriteInteger(SName, 'HarmonCnt', HarmonCntEdit.Value);
-  Ini.WriteString(SName, 'FreqProbk', FrequProbkEdit.Text);
-  Ini.WriteString(SName, 'FreqA1', FreqA1Edit.Text);
-
-  Ini.WriteInteger(SName, 'DataSize', DataSizeBox.ItemIndex);
-  Ini.WriteInteger(SName, 'DataType', DataTypeBox.ItemIndex);
-  Ini.WriteInteger(SName, 'SerieType', SerieTypeBox.ItemIndex);
-  Ini.WriteString(SName, 'GridColWidth', GetGridColumnWidtsStr(HarmonGrid));
-  for i := 1 to HarmonGrid.RowCount - 1 do
-  begin
-    sn := Format('R%u', [i]);
-    s := HarmonGrid.Rows[i].CommaText;
-    Ini.WriteString(SName, sn, s);
-  end;
-end;
-
 function TWavGenForm.GetJSONObject: TJSONBuilder;
 var
   i, j: integer;
   s, sn: string;
   jArr: TJSONArray;
   jArr2: TJSONArray;
-  jItem : TJSONBuilder;
-  jItem2 : TJSONBuilder;
+  jItem: TJSONBuilder;
+  jItem2: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
   Result.Add('Adr', AdresBox.Text);
@@ -279,7 +247,7 @@ begin
   begin
     jItem.Init;
     jItem.Add('Name', SeriesListBox.Items[i]);
-    jItem.Add('Activ', SeriesListBox.Checked[i]);
+    jItem.Add('Active', SeriesListBox.Checked[i]);
     jItem.AddColor('Color', Cardinal(SeriesListBox.Items.Objects[i]));
 
     jArr2 := TJSONArray.Create;
@@ -307,78 +275,82 @@ begin
   Result.Add('KanCnt', KanalCntEdit.Value);
   Result.Add('BitCnt', BitCntEdit.Value);
   Result.Add('HarmonCnt', HarmonCntEdit.Value);
-  Result.Add('FreqProbk', FrequProbkEdit.Text);
+  Result.Add('SampleFreq', FrequProbkEdit.Text);
   Result.Add('FreqA1', FreqA1Edit.Text);
 
   Result.Add('DataSize', DataSizeBox.ItemIndex);
   Result.Add('DataType', DataTypeBox.ItemIndex);
-  Result.Add('SerieType', SerieTypeBox.ItemIndex);
+  Result.Add('SeriesType', SerieTypeBox.ItemIndex);
   Result.Add('GridColWidth', GetGridColumnWidts(HarmonGrid));
 
-  Result.Add('SignalsDef', jArr);
 end;
 
-procedure TWavGenForm.LoadFromIni(Ini: TDotIniFile; SName: string);
+procedure TWavGenForm.LoadfromJson(jParent: TJSONLoader);
 var
-  s: string;
-  n: integer;
-  i: integer;
-  sn: string;
+  i, j: integer;
+  s, sn: string;
+  jArr: TJSONArray;
+  jArr2: TJSONArray;
+  jItem: TJSONLoader;
+  jItem2: TJSONLoader;
 begin
   inherited;
-  AdresBox.Text := Ini.ReadString(SName, 'Adr', '0');
-  SizeBox.Text := Ini.ReadString(SName, 'Size', '100');
 
-  s := AdresBox.Items.CommaText;
-  s := RemoveEmptyStrings(Ini.ReadString(SName, 'Adrs', s));
-  AdresBox.Items.CommaText := s;
+  jParent.Load('Adr', AdresBox);
+  jParent.Load('Adrs', AdresBox.Items);
+  jParent.Load('Size', SizeBox);
+  jParent.Load('Sizes', SizeBox.Items);
 
-  s := SizeBox.Items.CommaText;
-  s := RemoveEmptyStrings(Ini.ReadString(SName, 'Sizes', s));
-  SizeBox.Items.CommaText := s;
+  jParent.Load('KanCnt', KanalCntEdit);
+  jParent.Load('BitCnt', BitCntEdit);
+  jParent.Load('HarmonCnt', HarmonCntEdit);
+  jParent.Load('SampleFreq', FrequProbkEdit);
+  jParent.Load('FreqA1', FreqA1Edit);
 
-  s := SeriesListBox.Items.CommaText;
-  s := RemoveEmptyStrings(Ini.ReadString(SName, 'S_Names', s));
-  SeriesListBox.Items.CommaText := s;
+  jParent.Load('DataSize', DataSizeBox);
+  jParent.Load('DataType', DataTypeBox);
+  jParent.Load('SeriesType', SerieTypeBox);
 
-  s := Ini.ReadString(SName, 'S_Checked', '');
-  SetChckedFromString(SeriesListBox, s);
-  s := Ini.ReadString(SName, 'S_Colour', '');
-  SetPointerFromString(SeriesListBox, s);
-
-  KanalCntEdit.Value := Ini.ReadInteger(SName, 'KanCnt', KanalCntEdit.Value);
-  BitCntEdit.Value := Ini.ReadInteger(SName, 'BitCnt', BitCntEdit.Value);
-  HarmonCntEdit.Value := Ini.ReadInteger(SName, 'HarmonCnt', HarmonCntEdit.Value);
-  FrequProbkEdit.Text := Ini.ReadString(SName, 'FreqProbk', FrequProbkEdit.Text);
-  FreqA1Edit.Text := Ini.ReadString(SName, 'FreqA1', FreqA1Edit.Text);
-
-  n := Ini.ReadInteger(SName, 'DataSize', DataSizeBox.ItemIndex);
-  if n < DataSizeBox.Items.Count then
-    DataSizeBox.ItemIndex := n;
-
-  n := Ini.ReadInteger(SName, 'DataType', DataTypeBox.ItemIndex);
-  if n < DataTypeBox.Items.Count then
-    DataTypeBox.ItemIndex := n;
-
-  n := Ini.ReadInteger(SName, 'SerieType', SerieTypeBox.ItemIndex);
-  if n < SerieTypeBox.Items.Count then
-    SerieTypeBox.ItemIndex := n;
-
-  s := Ini.ReadString(SName, 'GridColWidth', '');
-  SetGridColumnWidts(HarmonGrid, s);
-
-  for i := 1 to HarmonGrid.RowCount - 1 do
-  begin
-    sn := Format('R%u', [i]);
-    s := HarmonGrid.Rows[i].CommaText;
-    s := Ini.ReadString(SName, sn, s);
-    HarmonGrid.Rows[i].CommaText := s;
-  end;
+  SetGridColumnWidts(HarmonGrid, jParent.getDynIntArray('GridColWidth'));
 
   SetSeriesCount;
   PrepareHarmonGrid;
+
+  jArr := jParent.getArray('Signals');
+  if Assigned(jArr) then
+  begin
+    for i := 0 to jArr.Count - 1 do
+    begin
+      jItem.Init(jArr.Items[i]);
+      SeriesListBox.Items[i] := jItem.LoadDef('Name', '');
+      SeriesListBox.Checked[i] := jItem.LoadDef('Active', True);
+      SeriesListBox.Items.Objects[i] := Pointer(jItem.LoadColorDef('Color', clBlack));
+
+      jArr2 := jItem.getArray('Harms');
+      if Assigned(jArr2) then
+      begin
+        for j := 0 to jArr2.Count - 1 do
+        begin
+          jItem2.Init(jArr2.Items[j]);
+
+          if j = 0 then
+          begin
+            HarmonGrid.Cells[1, i + 1] := jItem2.LoadDef('Ampl', HarmonGrid.Cells[1, i + 1]);
+          end
+          else
+          begin
+            HarmonGrid.Cells[2 * j + 0, i + 1] := jItem2.LoadDef('Ampl');
+            HarmonGrid.Cells[2 * j + 1, i + 1] := jItem2.LoadDef('Phase');
+          end;
+        end;
+      end;
+    end;
+  end;
+  // Result.Add('Signals', jArr);
+
   ShowCaption;
 end;
+
 
 procedure TWavGenForm.EditNameItemClick(Sender: TObject);
 var
@@ -398,7 +370,7 @@ begin
   Color := Cardinal(SeriesListBox.Items.Objects[SeriesListBox.ItemIndex]);
   ColorDialog1.Color := Color;
   if ColorDialog1.Execute then
-    SeriesListBox.Items.Objects[SeriesListBox.ItemIndex] := pointer(ColorDialog1.Color);
+    SeriesListBox.Items.Objects[SeriesListBox.ItemIndex] := Pointer(ColorDialog1.Color);
 end;
 
 function TWavGenForm.CheckBiPolar: boolean;

@@ -5,6 +5,7 @@ inherited WavGenForm: TWavGenForm
   ClientHeight = 613
   ClientWidth = 1124
   OldCreateOrder = True
+  OnCreate = FormCreate
   ExplicitWidth = 1140
   ExplicitHeight = 652
   PixelsPerInch = 96
@@ -25,10 +26,6 @@ inherited WavGenForm: TWavGenForm
     TabOrder = 1
     object TabSheet1: TTabSheet
       Caption = 'Generator'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object LeftPanel: TPanel
         Left = 0
         Top = 0
@@ -36,7 +33,6 @@ inherited WavGenForm: TWavGenForm
         Height = 501
         Align = alLeft
         BevelOuter = bvNone
-        Caption = 'LeftPanel'
         TabOrder = 0
         object DataSizeBox: TRadioGroup
           Left = 0
@@ -131,10 +127,11 @@ inherited WavGenForm: TWavGenForm
           object Label3: TLabel
             Left = 0
             Top = 0
-            Width = 67
+            Width = 129
             Height = 13
             Align = alTop
             Caption = 'Ilo'#347#263' kana'#322#243'w'
+            ExplicitWidth = 67
           end
           object KanalCntEdit: TSpinEdit
             Left = 0
@@ -159,10 +156,11 @@ inherited WavGenForm: TWavGenForm
           object Label5: TLabel
             Left = 0
             Top = 0
-            Width = 50
+            Width = 129
             Height = 13
             Align = alTop
             Caption = 'Ilo'#347#263' bit'#243'w'
+            ExplicitWidth = 50
           end
           object BitCntEdit: TSpinEdit
             Left = 0
@@ -212,10 +210,11 @@ inherited WavGenForm: TWavGenForm
           object Label1: TLabel
             Left = 0
             Top = 0
-            Width = 96
+            Width = 129
             Height = 13
             Align = alTop
             Caption = 'Ilo'#347#263' harmonicznych'
+            ExplicitWidth = 96
           end
           object HarmonCntEdit: TSpinEdit
             Left = 0
@@ -261,10 +260,6 @@ inherited WavGenForm: TWavGenForm
     object ChartSheet: TTabSheet
       Caption = 'Chart'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
     end
   end
   inherited ToolBar1: TToolBar
@@ -400,7 +395,7 @@ inherited WavGenForm: TWavGenForm
     Left = 160
     Top = 192
     Bitmap = {
-      494C010104000900200010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010104000900280010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -691,7 +686,7 @@ inherited WavGenForm: TWavGenForm
     Left = 120
     Top = 192
     Bitmap = {
-      494C01010E001300140010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010E0013001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000004000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

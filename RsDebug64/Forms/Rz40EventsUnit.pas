@@ -89,9 +89,6 @@ type
     constructor CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent);
     destructor Destroy; override;
 
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
-
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
   end;
@@ -220,11 +217,6 @@ begin
   EventDefList.Free;
 end;
 
-procedure TRz40EventsForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  Ini.WriteString(SName, 'EventDefFile', mEventDefFName);
-end;
 
 function TRz40EventsForm.GetJSONObject: TJSONBuilder;
 begin
@@ -236,14 +228,6 @@ procedure TRz40EventsForm.LoadfromJson(jParent: TJSONLoader);
 begin
   inherited;
   jParent.Load('EventDefFile', mEventDefFName);
-end;
-
-procedure TRz40EventsForm.LoadFromIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  mEventDefFName := Ini.ReadString(SName, 'EventDefFile', '');
-  if FileExists(mEventDefFName) then
-    EventDefList.LoadFromEtManagerDeffile(mEventDefFName);
 end;
 
 const

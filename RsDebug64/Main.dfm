@@ -78,7 +78,7 @@ object MainForm: TMainForm
       item
         Control = ButtonBar
         ImageIndex = -1
-        Width = 717
+        Width = 712
       end>
     Color = clBtnFace
     EdgeInner = esNone
@@ -302,7 +302,6 @@ object MainForm: TMainForm
     object Fiel1: TMenuItem
       Caption = 'Plik'
       Hint = 'Zapisz ustawienia'
-      OnClick = SaveSettingsActExecute
       object Open1: TMenuItem
         Action = OpenCloseDevAct
       end
@@ -478,7 +477,7 @@ object MainForm: TMainForm
     Left = 185
     Top = 56
     Bitmap = {
-      494C010106000900540010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101060009005C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

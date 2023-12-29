@@ -1904,7 +1904,7 @@ begin
   jBuild.Add('MinY', MinYEdit.Text);
   jBuild.Add('MaxY', MaxYEdit.Text);
   jBuild.Add('DataType', DataTypeBox.ItemIndex);
-  jBuild.Add('SereiesType', SerieTypeBox.ItemIndex);
+  jBuild.Add('SeriesType', SerieTypeBox.ItemIndex);
   jBuild.Add('DataSize', DataSizeBox.ItemIndex);
   jBuild.Add('RZ30Data', RZ30MemBox.Checked);
   jBuild.Add('Points', PointsBox.Checked);
@@ -2005,7 +2005,7 @@ begin
     jLoader.Load('MaxY', MaxYEdit);
 
     jLoader.Load('DataType', DataTypeBox);
-    jLoader.Load('SereiesType', SerieTypeBox);
+    jLoader.Load('SeriesType', SerieTypeBox);
     jLoader.Load('DataSize', DataSizeBox);
 
     jLoader.Load('RZ30Data', RZ30MemBox);

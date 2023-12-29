@@ -184,8 +184,6 @@ type
     procedure PrepareFilter;
     function FilterAccept(s: string): boolean;
   public
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
 
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
@@ -693,17 +691,6 @@ begin
   ShowParamAct.Execute;
 end;
 
-procedure TVarListForm.SaveToIni(Ini: TDotIniFile; SName: string);
-begin
-  inherited;
-  Ini.WriteString(SName, 'ListColWidth', GetViewListColumnWidtsStr(VarListView));
-  Ini.WriteString(SName, 'GridColWidth', GetGridColumnWidtsStr(ShowVarGrid));
-  Ini.WriteInteger(SName, 'ListWidth', ListPanel.Width);
-  Ini.WriteBool(SName, 'ListVisible', ShowVarPanelAct.Checked);
-  Ini.WriteString(SName, 'FilterStr', FilterEdit.Text);
-  GridVarList.SaveToIni(Ini, SName);
-end;
-
 function TVarListForm.GetJSONObject: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
@@ -733,27 +720,6 @@ begin
   FillShowVarGrid;
 end;
 
-procedure TVarListForm.LoadFromIni(Ini: TDotIniFile; SName: string);
-var
-  s: string;
-begin
-  inherited;
-  s := Ini.ReadString(SName, 'ListColWidth', '');
-  SetViewListColumnWidts(VarListView, s);
-
-  s := Ini.ReadString(SName, 'GridColWidth', '');
-  SetGridColumnWidts(ShowVarGrid, s);
-
-  ListPanel.Width := Ini.ReadInteger(SName, 'ListWidth', VarListView.Width);
-  ShowVarPanelAct.Checked := not(Ini.ReadBool(SName, 'ListVisible', true));
-  ShowVarPanelAct.Execute; // negacja cheked
-  FilterEdit.Text := Ini.ReadString(SName, 'FilterStr', '');
-
-  GridVarList.LoadFromIni(Ini, SName);
-
-  ReloadMapParser;
-  FillShowVarGrid;
-end;
 
 procedure TVarListForm.PrepareFilter;
 var

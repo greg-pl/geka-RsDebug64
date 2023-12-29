@@ -69,9 +69,6 @@ type
     procedure wmReadMem1(var Msg: TMessage); message wm_ReadMem1;
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
   public
-    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
-
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
 
@@ -135,19 +132,6 @@ begin
     StatusBar.Panels[2].Text := Format('RfcInstance: 0x%08x', [RfcInstanceAdr]);
 end;
 
-procedure TRfcForm.SaveToIni(Ini: TDotIniFile; SName: string);
-var
-  i: integer;
-begin
-  inherited;
-  Ini.WriteString(SName, 'RfcFunc', FunctionSelectBox.Text);
-  Ini.WriteString(SName, 'ID', IdEdit.Text);
-  for i := 0 to MAX_FUNCTION_PARAMETERS - 1 do
-  begin
-    Ini.WriteString(SName, 'ParamName_' + IntToStr(i), ParameterList.Cells[1, i + 1]);
-    Ini.WriteString(SName, 'ParamVal_' + IntToStr(i), ParameterList.Cells[2, i + 1]);
-  end;
-end;
 
 function TRfcForm.GetJSONObject: TJSONBuilder;
 var
@@ -187,26 +171,6 @@ begin
       ParameterList.Cells[1, i + 1] := jLoader.LoadDef('Name');
       ParameterList.Cells[2, i + 1] := jLoader.LoadDef('Val');
     end;
-  end;
-end;
-
-procedure TRfcForm.LoadFromIni(Ini: TDotIniFile; SName: string);
-var
-  i: integer;
-  s: string;
-  idx: integer;
-begin
-  inherited;
-  MapParser.MapItemList.LoadToList(PREFIX, FunctionSelectBox.Items);
-  s := Ini.ReadString(SName, 'RfcFunc', FunctionSelectBox.Text);
-  idx := FunctionSelectBox.Items.IndexOf(s);
-  if idx >= 0 then
-    FunctionSelectBox.ItemIndex := idx;
-  IdEdit.Text := Ini.ReadString(SName, 'ID', IdEdit.Text);
-  for i := 0 to MAX_FUNCTION_PARAMETERS - 1 do
-  begin
-    ParameterList.Cells[1, i + 1] := Ini.ReadString(SName, 'ParamName_' + IntToStr(i), ParameterList.Cells[1, i + 1]);
-    ParameterList.Cells[2, i + 1] := Ini.ReadString(SName, 'ParamVal_' + IntToStr(i), ParameterList.Cells[2, i + 1]);
   end;
 end;
 
