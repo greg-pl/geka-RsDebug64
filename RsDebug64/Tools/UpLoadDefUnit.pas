@@ -5,7 +5,7 @@ interface
 uses
   SysUtils, Contnrs,
   System.JSON,
-
+  JSonUtils,
   ProgCfgUnit;
 
 type
@@ -17,9 +17,11 @@ type
     StoreWin: boolean;
     StoreMenu: boolean;
     procedure SaveToIni(Ini: TDotIniFile; SName: string);
-    function GetJSONObject: TJSonValue;
-
     procedure LoadFromIni(Ini: TDotIniFile; SName: string);
+
+    function GetJSONObject: TJSONBuilder;
+    procedure LoadfromJson(jLoader: TJSONLoader);
+
   end;
 
   TUpLoadList = class(TObjectList)
@@ -28,18 +30,18 @@ type
     function GetItem(Index: integer): TUpLoadItem;
   public
     property Items[Index: integer]: TUpLoadItem read GetItem;
+
     procedure SaveToIni(Ini: TDotIniFile);
-    function GetJSONObject: TJSonValue;
     procedure LoadFromIni(Ini: TDotIniFile);
+
+    function GetJSONObject: TJSonValue;
+    procedure LoadfromJson(jArr: TJSONArray);
   end;
 
 var
   UpLoadList: TUpLoadList;
 
 implementation
-
-uses
-  JSonUtils;
 
 procedure TUpLoadItem.SaveToIni(Ini: TDotIniFile; SName: string);
 begin
@@ -51,15 +53,25 @@ begin
   Ini.WriteBool(SName, 'StoreMenu', StoreMenu);
 end;
 
-function TUpLoadItem.GetJSONObject: TJSonValue;
+function TUpLoadItem.GetJSONObject: TJSONBuilder;
 begin
-  Result := TJSONObject.Create;
-  (Result as TJSONObject).AddPair('Name', Name);
-  (Result as TJSONObject).AddPair('FileName', FileName);
-  (Result as TJSONObject).AddPair('Adres', Adres);
-  (Result as TJSONObject).AddPair(CreateJsonPairInt('MaxSize', MaxSize));
-  (Result as TJSONObject).AddPair(CreateJsonPairBool('StoreWin', StoreWin));
-  (Result as TJSONObject).AddPair(CreateJsonPairBool('StoreMenu', StoreMenu));
+  Result.init;
+  Result.Add('Name', Name);
+  Result.Add('FileName', FileName);
+  Result.Add('Adres', Adres);
+  Result.Add('MaxSize', MaxSize);
+  Result.Add('StoreWin', StoreWin);
+  Result.Add('StoreMenu', StoreMenu);
+end;
+
+procedure TUpLoadItem.LoadfromJson(jLoader: TJSONLoader);
+begin
+  jLoader.Load('Name', Name);
+  jLoader.Load('FileName', FileName);
+  jLoader.Load('Adres', Adres);
+  jLoader.Load('MaxSize', MaxSize);
+  jLoader.Load('StoreWin', StoreWin);
+  jLoader.Load('StoreMenu', StoreMenu);
 end;
 
 procedure TUpLoadItem.LoadFromIni(Ini: TDotIniFile; SName: string);
@@ -86,12 +98,26 @@ function TUpLoadList.GetJSONObject: TJSonValue;
 var
   i: integer;
 begin
-  Result := TJSonArray.Create;
+  Result := TJSONArray.Create;
   for i := 0 to Count - 1 do
   begin
-    (Result as TJSonArray).AddElement(Items[i].GetJSONObject);
+    (Result as TJSONArray).AddElement(Items[i].GetJSONObject.jobj);
   end;
+end;
 
+procedure TUpLoadList.LoadfromJson(jArr: TJSONArray);
+var
+  i: integer;
+  item: TUpLoadItem;
+  jLoader: TJSONLoader;
+begin
+  for i := 0 to jArr.Count - 1 do
+  begin
+    jLoader.init(jArr.Items[i]);
+    item := TUpLoadItem.Create;
+    item.LoadfromJson(jLoader);
+    Add(item);
+  end;
 end;
 
 procedure TUpLoadList.SaveToIni(Ini: TDotIniFile);

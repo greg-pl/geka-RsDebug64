@@ -5,6 +5,9 @@ interface
 uses
   Winapi.Windows,
   Vcl.Controls,
+  Vcl.ExtCtrls,
+  Vcl.Samples.Spin,
+  Vcl.ComCtrls,
   Messages, SysUtils, IniFiles, Menus, Forms, Classes,
   graphics, Contnrs, math, StdCtrls,
   System.JSON;
@@ -12,34 +15,90 @@ uses
 type
   TIntDynArr = array of integer;
   TFloatDynArr = array of double;
+  TYesNoAsk = (crYES, crNO, crASK);
 
-function CreateJsonPairBool(valName: string; aVal: boolean): TJSONPair;
-function CreateJsonPairInt(valName: string; aVal: integer): TJSONPair;
-function CreateJsonPairStrings(valName: string; aVal: TStrings): TJSONPair;
+  TJSONStringEx = class(TJSONString)
+  public
+    function ToString: string; override;
+  end;
 
+  TJSONBuilder = record
+    jobj: TJsonObject;
+    procedure Init;
+    procedure Add(valName: string; aVal: boolean); overload;
+    procedure Add(valName: string; aVal: integer); overload;
+    procedure Add(valName: string; aVal: string); overload;
+    procedure Add(valName: string; aVal: TStrings); overload;
+    procedure Add(valName: string; aVal: TIntDynArr); overload;
+    procedure Add(valName: string; aVal: TJSONValue); overload;
+    procedure Add(valName: string; aVal: TJSONBuilder); overload;
 
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: string); overload;
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: integer); overload;
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: bool); overload;
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: TStrings); overload;
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: TIntDynArr); overload;
-procedure JSonAddPair(Obj: TJsonObject; aVal: TPoint); overload;
+    procedure Add(aVal: TPoint); overload;
+    procedure Add(R: TRect); overload;
+    procedure Add(valName: string; Box: TComboBox); overload;
 
-procedure JSONAddPair_TLWH(Obj: TJsonObject; aVal: TWinControl);
-procedure JSonAddPairColor(Obj: TJsonObject; valName: string; aVal: TColor);
+    procedure Add_TLWH(aVal: TWinControl);
+    procedure AddColor(valName: string; aVal: TColor);
+  end;
 
+  // ---------------------------
 
-function JsonLoadStr(jobj: TJsonObject; valName: string; defTex: string): string;
-function JsonLoadInt(jobj: TJsonObject; valName: string; defVal: integer): integer;
-function JsonLoadFloat(jobj: TJsonObject; valName: string; defVal: single): single;
-function JsonLoadBool(jobj: TJsonObject; valName: string; defVal: boolean): boolean;
+type
+  TJSONLoader = record
+    jobj: TJsonObject;
+    function Init(Obj: TJSONValue): boolean; overload;
+    function Init(Parent: TJSONLoader; name: string): boolean; overload;
 
-function CreateJsonObjectTRect(const R: TRect): TJsonObject;
+    function getArray(valName: string): TJSONArray;
+    function GetObject(valName: string): TJsonObject;
+    function getDynIntArray(valName: string): TIntDynArr;
+
+    function Load(valName: string; var vVal: string): boolean; overload;
+    function Load(valName: string; var vVal: integer): boolean; overload;
+    function Load(valName: string; var vVal: double): boolean; overload;
+    function Load(valName: string; var vVal: boolean): boolean; overload;
+    function Load(valName: string; var vVal: TYesNoAsk): TYesNoAsk; overload;
+    function Load(valName: string; var intArr: TIntDynArr): boolean; overload;
+    function Load(valName: string; SL: TStrings): boolean; overload;
+
+    function Load(valName: string; CheckBox: TCheckBox): boolean; overload;
+    function Load(valName: string; SpinEdit: TSpinEdit): boolean; overload;
+
+    function Load(valName: string; Edit: TLabeledEdit): boolean; overload;
+    function Load(valName: string; Group: TRadioGroup): boolean; overload;
+    function Load(valName: string; Box: TComboBox): boolean; overload;
+
+    function Load(var R: TRect): boolean; overload;
+    function Load(var P: TPoint): boolean; overload;
+
+    function Load_WH(ctrl: TControl): boolean;
+    function Load_TLWH(ctrl: TControl): boolean;
+    function LoadBtnDown(valName: string; btn: TToolButton): boolean;
+
+    function LoadDef(valName: string; vDefault: string = ''): string; overload;
+    function LoadDef(valName: string; vDefault: integer): integer; overload;
+    function LoadDef(valName: string; vDefault: boolean): boolean; overload;
+
+  end;
 
 implementation
 
 const
   NAN_TEXT = 'NAN';
+
+function TJSONStringEx.ToString: string;
+var
+  Data: TArray<Byte>;
+  idx: integer;
+  txt: AnsiString;
+begin
+  Result := inherited ToString;
+  setLength(Data, 4 * length(Result));
+  idx := ToBytes(Data, 0);
+  setLength(txt, idx);
+  move(Data[0], txt[1], idx);
+  Result := String(txt);
+end;
 
 function JSonStrToBool(txt: string; var q: boolean): boolean;
 begin
@@ -58,17 +117,27 @@ begin
     Result := false
 end;
 
-function CreateJsonPairBool(valName: string; aVal: boolean): TJSONPair;
+procedure TJSONBuilder.Init;
 begin
-  Result := TJSONPair.Create(valName, TJSONBool.Create(aVal));
+  jobj := TJsonObject.Create;
 end;
 
-function CreateJsonPairInt(valName: string; aVal: integer): TJSONPair;
+procedure TJSONBuilder.Add(valName: string; aVal: boolean);
 begin
-  Result := TJSONPair.Create(valName, TJSONNumber.Create(aVal));
+  jobj.AddPair(TJSONPair.Create(valName, TJSONBool.Create(aVal)));
 end;
 
-function CreateJsonPairStrings(valName: string; aVal: TStrings): TJSONPair;
+procedure TJSONBuilder.Add(valName: string; aVal: integer);
+begin
+  jobj.AddPair(TJSONPair.Create(valName, TJSONNumber.Create(aVal)));
+end;
+
+procedure TJSONBuilder.Add(valName: string; aVal: string);
+begin
+  jobj.AddPair(valName, TJSONStringEx.Create(aVal));
+end;
+
+procedure TJSONBuilder.Add(valName: string; aVal: TStrings);
 var
   jArr: TJSONArray;
   i: integer;
@@ -78,37 +147,10 @@ begin
   begin
     jArr.Add(aVal.Strings[i]);
   end;
-  Result := TJSONPair.Create(valName, jArr);
+  jobj.AddPair(TJSONPair.Create(valName, jArr));
 end;
 
-
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: string);
-begin
-  Obj.AddPair(valName, aVal);
-end;
-
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: integer);
-begin
-  Obj.AddPair(valName, TJSONNumber.Create(aVal));
-end;
-
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: bool);
-begin
-  Obj.AddPair(valName, TJSONBool.Create(aVal));
-end;
-
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: TStrings);
-var
-  jArr: TJSONArray;
-  i: integer;
-begin
-  jArr := TJSONArray.Create();
-  for i := 0 to aVal.Count - 1 do
-    jArr.Add(aVal.Strings[i]);
-  Obj.AddPair(TJSONPair.Create(valName, jArr));
-end;
-
-procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: TIntDynArr);
+procedure TJSONBuilder.Add(valName: string; aVal: TIntDynArr);
 var
   jArr: TJSONArray;
   i: integer;
@@ -116,99 +158,331 @@ begin
   jArr := TJSONArray.Create();
   for i := 0 to length(aVal) - 1 do
     jArr.Add(aVal[i]);
-  Obj.AddPair(TJSONPair.Create(valName, jArr));
+  jobj.AddPair(TJSONPair.Create(valName, jArr));
 end;
 
-
-
-procedure JSonAddPair(Obj: TJsonObject; aVal: TPoint);
+procedure TJSONBuilder.Add(valName: string; aVal: TJSONValue);
 begin
-  JSonAddPair(Obj,'X',aVal.X);
-  JSonAddPair(Obj,'Y',aVal.Y);
+  jobj.AddPair(valName, aVal);
 end;
 
-
-procedure JSonAddPairColor(Obj: TJsonObject; valName: string; aVal: TColor);
+procedure TJSONBuilder.Add(valName: string; aVal: TJSONBuilder);
 begin
-  Obj.AddPair(valName, '0x'+IntToHex(aVal,8));
+  jobj.AddPair(valName, aVal.jobj);
 end;
 
-procedure JSONAddPair_TLWH(Obj: TJsonObject; aVal: TWinControl);
+procedure TJSONBuilder.Add(aVal: TPoint);
 begin
-  JSonAddPair(Obj,'Top',aVal.Top);
-  JSonAddPair(Obj,'Left',aVal.Left);
-  JSonAddPair(Obj,'Width',aVal.Width);
-  JSonAddPair(Obj,'Height',aVal.Height);
+  Add('X', aVal.X);
+  Add('Y', aVal.Y);
 end;
 
-
-function JsonLoadStr(jobj: TJsonObject; valName: string; defTex: string): string;
-var
-  jVal: TJSONValue;
+procedure TJSONBuilder.Add_TLWH(aVal: TWinControl);
 begin
-  jVal := jobj.GetValue(valName);
-  if Assigned(jVal) then
-    Result := jVal.Value
+  Add('Top', aVal.Top);
+  Add('Left', aVal.Left);
+  Add('Width', aVal.Width);
+  Add('Height', aVal.Height);
+end;
+
+procedure TJSONBuilder.Add(R: TRect);
+begin
+  Add('Top', R.Top);
+  Add('Left', R.Left);
+  Add('Right', R.Right);
+  Add('Bottom', R.Bottom);
+end;
+
+procedure TJSONBuilder.Add(valName: string; Box: TComboBox);
+begin
+  if Box.Style = csDropDownList then
+    Add(valName, Box.ItemIndex)
   else
-    Result := defTex;
+    Add(valName, Box.Text);
 end;
 
-function JsonLoadInt(jobj: TJsonObject; valName: string; defVal: integer): integer;
-var
-  jVal: TJSONValue;
-  txt: string;
+procedure TJSONBuilder.AddColor(valName: string; aVal: TColor);
 begin
-  jVal := jobj.GetValue(valName);
-  if Assigned(jVal) then
-  begin
-    txt := jVal.Value;
-    if not(TryStrToInt(jVal.Value, Result)) then
-      Result := defVal;
-  end
-  else
-    Result := defVal;
+  jobj.AddPair(valName, '0x' + IntToHex(aVal, 8));
 end;
 
-function JsonLoadFloat(jobj: TJsonObject; valName: string; defVal: single): single;
+procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: string);
+begin
+  Obj.AddPair(valName, TJSONStringEx.Create(aVal));
+end;
+
+// --------------------------------------------------------------------------------
+
+function TJSONLoader.Init(Obj: TJSONValue): boolean;
+begin
+  jobj := nil;
+  Result := Assigned(Obj) and (Obj is TJsonObject);
+  if Result then
+    jobj := Obj as TJsonObject
+end;
+
+function TJSONLoader.Init(Parent: TJSONLoader; name: string): boolean;
 var
   jVal: TJSONValue;
-  txt: string;
 begin
+  jobj := nil;
+  jVal := Parent.jobj.GetValue(name);
+  Result := Assigned(jVal) and (jVal is TJsonObject);
+  if Result then
+    jobj := jVal as TJsonObject;
+end;
+
+function TJSONLoader.getArray(valName: string): TJSONArray;
+var
+  jVal: TJSONValue;
+begin
+  Result := nil;
   jVal := jobj.GetValue(valName);
-  if Assigned(jVal) then
+  if jVal is TJSONArray then
+    Result := jVal as TJSONArray;
+end;
+
+function TJSONLoader.GetObject(valName: string): TJsonObject;
+var
+  jVal: TJSONValue;
+begin
+  Result := nil;
+  jVal := jobj.GetValue(valName);
+  if jVal is TJsonObject then
+    Result := jVal as TJsonObject;
+end;
+
+function TJSONLoader.getDynIntArray(valName: string): TIntDynArr;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  setLength(Result, 0);
+  jArr := jobj.GetValue(valName) as TJSONArray;
+  if Assigned(jArr) then
   begin
-    txt := jVal.Value;
-    if txt = NAN_TEXT then
-      Result := nan
-    else
+    setLength(Result, jArr.Count);
+    for i := 0 to jArr.Count - 1 do
     begin
-      if not(TryStrToFloat(jVal.Value, Result)) then
-        Result := defVal;
+      Result[i] := StrToInt(jArr.Items[i].Value);
     end;
-  end
-  else
-    Result := defVal;
-end;
-
-function JsonLoadBool(jobj: TJsonObject; valName: string; defVal: boolean): boolean;
-var
-  jVal: TJSONValue;
-begin
-  Result := defVal;
-  jVal := jobj.GetValue(valName);
-  if Assigned(jVal) then
-  begin
-    JSonStrToBool(jVal.Value, Result);
   end;
 end;
 
-function CreateJsonObjectTRect(const R: TRect): TJsonObject;
+function TJSONLoader.Load(valName: string; var vVal: string): boolean;
+var
+  jVal: TJSONValue;
 begin
-  Result := TJsonObject.Create;
-  Result.AddPair(CreateJsonPairInt('Top', R.Top));
-  Result.AddPair(CreateJsonPairInt('Left', R.Left));
-  Result.AddPair(CreateJsonPairInt('Right', R.Right));
-  Result.AddPair(CreateJsonPairInt('Bottom', R.Bottom));
+  jVal := jobj.GetValue(valName);
+  Result := Assigned(jVal);
+  if Result then
+    vVal := jVal.Value;
+end;
+
+function TJSONLoader.Load(valName: string; var vVal: integer): boolean;
+var
+  jVal: TJSONValue;
+begin
+  jVal := jobj.GetValue(valName);
+  Result := Assigned(jVal);
+  if Result then
+    Result := TryStrToInt(jVal.Value, vVal);
+end;
+
+function TJSONLoader.Load(valName: string; var vVal: double): boolean;
+var
+  jVal: TJSONValue;
+begin
+  jVal := jobj.GetValue(valName);
+  Result := Assigned(jVal);
+  if Result then
+    Result := TryStrToFloat(jVal.Value, vVal);
+end;
+
+function TJSONLoader.Load(valName: string; var vVal: boolean): boolean;
+var
+  jVal: TJSONValue;
+begin
+  jVal := jobj.GetValue(valName);
+  Result := Assigned(jVal);
+  if Result then
+    Result := JSonStrToBool(jVal.Value, vVal);
+end;
+
+function TJSONLoader.Load(valName: string; var vVal: TYesNoAsk): TYesNoAsk;
+var
+  v: integer;
+begin
+  v := ord(vVal);
+  Load(valName, v);
+  if (v >= ord(low(TYesNoAsk))) and (v <= ord(high(TYesNoAsk))) then
+    Result := TYesNoAsk(v)
+  else
+    Result := vVal;
+end;
+
+function TJSONLoader.Load(valName: string; CheckBox: TCheckBox): boolean;
+var
+  q: boolean;
+begin
+  Result := Load(valName, q);
+  if Result then
+    CheckBox.Checked := q;
+end;
+
+function TJSONLoader.Load(valName: string; SpinEdit: TSpinEdit): boolean;
+var
+  v: integer;
+begin
+  Result := Load(valName, v);
+  if Result then
+    SpinEdit.Value := v;
+end;
+
+function TJSONLoader.Load(valName: string; Edit: TLabeledEdit): boolean;
+var
+  v: string;
+begin
+  Result := Load(valName, v);
+  if Result then
+    Edit.Text := v;
+end;
+
+function TJSONLoader.Load(valName: string; Box: TComboBox): boolean;
+var
+  v: string;
+  c: integer;
+begin
+  Result := false;
+  if Box.Style = csDropDownList then
+  begin
+    if Load(valName, c) then
+    begin
+      Result := true;
+      Box.ItemIndex := c;
+    end;
+  end
+  else
+  begin
+    if Load(valName, v) then
+    begin
+      Result := true;
+      Box.Text := v;
+    end;
+  end;
+
+end;
+
+function TJSONLoader.Load(valName: string; Group: TRadioGroup): boolean;
+var
+  v: integer;
+begin
+  Result := Load(valName, v);
+  if Result then
+    Group.ItemIndex := v;
+end;
+
+function TJSONLoader.Load(var R: TRect): boolean;
+begin
+  Result := Load('Top', R.Top);
+  Result := Result and Load('Left', R.Left);
+  Result := Result and Load('Right', R.Right);
+  Result := Result and Load('Bottom', R.Bottom);
+end;
+
+function TJSONLoader.Load(var P: TPoint): boolean;
+begin
+  Result := Load('X', P.X) and Load('Y', P.Y);
+end;
+
+function TJSONLoader.Load(valName: string; var intArr: TIntDynArr): boolean;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  Result := false;
+  setLength(intArr, 0);
+  jArr := jobj.GetValue(valName) as TJSONArray;
+  if Assigned(jArr) then
+  begin
+    Result := true;
+    setLength(intArr, jArr.Count);
+    for i := 0 to jArr.Count - 1 do
+    begin
+      intArr[i] := StrToInt(jArr.Items[i].Value);
+    end;
+  end;
+end;
+
+function TJSONLoader.Load(valName: string; SL: TStrings): boolean;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  Result := false;
+  jArr := jobj.GetValue(valName) as TJSONArray;
+  if Assigned(jArr) then
+  begin
+    Result := true;
+    SL.Clear;
+    for i := 0 to jArr.Count - 1 do
+    begin
+      SL.Add(jArr.Items[i].Value);
+    end;
+  end;
+end;
+
+function TJSONLoader.Load_WH(ctrl: TControl): boolean;
+var
+  w, h: integer;
+begin
+  Result := Load('W', w) and Load('H', h);
+  if Result then
+  begin
+    ctrl.Width := w;
+    ctrl.Height := h;
+  end;
+end;
+
+function TJSONLoader.Load_TLWH(ctrl: TControl): boolean;
+var
+  t, l, w, h: integer;
+begin
+  Result := Load('Top', t) and Load('Left', l) and Load('Width', w) and Load('Height', h);
+  if Result then
+  begin
+    ctrl.Top := t;
+    ctrl.Left := l;
+    ctrl.Width := w;
+    ctrl.Height := h;
+  end;
+end;
+
+function TJSONLoader.LoadBtnDown(valName: string; btn: TToolButton): boolean;
+var
+  q: boolean;
+begin
+  Result := Load(valName, q);
+  if Result then
+    btn.Down := q;
+end;
+
+function TJSONLoader.LoadDef(valName: string; vDefault: string): string;
+begin
+  Result := vDefault;
+  Load(valName, Result);
+end;
+
+function TJSONLoader.LoadDef(valName: string; vDefault: integer): integer;
+begin
+  Result := vDefault;
+  Load(valName, Result);
+end;
+
+function TJSONLoader.LoadDef(valName: string; vDefault: boolean): boolean;
+begin
+  Result := vDefault;
+  Load(valName, Result);
 end;
 
 end.

@@ -96,9 +96,11 @@ type
     procedure wmWriteMem2(var Msg: TMessage); message wm_WriteMem2;
   public
     procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONObject; override;
-
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+
+    function GetJSONObject: TJSONBuilder; override;
+
+
     procedure SettingChg; override;
     procedure ReloadMapParser; override;
     function GetDefaultCaption: string; override;
@@ -535,19 +537,19 @@ begin
   MemFrame.SaveToIni(Ini, SName);
 end;
 
-function TMemForm.GetJSONObject: TJSONObject;
+function TMemForm.GetJSONObject: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
-  Result.AddPair('Adr', AdresBox.Text);
-  Result.AddPair(CreateJsonPairStrings('Adrs', AdresBox.Items));
-  Result.AddPair('Size', SizeBox.Text);
-  Result.AddPair(CreateJsonPairStrings('Sizes', SizeBox.Items));
-  Result.AddPair('RepTime', AutoRepTmEdit.Text);
-  Result.AddPair(CreateJsonPairStrings('RepTimes', AutoRepTmEdit.Items));
-  Result.AddPair(CreateJsonPairInt('ViewPage', MemFrame.ActivPage));
-  Result.AddPair(CreateJsonPairInt('AdrMode', AdrModeGroup.ItemIndex));
-  Result.AddPair('FillValue', FillValueEdit.Text);
-  Result.AddPair('MemFrame', MemFrame.GetJSONObject);
+  Result.Add('Adr', AdresBox.Text);
+  Result.Add('Adrs', AdresBox.Items);
+  Result.Add('Size', SizeBox.Text);
+  Result.Add('Sizes', SizeBox.Items);
+  Result.Add('RepTime', AutoRepTmEdit.Text);
+  Result.Add('RepTimes', AutoRepTmEdit.Items);
+  Result.Add('ViewPage', MemFrame.ActivPage);
+  Result.Add('AdrMode', AdrModeGroup.ItemIndex);
+  Result.Add('FillValue', FillValueEdit.Text);
+  Result.Add('MemFrame', MemFrame.GetJSONObject);
 end;
 
 procedure TMemForm.LoadFromIni(Ini: TDotIniFile; SName: string);

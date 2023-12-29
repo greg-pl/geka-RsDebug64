@@ -29,7 +29,7 @@ type
     procedure TerminalKeyPressEventProc(Sender: TObject; var Key: Char);
   public
     procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONObject; override;
+    function GetJSONObject: TJSONBuilder; override;
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
     procedure AfterConnChanged; override;
   end;
@@ -112,7 +112,7 @@ begin
 
 end;
 
-function TTerminalForm.GetJSONObject: TJSONObject;
+function TTerminalForm.GetJSONObject: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
 

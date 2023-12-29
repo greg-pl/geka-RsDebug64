@@ -49,8 +49,11 @@ type
     procedure TypeDefChg;
     procedure ReloadMapParser(OnMsg: TOnMsg);
     procedure SaveToIni(Ini: TDotIniFile; SName, IName: string);
-    function GetJSONObject: TJSONObject;
     procedure LoadFromIni(Ini: TDotIniFile; SName, IName: string);
+
+    function GetJSONObject: TJSONBuilder;
+    procedure LoadfromJson(jLoader: TJSONLoader);
+
     function ISmemChg: boolean;
     function PhAdres: cardinal;
     procedure CopyDefFrom(Src: TViewVar);
@@ -68,6 +71,7 @@ type
     procedure ReloadMapParser(OnMsg: TOnMsg);
     procedure SaveToIni(Ini: TDotIniFile; SName: string);
     function GetJSONObject: TJSONValue;
+    procedure LoadfromJson(jObj: TJSONValue);
     procedure LoadFromIni(Ini: TDotIniFile; SName: string);
     function ReadVars(RHan: THandle; OnMsg: TOnMsg; dev: TCmmDevice): boolean;
     function FindVar(Nm: string): TViewVar;
@@ -181,9 +185,11 @@ type
     function FilterAccept(s: string): boolean;
   public
     procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONObject; override;
-
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+
+    function GetJSONObject: TJSONBuilder; override;
+    procedure LoadfromJson(jParent: TJSONLoader); override;
+
     procedure ReloadMapParser; override;
     procedure TypeDefChg; override;
     procedure SettingChg; override;
@@ -375,17 +381,6 @@ begin
   end;
 end;
 
-function TViewVar.GetJSONObject: TJSONObject;
-begin
-  Result := TJSONObject.Create;
-  JSonAddPair(Result, 'Name', Name);
-  JSonAddPair(Result, 'TypName', TypName);
-  JSonAddPair(Result, 'Rep', Rep);
-  JSonAddPair(Result, 'TxMode', ShowModeTxt[TxMode]);
-  JSonAddPair(Result, 'Manual', Manual);
-  JSonAddPair(Result, 'AreaAdres', AreaAdres);
-end;
-
 procedure TViewVar.LoadFromIni(Ini: TDotIniFile; SName, IName: string);
 var
   SL: TStringList;
@@ -408,6 +403,27 @@ begin
   finally
     SL.Free;
   end;
+end;
+
+function TViewVar.GetJSONObject: TJSONBuilder;
+begin
+  Result.Init;
+  Result.Add('Name', Name);
+  Result.Add('TypName', TypName);
+  Result.Add('Rep', Rep);
+  Result.Add('TxMode', ShowModeTxt[TxMode]);
+  Result.Add('Manual', Manual);
+  Result.Add('AreaAdres', AreaAdres);
+end;
+
+procedure TViewVar.LoadfromJson(jLoader: TJSONLoader);
+begin
+  jLoader.Load('Name', Name);
+  TypName := jLoader.LoadDef('TypName', TypName);
+  Rep := jLoader.LoadDef('Rep', Rep);
+  TxMode := StrToShowMode(jLoader.LoadDef('TxMode', ShowModeTxt[TxMode]), smSIGN);
+  jLoader.Load('Manual', Manual);
+  AreaAdres := jLoader.LoadDef('AreaAdres', AreaAdres);
 end;
 
 // ------------ TViewVarList --------------------------------------------------
@@ -484,17 +500,6 @@ begin
   end;
 end;
 
-function TViewVarList.GetJSONObject: TJSONValue;
-var
-  i: integer;
-begin
-  Result := TJSONArray.Create;
-  for i := 0 to Count - 1 do
-  begin
-    (Result as TJSONArray).AddElement(Items[i].GetJSONObject);
-  end;
-end;
-
 procedure TViewVarList.LoadFromIni(Ini: TDotIniFile; SName: string);
 var
   i: integer;
@@ -507,6 +512,39 @@ begin
     V.LoadFromIni(Ini, SName, GetIName(i));
     Add(V);
     inc(i);
+  end;
+end;
+
+function TViewVarList.GetJSONObject: TJSONValue;
+var
+  i: integer;
+begin
+  Result := TJSONArray.Create;
+  for i := 0 to Count - 1 do
+  begin
+    (Result as TJSONArray).AddElement(Items[i].GetJSONObject.jobj);
+  end;
+end;
+
+procedure TViewVarList.LoadfromJson(jObj: TJSONValue);
+var
+  i: integer;
+  V: TViewVar;
+  jArr: TJSONArray;
+  jLoader : TJSONLoader;
+begin
+  if jObj is TJSONArray then
+  begin
+    jArr := jObj as TJSONArray;
+    for i := 0 to jArr.Count - 1 do
+    begin
+      if jLoader.Init(jArr.Items[i]) then
+      begin
+        V := TViewVar.Create(self);
+        V.LoadfromJson(jLoader);
+        Add(V);
+      end;
+    end;
   end;
 end;
 
@@ -666,15 +704,33 @@ begin
   GridVarList.SaveToIni(Ini, SName);
 end;
 
-function TVarListForm.GetJSONObject: TJSONObject;
+function TVarListForm.GetJSONObject: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
-  JSonAddPair(Result, 'ListColWidth', GetViewListColumnWidts(VarListView));
-  JSonAddPair(Result, 'GridColWidth', GetGridColumnWidts(ShowVarGrid));
-  JSonAddPair(Result, 'ListWidth', ListPanel.Width);
-  JSonAddPair(Result, 'ListVisible', ShowVarPanelAct.Checked);
-  JSonAddPair(Result, 'FilterStr', FilterEdit.Text);
-  Result.AddPair('VarList', GridVarList.GetJSONObject);
+  Result.Add('ListColWidth', GetViewListColumnWidts(VarListView));
+  Result.Add('GridColWidth', GetGridColumnWidts(ShowVarGrid));
+  Result.Add('ListWidth', ListPanel.Width);
+  Result.Add('ListVisible', ShowVarPanelAct.Checked);
+  Result.Add('FilterStr', FilterEdit.Text);
+  Result.Add('VarList', GridVarList.GetJSONObject);
+end;
+
+procedure TVarListForm.LoadfromJson(jParent: TJSONLoader);
+var
+  aArr: TIntDynArr;
+  jParent2: TJSONLoader;
+begin
+  inherited;
+  SetViewListColumnWidts(VarListView, jParent.getDynIntArray('ListColWidth'));
+  SetGridColumnWidts(ShowVarGrid, jParent.getDynIntArray('GridColWidth'));
+
+  ListPanel.Width := jParent.LoadDef('ListWidth', ListPanel.Width);
+  ShowVarPanelAct.Checked := jParent.LoadDef('ListVisible', ShowVarPanelAct.Checked);
+  jParent.Load('FilterStr', FilterEdit);
+  GridVarList.LoadfromJson(jParent.getArray('VarList'));
+
+  ReloadMapParser;
+  FillShowVarGrid;
 end;
 
 procedure TVarListForm.LoadFromIni(Ini: TDotIniFile; SName: string);
@@ -694,7 +750,6 @@ begin
   FilterEdit.Text := Ini.ReadString(SName, 'FilterStr', '');
 
   GridVarList.LoadFromIni(Ini, SName);
-
 
   ReloadMapParser;
   FillShowVarGrid;
@@ -1299,7 +1354,7 @@ begin
       if M.Typ.IsSys then
         p := true;
   end;
-  p := p and (GridVarList.Count > 0) and dev.Connected;
+  p := p and (GridVarList.Count > 0) and IsConnected;
   (Sender as TAction).Enabled := p;
 end;
 
@@ -1579,6 +1634,5 @@ begin
     end;
   end;
 end;
-
 
 end.

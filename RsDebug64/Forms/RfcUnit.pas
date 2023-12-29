@@ -70,9 +70,11 @@ type
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
   public
     procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONObject; override;
-
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+
+    function GetJSONObject: TJSONBuilder; override;
+    procedure LoadfromJson(jParent: TJSONLoader); override;
+
     procedure ReloadMapParser; override;
     function GetDefaultCaption: string; override;
   end;
@@ -147,24 +149,45 @@ begin
   end;
 end;
 
-function TRfcForm.GetJSONObject: TJSONObject;
+function TRfcForm.GetJSONObject: TJSONBuilder;
 var
   i: integer;
   jArr: TJSONArray;
-  jObj : TJSONObject;
+  jObj: TJSONBuilder;
 begin
   result := inherited GetJSONObject;
-  JSonAddPair(result, 'RfcFunc', FunctionSelectBox.Text);
-  JSonAddPair(result, 'ID', IdEdit.Text);
+  result.Add('RfcFunc', FunctionSelectBox.ItemIndex);
+  result.Add('ID', IdEdit.Text);
   jArr := TJSONArray.Create;
   for i := 0 to MAX_FUNCTION_PARAMETERS - 1 do
   begin
-    jObj := TJSONObject.Create;
-    JSonAddPair(jObj,'Name',ParameterList.Cells[1, i + 1]);
-    JSonAddPair(jObj,'Val',ParameterList.Cells[2, i + 1]);
-    jArr.AddElement(jObj);
+    jObj.Init;
+    jObj.Add('Name', ParameterList.Cells[1, i + 1]);
+    jObj.Add('Val', ParameterList.Cells[2, i + 1]);
+    jArr.AddElement(jObj.jobj);
   end;
-  result.AddPair('Params', jArr);
+  result.Add('Params', jArr);
+end;
+
+procedure TRfcForm.LoadfromJson(jParent: TJSONLoader);
+var
+  i: integer;
+  jArr: TJSONArray;
+  jLoader: TJSONLoader;
+begin
+  inherited;
+  jParent.Load('RfcFunc', FunctionSelectBox);
+  jParent.Load('ID', IdEdit);
+  jArr := jParent.getArray('Params');
+  if Assigned(jArr) then
+  begin
+    for i := 0 to jArr.Count - 1 do
+    begin
+      jLoader.Init(jArr.Items[i]);
+      ParameterList.Cells[1, i + 1] := jLoader.LoadDef('Name');
+      ParameterList.Cells[2, i + 1] := jLoader.LoadDef('Val');
+    end;
+  end;
 end;
 
 procedure TRfcForm.LoadFromIni(Ini: TDotIniFile; SName: string);

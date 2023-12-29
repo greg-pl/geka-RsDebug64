@@ -5,6 +5,7 @@ inherited TerminalForm: TTerminalForm
   ClientHeight = 703
   ClientWidth = 732
   OldCreateOrder = True
+  OnCreate = FormCreate
   ExplicitWidth = 748
   ExplicitHeight = 742
   PixelsPerInch = 96
@@ -36,14 +37,8 @@ inherited TerminalForm: TTerminalForm
   inherited ToolBar1: TToolBar
     Width = 732
     ExplicitWidth = 732
-    inherited AreaSelect: TComboBox
-      Visible = False
-    end
-    inherited ToolButton13: TToolButton
-      Visible = False
-    end
     object ReadBtn: TToolButton
-      Left = 178
+      Left = 58
       Top = 0
       Hint = 'Czytaj dane z urz'#261'dzenia'
       Caption = 'ReadBtn'
@@ -52,7 +47,7 @@ inherited TerminalForm: TTerminalForm
       OnClick = ReadBtnClick
     end
     object ClearBtn: TToolButton
-      Left = 201
+      Left = 81
       Top = 0
       Action = ClrTerminalAct
     end
@@ -72,7 +67,7 @@ inherited TerminalForm: TTerminalForm
   end
   inherited TreeImages: TImageList
     Bitmap = {
-      494C010104000900240010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101040009002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -345,7 +340,7 @@ inherited TerminalForm: TTerminalForm
   end
   inherited ToolBarImgList: TImageList
     Bitmap = {
-      494C01010D000E001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010D000E00240010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000004000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

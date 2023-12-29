@@ -25,12 +25,11 @@ const
   stBadRepl = 7;
   stBadArguments = 8;
   stBufferToSmall = 9; // publiczny - rozpoznawany przez warstwê wy¿sza
-  stToBigTerminalNr =10; //
+  stToBigTerminalNr = 10; //
   stEND_OFF_DIR = 11;
   stDelphiError = 12;
   stMdbError = 50;
   stMdbExError = 100;
-
 
   stAPL_BASE = 500;
 
@@ -213,22 +212,25 @@ var
   JSonValue: TJSONValue;
   myObj: TJsonObject;
   arr: TJSONArray;
-  n, i: integer;
-  pair: TJSONPair;
 begin
-  JSonValue := TJsonObject.ParseJSONValue(txt);
-  myObj := JSonValue as TJsonObject;
+  try
+    JSonValue := TJsonObject.ParseJSONValue(txt);
+    myObj := JSonValue as TJsonObject;
 
-  Params.shortName := myObj.Get('ShortName').JSonValue.Value;
-  Params.Description := myObj.Get('Description').JSonValue.Value;
-  Params.ConnectionType := TConnectionType(FindStringInArray(myObj.Get('ConnectionType').JSonValue.Value,
-    ConnectionTypeName, ord(connTypNODEF)));
+    Params.shortName := myObj.Get('ShortName').JSonValue.Value;
+    Params.Description := myObj.Get('Description').JSonValue.Value;
+    Params.ConnectionType := TConnectionType(FindStringInArray(myObj.Get('ConnectionType').JSonValue.Value,
+      ConnectionTypeName, ord(connTypNODEF)));
 
-  arr := myObj.Get('SubGroups').JSonValue as TJSONArray;
-  Params.SubGroups := LoadGroups(arr);
+    arr := myObj.Get('SubGroups').JSonValue as TJSONArray;
+    Params.SubGroups := LoadGroups(arr);
 
-  arr := myObj.Get('ConectionParams').JSonValue as TJSONArray;
-  ConnectionParamsLoadfromArr(arr);
+    arr := myObj.Get('ConectionParams').JSonValue as TJSONArray;
+    ConnectionParamsLoadfromArr(arr);
+    Result := true;
+  except
+    Result := false;
+  end;
 
 end;
 
@@ -255,7 +257,7 @@ var
   jVal: TJSONValue;
   jobj: TJsonObject;
   paramObj: TJsonObject;
-  item: TJsonPair;
+  item: TJSONPair;
 begin
   Result := false;
   try

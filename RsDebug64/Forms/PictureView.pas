@@ -109,8 +109,11 @@ type
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
   public
     procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONObject; override;
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+
+    function GetJSONObject: TJSONBuilder; override;
+    procedure LoadfromJson(jParent: TJSONLoader); override;
+
     procedure ReloadMapParser; override;
     function GetDefaultCaption: string; override;
   end;
@@ -383,33 +386,6 @@ begin
   Ini.WriteInteger(SName, 'LH', HLGroup.ItemIndex);
 end;
 
-function TPictureViewForm.GetJSONObject: TJSONObject;
-begin
-  Result := inherited GetJSONObject;
-
-  JSonAddPair(Result, 'Adr', AdresBox.Text);
-  JSonAddPair(Result, 'Adrs', AdresBox.Items);
-  JSonAddPair(Result, 'AdrMode', AdrModeGroup.ItemIndex);
-
-  JSonAddPair(Result, 'PicWidth', WidthBoxEdit.Text);
-  JSonAddPair(Result, 'PicWidths', WidthBoxEdit.Items);
-
-  JSonAddPair(Result, 'PicHeight', HeightBoxEdit.Text);
-  JSonAddPair(Result, 'PicHeights', HeightBoxEdit.Items);
-
-  JSonAddPair(Result, 'PicZoomBox', ZoomBox.ItemIndex);
-
-  JSonAddPair(Result, 'Stretch', StretchBox.Checked);
-  JSonAddPair(Result, 'Proportional', ProportionalBox.Checked);
-  JSonAddPair(Result, 'BitPerPixel', GetBitPerPixel);
-
-  JSonAddPairColor(Result, 'Color1', ColorTab[0]);
-  JSonAddPairColor(Result, 'Color2', ColorTab[1]);
-  JSonAddPairColor(Result, 'Color3', ColorTab[2]);
-  JSonAddPairColor(Result, 'Color4', ColorTab[3]);
-
-  JSonAddPair(Result, 'LH', HLGroup.ItemIndex);
-end;
 
 procedure TPictureViewForm.LoadFromIni(Ini: TDotIniFile; SName: string);
 begin
@@ -436,6 +412,70 @@ begin
   ColorTab[3] := Ini.ReadInteger(SName, 'Color4', ColorTab[3]);
 
   HLGroup.ItemIndex := Ini.ReadInteger(SName, 'LH', HLGroup.ItemIndex);
+
+  bmp.Width := GetWidth;
+  bmp.Height := GetHeight;
+  StretchBoxClick(nil);
+  DrukImage.Picture.Assign(bmp);
+end;
+
+function TPictureViewForm.GetJSONObject: TJSONBuilder;
+begin
+  Result := inherited GetJSONObject;
+
+  Result.Add('Adr', AdresBox.Text);
+  Result.Add('Adrs', AdresBox.Items);
+  Result.Add('AdrMode', AdrModeGroup.ItemIndex);
+
+  Result.Add('PicWidth', WidthBoxEdit.Text);
+  Result.Add('PicWidths', WidthBoxEdit.Items);
+
+  Result.Add('PicHeight', HeightBoxEdit.Text);
+  Result.Add('PicHeights', HeightBoxEdit.Items);
+
+  Result.Add('PicZoomBox', ZoomBox.ItemIndex);
+
+  Result.Add('Stretch', StretchBox.Checked);
+  Result.Add('Proportional', ProportionalBox.Checked);
+  Result.Add('BitPerPixel', GetBitPerPixel);
+
+  Result.Add('Color', [ColorTab[0], ColorTab[1], ColorTab[2], ColorTab[3]]);
+
+  Result.AddColor('LH', HLGroup.ItemIndex);
+end;
+
+procedure TPictureViewForm.LoadfromJson(jParent: TJSONLoader);
+var
+  colors: TIntDynArr;
+begin
+  inherited;
+  AdresBox.Items.CommaText := '0,4000,8000,800000';
+  jParent.Load('Adrs', AdresBox.Items);
+  jParent.Load('Adr', AdresBox);
+
+  jParent.Load('AdrMode', AdrModeGroup);
+
+  jParent.Load('PicWidth', WidthBoxEdit);
+  jParent.Load('PicWidths', WidthBoxEdit.Items);
+
+  jParent.Load('PicHeight', HeightBoxEdit);
+  jParent.Load('PicHeights', HeightBoxEdit.Items);
+
+  jParent.Load('PicZoomBox', ZoomBox);
+
+  jParent.Load('Stretch', StretchBox);
+  jParent.Load('Proportional', ProportionalBox);
+  SetBitPerPixel(jParent.LoadDef('BitPerPixel', GetBitPerPixel));
+
+  colors := jParent.getDynIntArray('Color');
+  if length(colors) = 4 then
+  begin
+    ColorTab[0] := colors[0];
+    ColorTab[1] := colors[1];
+    ColorTab[2] := colors[2];
+    ColorTab[3] := colors[3];
+  end;
+  jParent.Load('LH', HLGroup);
 
   bmp.Width := GetWidth;
   bmp.Height := GetHeight;

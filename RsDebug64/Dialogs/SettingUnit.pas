@@ -6,7 +6,8 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls,
   Spin, ComCtrls, Grids,
-  ProgCfgUnit, ToolsUnit;
+  ProgCfgUnit, ToolsUnit,
+  JSonUtils;
 
 type
   TSettingForm = class(TForm)
@@ -50,8 +51,6 @@ implementation
 {$R *.dfm}
 
 procedure TSettingForm.FormActivate(Sender: TObject);
-var
-  i: integer;
 begin
   AutoSaveBox.ItemIndex := ord(ProgCfg.AutoSaveCfg);
   AutoRefreshmapBox.ItemIndex := ord(ProgCfg.AutoRefreshMap);
@@ -76,8 +75,6 @@ begin
 end;
 
 procedure TSettingForm.OkBtnClick(Sender: TObject);
-var
-  i    : integer;
 begin
   ProgCfg.SelectAsmVar := SelectAsmBox.Checked;
   ProgCfg.SelectC_Var  := SelectC_Box.Checked;

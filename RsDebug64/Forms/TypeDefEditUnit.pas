@@ -8,7 +8,7 @@ uses
   ProgCfgUnit,
   EditTypeItemUnit,
   RmtChildUnit,
-  TypeDefUnit;
+  TypeDefUnit, System.ImageList, System.Actions;
 
 type
   TTypeDefEditForm = class(TChildForm)

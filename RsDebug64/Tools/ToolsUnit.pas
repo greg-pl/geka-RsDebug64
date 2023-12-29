@@ -16,12 +16,15 @@ const
 
 function GetViewListColumnWidtsStr(ListView: TListView): string;
 function GetViewListColumnWidts(ListView: TListView): TIntDynArr;
-procedure SetViewListColumnWidts(ListView: TListView; S: string);
+procedure SetViewListColumnWidts(ListView: TListView; S: string); overload;
+procedure SetViewListColumnWidts(ListView: TListView; arr: TIntDynArr); overload;
 
 function GetGridColumnWidtsStr(Grid: TStringGrid): string;
 function GetGridColumnWidts(Grid: TStringGrid): TIntDynArr;
 
-procedure SetGridColumnWidts(Grid: TStringGrid; S: string);
+procedure SetGridColumnWidts(Grid: TStringGrid; S: string); overload;
+procedure SetGridColumnWidts(Grid: TStringGrid; arr: TIntDynArr); overload;
+
 procedure AddToList(Combo: TComboBox);
 function GetChckedAsString(Box: TCheckListBox): string;
 procedure SetChckedFromString(Box: TCheckListBox; S: string);
@@ -86,6 +89,16 @@ begin
   end;
 end;
 
+procedure SetViewListColumnWidts(ListView: TListView; arr: TIntDynArr);
+var
+  i: integer;
+  N: integer;
+begin
+  N := Min(ListView.Columns.Count, Length(arr));
+  for i := 0 to N - 1 do
+    ListView.Column[i].Width := arr[i];
+end;
+
 function GetViewListColumnWidts(ListView: TListView): TIntDynArr;
 var
   i: integer;
@@ -145,6 +158,18 @@ begin
     end;
   finally
     SL.Free;
+  end;
+end;
+
+procedure SetGridColumnWidts(Grid: TStringGrid; arr: TIntDynArr);
+var
+  i: integer;
+  N: integer;
+begin
+  N := Min(Grid.ColCount - 1, Length(arr));
+  for i := 0 to N - 1 do
+  begin
+    Grid.ColWidths[i + 1] := arr[i]
   end;
 end;
 
@@ -390,7 +415,7 @@ begin
     begin
       if copy(S, 1, 2) = '0x' then
       begin
-        S := '$' + copy(S, 3, length(S) - 2);
+        S := '$' + copy(S, 3, Length(S) - 2);
       end;
       Val(S, V, E);
       Result := (E = 0);

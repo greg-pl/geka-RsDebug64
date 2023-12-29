@@ -2,10 +2,16 @@ inherited PictureViewForm: TPictureViewForm
   Left = 2338
   Top = 409
   Caption = 'PictureViewForm'
+  ClientHeight = 379
+  ClientWidth = 737
   OldCreateOrder = True
+  ExplicitWidth = 753
+  ExplicitHeight = 418
   PixelsPerInch = 96
   TextHeight = 13
   inherited StatusBar: TStatusBar
+    Top = 360
+    Width = 737
     Panels = <
       item
         Style = psOwnerDraw
@@ -27,10 +33,9 @@ inherited PictureViewForm: TPictureViewForm
       item
         Width = 50
       end>
-    ExplicitTop = 388
-    ExplicitWidth = 774
   end
   inherited ToolBar1: TToolBar
+    Width = 737
     object ToolButton2: TToolButton
       Left = 58
       Top = 0
@@ -76,8 +81,8 @@ inherited PictureViewForm: TPictureViewForm
     end
   end
   inherited ParamPanel: TPanel
+    Width = 737
     Height = 84
-    ExplicitWidth = 774
     ExplicitHeight = 84
     object Label2: TLabel
       Left = 72
@@ -284,19 +289,21 @@ inherited PictureViewForm: TPictureViewForm
   object ScrollBox1: TScrollBox [3]
     Left = 0
     Top = 113
-    Width = 419
-    Height = 169
+    Width = 737
+    Height = 247
     Align = alClient
     TabOrder = 3
-    ExplicitWidth = 774
-    ExplicitHeight = 275
+    ExplicitWidth = 419
+    ExplicitHeight = 169
     object DrukImage: TImage
       Left = 0
       Top = 0
-      Width = 770
-      Height = 271
+      Width = 733
+      Height = 243
       Align = alClient
       OnMouseMove = DrukImageMouseMove
+      ExplicitWidth = 770
+      ExplicitHeight = 271
     end
   end
   inherited ActionList2: TActionList
@@ -307,7 +314,7 @@ inherited PictureViewForm: TPictureViewForm
     Left = 456
     Top = 360
     Bitmap = {
-      494C010104000900180010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010104000900200010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -582,7 +589,7 @@ inherited PictureViewForm: TPictureViewForm
     Left = 416
     Top = 360
     Bitmap = {
-      494C010111001300080010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010111001300100010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

@@ -192,10 +192,6 @@ object AnalogFrame: TAnalogFrame
       Caption = 'Chart'
       ImageIndex = 6
       OnShow = ChartSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Panel1: TPanel
         Left = 0
         Top = 0
@@ -545,10 +541,6 @@ object AnalogFrame: TAnalogFrame
       Caption = 'Wektory'
       ImageIndex = 7
       OnShow = WekSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object Panel3: TPanel
         Left = 0
         Top = 0
@@ -560,10 +552,11 @@ object AnalogFrame: TAnalogFrame
         object Label2: TLabel
           Left = 0
           Top = 0
-          Width = 72
+          Width = 113
           Height = 13
           Align = alTop
           Caption = 'Ilo'#347#263' wektor'#243'w'
+          ExplicitWidth = 72
         end
         object WekCntEdit: TSpinEdit
           Left = 0

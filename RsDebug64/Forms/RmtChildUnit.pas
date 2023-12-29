@@ -62,8 +62,11 @@ type
 
     procedure Start; virtual;
     procedure SaveToIni(Ini: TDotIniFile; SName: string); virtual;
-    function GetJSONObject: TJSONObject; virtual;
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); virtual;
+
+    function GetJSONObject: TJSONBuilder; virtual;
+    procedure LoadfromJson(jParent: TJSONLoader); virtual;
+
     procedure ReloadMapParser; virtual;
     procedure TypeDefChg; virtual;
     procedure SettingChg; virtual;
@@ -142,16 +145,16 @@ begin
   end;
 end;
 
-function TChildForm.GetJSONObject: TJSONObject;
+function TChildForm.GetJSONObject: TJSONBuilder;
 begin
-  Result := TJSONObject.Create;
+  Result.Init;
 
-  Result.AddPair('WinType', ClassName);
-  Result.AddPair('Title', Title);
-  Result.AddPair(CreateJsonPairInt('WinState', ord(WindowState)));
-  Result.AddPair(CreateJsonPairBool('ParamPanel', ParamPanelBtn.Down));
+  Result.Add('WinType', ClassName);
+  Result.Add('Title', Title);
+  Result.Add('WinState', ord(WindowState));
+  Result.Add('ParamPanel', ParamPanelBtn.Down);
   if WindowState = wsNormal then
-    JSONAddPair_TLWH(Result,self);
+    Result.Add_TLWH(self);
 end;
 
 procedure TChildForm.LoadFromIni(Ini: TDotIniFile; SName: string);
@@ -169,6 +172,20 @@ begin
   ParamPanel.Visible := ParamPanelBtn.Down;
   ShowParamAct.Checked := ParamPanelBtn.Down;
 
+  ShowCaption;
+end;
+
+procedure TChildForm.LoadfromJson(jParent: TJSONLoader);
+var
+  s: string;
+  N: integer;
+begin
+  WindowState := TWindowState(jParent.LoadDef('WinState',ord(wsNormal)));
+  jParent.Load('Title',Title);
+  jParent.Load_TLWH(self);
+  jParent.LoadBtnDown('ParamPanel', ParamPanelBtn);
+  ParamPanel.Visible := ParamPanelBtn.Down;
+  ShowParamAct.Checked := ParamPanelBtn.Down;
   ShowCaption;
 end;
 
@@ -320,6 +337,5 @@ procedure TChildForm.doParamsVisible(vis: boolean);
 begin
 
 end;
-
 
 end.

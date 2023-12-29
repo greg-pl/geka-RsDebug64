@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, RmtChildUnit, ImgList, ComCtrls, StdCtrls, ExtCtrls,Contnrs,
-  ProgCfgUnit,UpLoadDefUnit, ActnList, ToolWin;
+  ProgCfgUnit,UpLoadDefUnit, ActnList, ToolWin, System.ImageList, System.Actions;
 
 type
   TUpLoadFileForm = class(TChildForm)

@@ -48,6 +48,8 @@ object SettingForm: TSettingForm
       Caption = 'Og'#243'lne'
       ExplicitLeft = 2
       ExplicitTop = 29
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Label1: TLabel
         Left = 74
         Top = 8

@@ -33,7 +33,6 @@ const
   INI_PARAM_DEV_STR = '_PrmDevStr_';
 
 type
-  TYesNoAsk = (crYES, crNO, crASK);
 
   TDotIniFile = class(TMemIniFile)
     function ReadFloat(const Section, Name: string; Default: Double): Double; override;
@@ -62,6 +61,7 @@ type
     procedure LoadFromIni(IniFile: TDotIniFile);
     procedure SaveToIni(IniFile: TDotIniFile);
     function GetJSONObject: TJSONValue;
+    procedure LoadFromJObj(jArr: TJSONArray);
     function FindItem(AItem: TMenuItem): boolean;
     function AddFile(Fname: string; UpdateMenu: boolean): TReopenItem; overload;
   public
@@ -75,7 +75,8 @@ type
   end;
 
   TIniIoProc = procedure(IniFile: TDotIniFile) of object;
-  TGetJsonObject = function: TJSONObject of object;
+  TGetJsonObject = function: TJSONBuilder of object;
+  TReadJsonObject = procedure(jLoader: TJSONLoader) of object;
 
   PAdrCpx = ^TAdrCpx;
 
@@ -92,6 +93,7 @@ type
     FOnReadIni: TIniIoProc;
     FOnWriteIni: TIniIoProc;
     FOnWriteJsonCfg: TGetJsonObject;
+    FOnReadJsonCfg: TReadJsonObject;
 
     FIniFilename: string;
   public
@@ -104,12 +106,12 @@ type
     AutoRefreshMap: TYesNoAsk;
     SelSectionMode: integer;
     SelSections: TStringList;
-    ScalMemCnt: cardinal;
-    MaxVarSize: cardinal;
+    ScalMemCnt: integer;
+    MaxVarSize: integer;
     DevString: String;
     WinTab: TWinTab;
-    ByteOrder : TByteOrder;
-    ptrSize : TPtrSize;
+    ByteOrder: TByteOrder;
+    ptrSize: TPtrSize;
 
     constructor Create;
     destructor Destroy; override;
@@ -119,6 +121,7 @@ type
     property OnReadData: TIniIoProc read FOnReadIni write FOnReadIni;
     property OnWriteData: TIniIoProc read FOnWriteIni write FOnWriteIni;
     property OnWriteJsonCfg: TGetJsonObject read FOnWriteJsonCfg write FOnWriteJsonCfg;
+    property OnReadJsonCfg: TReadJsonObject read FOnReadJsonCfg write FOnReadJsonCfg;
 
     property MainIniFName: string read FIniFilename;
   end;
@@ -150,8 +153,6 @@ begin
 end;
 
 procedure TDotIniFile.WriteFloat(const Section, Name: string; Value: Double);
-var
-  Sep: char;
 begin
   WriteString(Section, Name, FloatToStr(Value, DotFormatSettings));
 end;
@@ -282,7 +283,21 @@ begin
     n := ReOpenDeep;
   for i := 0 to n - 1 do
   begin
-    (Result as TJSONArray).Add(Items[i].FileName);
+    (Result as TJSONArray).AddElement(TJsonStringEx.Create(Items[i].FileName));
+  end;
+end;
+
+procedure TReopenList.LoadFromJObj(jArr: TJSONArray);
+var
+  i: integer;
+begin
+  Clear;
+  if Assigned(jArr) then
+  begin
+    for i := 0 to jArr.Count - 1 do
+    begin
+      AddFile(jArr.Items[i].Value, false);
+    end;
   end;
 end;
 
@@ -391,7 +406,12 @@ end;
 procedure TProgCfg.LoadMainCfg;
 var
   IniFile: TDotIniFile;
-  s: string;
+
+  jVal: TJSONValue;
+  txt: string;
+  MS: TMemoryStream;
+  jLoader: TJSONLoader;
+  jLoader2: TJSONLoader;
 begin
   IniFile := TDotIniFile.Create(MainIniFName);
   try
@@ -416,7 +436,6 @@ begin
     IniFile.ReadTStrings('MAIN_CFG', 'SEL_SEC', SelSections);
     ByteOrder := TByteOrder(IniFile.ReadInteger('MAIN_CFG', 'SYS_MOTOROLA', 0));
 
-
     if Assigned(FOnReadIni) then
       FOnReadIni(IniFile);
 
@@ -425,17 +444,75 @@ begin
   finally
     IniFile.Free;
   end;
+
+  txt := '';
+  MS := TMemoryStream.Create;
+  try
+    MS.LoadFromFile(ChangeFileExt(MainIniFName, '.json'));
+    if MS.Size > 0 then
+    begin
+      setLength(txt, MS.Size div 2);
+      MS.read(txt[1], length(txt) * sizeof(char));
+    end;
+  finally
+    MS.Free;
+  end;
+
+  if txt <> '' then
+  begin
+    try
+      jVal := TJSONObject.ParseJSONValue(txt);
+      jLoader.Init(jVal);
+      if jLoader2.Init(jLoader, 'MainCfg') then
+      begin
+        jLoader2.Load('MAP_FILE', WorkingMap);
+        jVal := jLoader2.GetObject('DEVSTR');
+        if Assigned(jVal) then
+           DevString := jVal.ToString;
+
+        jLoader2.Load('ASM_VAR', SelectAsmVar);
+        jLoader2.Load('C_VAR', SelectC_Var);
+        jLoader2.Load('SYS_VAR', SelectSysVar);
+        jLoader2.Load('AUTOSAVE', AutoSaveCfg);
+        jLoader2.Load('AUTOREFRESH', AutoRefreshMap);
+        jLoader2.Load('SEL_SEC_MODE', SelSectionMode);
+
+        jLoader2.Load('SCAL_MEM', ScalMemCnt);
+        jLoader2.Load('MAX_VAR_SIZE', MaxVarSize);
+
+        try
+          WinTab := TWinTab(jLoader2.LoadDef('WIN_TAB', ord(WinTab)));
+        except
+          WinTab := wtTOP;
+        end;
+
+        jLoader2.Load('SEL_SEC', SelSections);
+        ByteOrder := TByteOrder(jLoader2.LoadDef('BYTE_ORDER', ord(ByteOrder)));
+      end;
+
+      if Assigned(FOnReadJsonCfg) then
+      begin
+        if jLoader2.Init(jLoader,'DeskTop') then
+          FOnReadJsonCfg(jLoader2);
+      end;
+      ReOpenBaseList.LoadFromJObj(jLoader.getArray('ReOpenList'));
+
+    except
+
+    end;
+  end;
+
 end;
 
 procedure TProgCfg.SaveMainCfg;
 var
   IniFile: TDotIniFile;
-  jVal: TJSONValue;
-  jobj: TJSONObject;
-  jObj2: TJSONObject;
-  FF: string;
-  MS: TMemoryStream;
 
+  jVal: TJSONValue;
+  jBuild: TJSONBuilder;
+  jBuild2: TJSONBuilder;
+  txt: string;
+  MS: TMemoryStream;
 begin
 
   IniFile := TDotIniFile.Create(MainIniFName);
@@ -450,7 +527,7 @@ begin
     IniFile.WriteYesNo('MAIN_CFG', 'AUTOREFRESH', AutoRefreshMap);
     IniFile.WriteInteger('MAIN_CFG', 'SEL_SEC_MODE', SelSectionMode);
     IniFile.WriteTStrings('MAIN_CFG', 'SEL_SEC', SelSections);
-    IniFile.WriteInteger('MAIN_CFG', 'SYS_MOTOROLA', ord(ByteOrder));
+    IniFile.WriteInteger('MAIN_CFG', 'BYTE_ORDER', ord(ByteOrder));
     IniFile.WriteInteger('MAIN_CFG', 'SCAL_MEM', ScalMemCnt);
     IniFile.WriteInteger('MAIN_CFG', 'MAX_VAR_SIZE', MaxVarSize);
     IniFile.WriteInteger('MAIN_CFG', 'WIN_TAB', ord(WinTab));
@@ -464,41 +541,41 @@ begin
     IniFile.Free;
   end;
 
-  jobj := TJSONObject.Create;
+  jBuild.Init;
 
-  jObj2 := TJSONObject.Create;
+  jBuild2.Init;
 
   jVal := TJSONObject.ParseJSONValue(DevString);
-  jObj2.AddPair(TJSONPair.Create('DEVSTR', jVal)); // DevString));
 
-  jObj2.AddPair(TJSONPair.Create('MAP_FILE', WorkingMap));
-  jObj2.AddPair(CreateJsonPairBool('ASM_VAR', SelectAsmVar));
-  jObj2.AddPair(CreateJsonPairBool('C_VAR', SelectC_Var));
-  jObj2.AddPair(CreateJsonPairBool('SYS_VAR', SelectSysVar));
-  jObj2.AddPair(CreateJsonPairInt('AUTOSAVE', ord(AutoSaveCfg)));
-  jObj2.AddPair(CreateJsonPairInt('AUTOREFRESH', ord(AutoRefreshMap)));
-  jObj2.AddPair(CreateJsonPairInt('SEL_SEC_MODE', SelSectionMode));
+  jBuild2.Add('DEVSTR', jVal);
+  jBuild2.Add('MAP_FILE', WorkingMap);
+  jBuild2.Add('ASM_VAR', SelectAsmVar);
+  jBuild2.Add('C_VAR', SelectC_Var);
+  jBuild2.Add('SYS_VAR', SelectSysVar);
+  jBuild2.Add('AUTOSAVE', ord(AutoSaveCfg));
+  jBuild2.Add('AUTOREFRESH', ord(AutoRefreshMap));
+  jBuild2.Add('SEL_SEC_MODE', SelSectionMode);
 
-  jObj2.AddPair(CreateJsonPairStrings('SEL_SEC', SelSections));
-  jObj2.AddPair(CreateJsonPairInt('SYS_MOTOROLA', ord(ByteOrder)));
-  jObj2.AddPair(CreateJsonPairInt('SCAL_MEM', ScalMemCnt));
-  jObj2.AddPair(CreateJsonPairInt('MAX_VAR_SIZE', MaxVarSize));
-  jObj2.AddPair(CreateJsonPairInt('WIN_TAB', ord(WinTab)));
+  jBuild2.Add('SEL_SEC', SelSections);
+  jBuild2.Add('SYS_MOTOROLA', ord(ByteOrder));
+  jBuild2.Add('SCAL_MEM', ScalMemCnt);
+  jBuild2.Add('MAX_VAR_SIZE', MaxVarSize);
+  jBuild2.Add('WIN_TAB', ord(WinTab));
 
-  jobj.AddPair(TJSONPair.Create('MainCfg', jObj2));
+  jBuild2.Add('SEL_SEC', SelSections);
+  jBuild2.Add('SYS_MOTOROLA', ord(ByteOrder));
+
+  jBuild.Add('MainCfg', jBuild2);
 
   if Assigned(FOnWriteJsonCfg) then
-  begin
-    jObj2 := FOnWriteJsonCfg;
-    jobj.AddPair(TJSONPair.Create('DeskTop', jObj2));
-  end;
+    jBuild.Add('DeskTop', FOnWriteJsonCfg.jobj);
 
-  jobj.AddPair(TJSONPair.Create('ReOpenList', ReOpenBaseList.GetJSONObject));
-  // AreaDefList.SaveToIni(IniFile);
-  FF := jobj.ToString;
+  jBuild.Add('ReOpenList', ReOpenBaseList.GetJSONObject);
+
+  txt := jBuild.jobj.ToString;
   MS := TMemoryStream.Create;
   try
-    MS.write(FF[1], length(FF) * sizeof(char));
+    MS.write(txt[1], length(txt) * sizeof(char));
     MS.SaveToFile(ChangeFileExt(MainIniFName, '.json'));
   finally
     MS.Free;

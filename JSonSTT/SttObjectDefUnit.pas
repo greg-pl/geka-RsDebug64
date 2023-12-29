@@ -159,6 +159,8 @@ begin
       Result := TSttFloatObjectJson.Create;
     sttIP:
       Result := TSttIPObjectJson.Create;
+  else
+    Result := nil;
   end;
 end;
 

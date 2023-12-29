@@ -106,7 +106,7 @@ type
     procedure ReloadMapParser; override;
     function GetDefaultCaption: string; override;
     procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
-    function GetJSONObject: TJSONObject; override;
+    function GetJSONObject: TJSONBuilder; override;
 
     procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
   end;
@@ -260,62 +260,62 @@ begin
   end;
 end;
 
-function TWavGenForm.GetJSONObject: TJSONObject;
+function TWavGenForm.GetJSONObject: TJSONBuilder;
 var
   i, j: integer;
   s, sn: string;
   jArr: TJSONArray;
-  jObj: TJSONObject;
   jArr2: TJSONArray;
-  jObj2: TJSONObject;
+  jItem : TJSONBuilder;
+  jItem2 : TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
-  JSonAddPair(Result, 'Adr', AdresBox.Text);
-  JSonAddPair(Result, 'Adrs', AdresBox.Items);
-  JSonAddPair(Result, 'Size', SizeBox.Text);
-  JSonAddPair(Result, 'Sizes', SizeBox.Items);
+  Result.Add('Adr', AdresBox.Text);
+  Result.Add('Adrs', AdresBox.Items);
+  Result.Add('Size', SizeBox.Text);
+  Result.Add('Sizes', SizeBox.Items);
   jArr := TJSONArray.Create;
   for i := 0 to SeriesListBox.Count - 1 do
   begin
-    jObj := TJSONObject.Create;
-    JSonAddPair(jObj, 'Name', SeriesListBox.Items[i]);
-    JSonAddPair(jObj, 'Activ', SeriesListBox.Checked[i]);
-    JSonAddPairColor(jObj, 'Color', Cardinal(SeriesListBox.Items.Objects[i]));
+    jItem.Init;
+    jItem.Add('Name', SeriesListBox.Items[i]);
+    jItem.Add('Activ', SeriesListBox.Checked[i]);
+    jItem.AddColor('Color', Cardinal(SeriesListBox.Items.Objects[i]));
 
     jArr2 := TJSONArray.Create;
     for j := 0 to HarmonCntEdit.Value do
     begin
-      jObj2 := TJSONObject.Create;
+      jItem2.Init;
 
       if j = 0 then
       begin
-        JSonAddPair(jObj2, 'Ampl', HarmonGrid.Cells[1, i + 1]);
+        jItem2.Add('Ampl', HarmonGrid.Cells[1, i + 1]);
       end
       else
       begin
-        JSonAddPair(jObj2, 'Ampl', HarmonGrid.Cells[2 * j + 0, i + 1]);
-        JSonAddPair(jObj2, 'Phase', HarmonGrid.Cells[2 * j + 1, i + 1]);
+        jItem2.Add('Ampl', HarmonGrid.Cells[2 * j + 0, i + 1]);
+        jItem2.Add('Phase', HarmonGrid.Cells[2 * j + 1, i + 1]);
       end;
-      jArr2.AddElement(jObj2);
+      jArr2.AddElement(jItem2.jobj);
     end;
-    jObj.AddPair('Harms', jArr2);
+    jItem.Add('Harms', jArr2);
 
-    jArr.AddElement(jObj);
+    jArr.AddElement(jItem.jobj);
   end;
-  Result.AddPair('Signals', jArr);
+  Result.Add('Signals', jArr);
 
-  JSonAddPair(Result, 'KanCnt', KanalCntEdit.Value);
-  JSonAddPair(Result, 'BitCnt', BitCntEdit.Value);
-  JSonAddPair(Result, 'HarmonCnt', HarmonCntEdit.Value);
-  JSonAddPair(Result, 'FreqProbk', FrequProbkEdit.Text);
-  JSonAddPair(Result, 'FreqA1', FreqA1Edit.Text);
+  Result.Add('KanCnt', KanalCntEdit.Value);
+  Result.Add('BitCnt', BitCntEdit.Value);
+  Result.Add('HarmonCnt', HarmonCntEdit.Value);
+  Result.Add('FreqProbk', FrequProbkEdit.Text);
+  Result.Add('FreqA1', FreqA1Edit.Text);
 
-  JSonAddPair(Result, 'DataSize', DataSizeBox.ItemIndex);
-  JSonAddPair(Result, 'DataType', DataTypeBox.ItemIndex);
-  JSonAddPair(Result, 'SerieType', SerieTypeBox.ItemIndex);
-  JSonAddPair(Result, 'GridColWidth', GetGridColumnWidts(HarmonGrid));
+  Result.Add('DataSize', DataSizeBox.ItemIndex);
+  Result.Add('DataType', DataTypeBox.ItemIndex);
+  Result.Add('SerieType', SerieTypeBox.ItemIndex);
+  Result.Add('GridColWidth', GetGridColumnWidts(HarmonGrid));
 
-  Result.AddPair('SignalsDef', jArr);
+  Result.Add('SignalsDef', jArr);
 end;
 
 procedure TWavGenForm.LoadFromIni(Ini: TDotIniFile; SName: string);

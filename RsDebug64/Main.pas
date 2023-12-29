@@ -23,8 +23,9 @@ uses
   About,
   Registry,
   System.JSON,
-  ExtGMemoUnit, ImgList, System.ImageList, System.Actions,
-  ExtG2MemoUnit;
+  ImgList, System.ImageList, System.Actions,
+  ExtG2MemoUnit,
+  JSonUtils;
 
 type
   TMainForm = class(TForm, IMainWinInterf)
@@ -176,12 +177,12 @@ type
     function FindIniDrvPrmSection(s: string): string;
   private
     FirstTime: boolean;
-    FirstConnectBtn: TToolButton;
     TerminalChecked: boolean;
     TerminalValid: boolean;
     ExtMemo: TExtG2Memo;
     procedure OnWriteIniProc(Ini: TDotIniFile);
-    function OnWriteJsonCfgProc: TJsonObject;
+    function OnWriteJsonCfgProc: TJSONBuilder;
+    procedure OnReadJsonCfgProc(jLoader: TJSONLoader);
     procedure OnActivateAplic(Sender: TObject);
     procedure OnReadIniProc(Ini: TDotIniFile);
     procedure OnReOpenClickProc(Sender: TObject);
@@ -195,6 +196,7 @@ type
     function isDllReady: boolean;
     procedure UpdateStatusBarConnInfoStr;
     procedure AfterConnChanged;
+    function CreateChildForm(WinType: string): TChildForm;
   public
     Dev: TCmmDevice;
     CommThread: TCommThread;
@@ -227,8 +229,7 @@ uses
   TerminalUnit,
   RegMemUnit,
   BinaryMemUnit,
-  OpenConnectionDlgUnit,
-  JSonUtils;
+  OpenConnectionDlgUnit;
 
 function GetComNr(s: string): Integer;
 begin
@@ -241,6 +242,7 @@ begin
   ProgCfg.OnReadData := OnReadIniProc;
   ProgCfg.OnWriteData := OnWriteIniProc;
   ProgCfg.OnWriteJsonCfg := OnWriteJsonCfgProc;
+  ProgCfg.OnReadJsonCfg := OnReadJsonCfgProc;
   Application.OnActivate := OnActivateAplic;
   MapParser.OnReloaded := OnReloadedProc;
   Dev := nil;
@@ -680,25 +682,86 @@ begin
   GlobTypeList.SaveToIni(Ini);
 end;
 
-function TMainForm.OnWriteJsonCfgProc: TJsonObject;
+function TMainForm.OnWriteJsonCfgProc: TJSONBuilder;
 var
-  jArr :TJSonArray;
-  i : integer;
+  jArr: TJSonArray;
+  i: Integer;
 begin
-  Result := TJsonObject.Create;
-  JSONAddPair_TLWH(Result,self);
-  JSONAddPair(Result,'MemoHeight', ExtMemo.Height);
-  Result.AddPair(TJSONPair.Create('UpLoadList',UpLoadList.GetJSONObject));
+  Result.Init;
+  Result.Add_TLWH(self);
+  Result.Add('MemoHeight', ExtMemo.Height);
+  Result.Add('UpLoadList', UpLoadList.GetJSONObject);
 
   jArr := TJSonArray.Create;
   for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TChildForm then
     begin
-      jArr.AddElement((MDIChildren[i] as TChildForm).GetJSONObject);
+      jArr.AddElement((MDIChildren[i] as TChildForm).GetJSONObject.jobj);
     end;
   end;
-  Result.AddPair(TJSONPair.Create('ChildForms',jArr));
+  Result.Add('ChildForms', jArr);
+end;
+
+function TMainForm.CreateChildForm(WinType: string): TChildForm;
+begin
+  if WinType = 'TMemForm' then
+    Result := TMemForm.CreateIterf(self, self)
+  else if WinType = 'TVarListForm' then
+    Result := TVarListForm.CreateIterf(self, self)
+  else if WinType = 'TStructShowForm' then
+    Result := TStructShowForm.CreateIterf(self, self)
+  else if WinType = 'TWavGenForm' then
+    Result := TWavGenForm.CreateIterf(self, self)
+  else if WinType = 'TTerminalForm' then
+    Result := TTerminalForm.CreateIterf(self, self)
+  else if WinType = 'TPictureViewForm' then
+    Result := TPictureViewForm.CreateIterf(self, self)
+  else if WinType = 'TRegMemForm' then
+    Result := TRegMemForm.CreateIterf(self, self)
+  else if WinType = 'TBinaryMemForm' then
+    Result := TBinaryMemForm.CreateIterf(self, self)
+  else if WinType = 'TRz40EventsForm' then
+    Result := TRz40EventsForm.CreateIterf(self, self)
+  else if WinType = 'TRfcForm' then
+    Result := TRfcForm.CreateIterf(self, self)
+  else
+    Result := nil;
+end;
+
+procedure TMainForm.OnReadJsonCfgProc(jLoader: TJSONLoader);
+var
+  jArr: TJSonArray;
+  i: Integer;
+  jChild: TJSONLoader;
+  WinType: string;
+  Dlg: TChildForm;
+begin
+  jLoader.Load_TLWH(self);
+  ExtMemo.Height := jLoader.LoadDef('MemoHeight', ExtMemo.Height);
+
+  ExtMemo.Top := 1; // ExtMemo above StatusBar
+  SplitterBottom.Top := 1; // SplitterBottom above ExtMemo
+
+//  GlobTypeList.LoadfromIni(Ini);
+//  UpLoadList.LoadfromIni(Ini);
+
+
+  jArr := jLoader.getArray('ChildForms');
+  if Assigned(jArr) then
+  begin
+    for i := 0 to jArr.Count - 1 do
+    begin
+      if jChild.Init(jArr.Items[i]) then
+      begin
+        WinType := '';
+        jChild.Load('WinType', WinType);
+        Dlg := CreateChildForm(WinType);
+        if Dlg <> nil then
+          Dlg.LoadfromJson(jChild);
+      end;
+    end;
+  end;
 end;
 
 procedure TMainForm.OnReadIniProc(Ini: TDotIniFile);
@@ -727,32 +790,9 @@ begin
   while Ini.SectionExists(GetSName(N)) do
   begin
     WinType := Ini.ReadString(GetSName(N), 'WinType', '');
-    Dlg := nil;
-    if WinType = 'TMemForm' then
-      Dlg := TMemForm.CreateIterf(self, self);
-    if WinType = 'TVarListForm' then
-      Dlg := TVarListForm.CreateIterf(self, self);
-    if WinType = 'TStructShowForm' then
-      Dlg := TStructShowForm.CreateIterf(self, self);
-    if WinType = 'TWavGenForm' then
-      Dlg := TWavGenForm.CreateIterf(self, self);
-    if WinType = 'TTerminalForm' then
-      Dlg := TTerminalForm.CreateIterf(self, self);
-    if WinType = 'TPictureViewForm' then
-      Dlg := TPictureViewForm.CreateIterf(self, self);
-    if WinType = 'TRegMemForm' then
-      Dlg := TRegMemForm.CreateIterf(self, self);
-    if WinType = 'TBinaryMemForm' then
-      Dlg := TBinaryMemForm.CreateIterf(self, self);
-    if WinType = 'TRz40EventsForm' then
-      Dlg := TRz40EventsForm.CreateIterf(self, self);
-    if WinType = 'TRfcForm' then
-      Dlg := TRfcForm.CreateIterf(self, self);
-
+    Dlg := CreateChildForm(WinType);
     if Dlg <> nil then
-    begin
       Dlg.LoadfromIni(Ini, GetSName(N));
-    end;
     inc(N);
   end;
 end;
@@ -764,9 +804,8 @@ end;
 
 function TMainForm.isDllReady: boolean;
 begin
-  Result := Assigned(Dev) and Dev.IsDllReady;
+  Result := Assigned(Dev) and Dev.isDllReady;
 end;
-
 
 procedure TMainForm.OnReOpenClickProc(Sender: TObject);
 var

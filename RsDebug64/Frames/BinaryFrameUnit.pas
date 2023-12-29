@@ -64,10 +64,13 @@ type
     procedure FillOnes;
     procedure Fill(Val: Boolean);
     property RegisterSize: integer read FRegisterSize write FSetRegisterSize;
-    procedure SaveToIni(Ini: TMemIniFile; SName: string);
-    function GetJSONObject: TJSONObject;
 
+    procedure SaveToIni(Ini: TMemIniFile; SName: string);
     procedure LoadFromIni(Ini: TMemIniFile; SName: string);
+
+    function GetJSONObject: TJSONBuilder;
+    procedure LoadfromJson(jParent: TJSONLoader);
+
     procedure CopyToStringList(SL: TStrings);
     procedure doParamVisible(vis: Boolean);
   end;
@@ -377,9 +380,14 @@ begin
 
 end;
 
-function TBinaryFrame.GetJSONObject: TJSONObject;
+function TBinaryFrame.GetJSONObject: TJSONBuilder;
 begin
-  Result := TJSONObject.Create;
+  Result.Init;
+end;
+
+procedure TBinaryFrame.LoadfromJson(jParent: TJSONLoader);
+begin
+
 end;
 
 procedure TBinaryFrame.LoadFromIni(Ini: TMemIniFile; SName: string);

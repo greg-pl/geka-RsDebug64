@@ -4,20 +4,22 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, Buttons, BinaryFrameUnit, RmtChildUnit,IniFiles,
+  Dialogs, StdCtrls, ExtCtrls, Buttons, BinaryFrameUnit, RmtChildUnit, IniFiles,
   ImgList, ComCtrls, ActnList, Menus, ToolWin,
   MapParserUnit,
   ProgCfgUnit,
   ToolsUnit,
   RsdDll,
-  Grids, 
+  Grids,
   CommonDef,
   Rsd64Definitions,
-  AnalogFrameUnit, System.Actions, System.ImageList;
-
+  AnalogFrameUnit, System.Actions, System.ImageList,
+  System.JSON,
+  JSonUtils;
 
 type
   TBinaryMemType = (bmBINARYINP, bmCOILS);
+
   TBinaryMemForm = class(TChildForm)
     MemFrame: TBinaryFrame;
     AutoRepTimer: TTimer;
@@ -77,42 +79,41 @@ type
     procedure SaveBufActUpdate(Sender: TObject);
     procedure FillFFActUpdate(Sender: TObject);
   private
-    MemType   : TBinaryMemType;
-    function  ReadMem : TStatus;
-    function  WriteMem : TStatus;
-    function  GetPhAdr(Adr : cardinal):cardinal;
-    function  ReadPtrValue(A : cardinal): cardinal;
-    procedure GetFromText(var Adr : cardinal; var ShowAdr : cardinal; var Size : cardinal; var RegSize : cardinal);
+    MemType: TBinaryMemType;
+    function ReadMem: TStatus;
+    function WriteMem: TStatus;
+    function GetPhAdr(Adr: cardinal): cardinal;
+    function ReadPtrValue(A: cardinal): cardinal;
+    procedure GetFromText(var Adr: cardinal; var ShowAdr: cardinal; var Size: cardinal; var RegSize: cardinal);
   public
-    procedure SaveToIni(Ini : TDotIniFile; SName : string); override;
-    procedure LoadFromIni(Ini : TDotIniFile; SName : string); override;
+    procedure SaveToIni(Ini: TDotIniFile; SName: string); override;
+    procedure LoadFromIni(Ini: TDotIniFile; SName: string); override;
+
+    procedure LoadfromJson(jLoader: TJSONLoader); override;
+    function GetJSONObject: TJSONBuilder; override;
+
     procedure SettingChg; override;
-    function  GetDefaultCaption : string; override;
-    procedure doParamsVisible(vis : boolean); override;
-    procedure ShowMem(Adr : integer);
-    procedure SetMemType(mtype : TBinaryMemType);
+    function GetDefaultCaption: string; override;
+    procedure doParamsVisible(vis: boolean); override;
+    procedure ShowMem(Adr: integer);
+    procedure SetMemType(mtype: TBinaryMemType);
   end;
 
-var
-  BinaryMemForm: TBinaryMemForm;
-
 implementation
-
 
 {$R *.dfm}
 
 Const
-  smfH8_RESET  = 0;
+  smfH8_RESET = 0;
   smfDSP_RESET = 6;
-  BinaryMemName : array[TBinaryMemType] of string = ('BIN_INP','COILS');
+  BinaryMemName: array [TBinaryMemType] of string = ('BIN_INP', 'COILS');
 
-function GetMemType(s : string): TBinaryMemType;
+function GetMemType(s: string): TBinaryMemType;
 begin
   Result := bmCOILS;
   if s = BinaryMemName[bmBINARYINP] then
     Result := bmBINARYINP;
 end;
-
 
 procedure TBinaryMemForm.FormCreate(Sender: TObject);
 begin
@@ -121,103 +122,105 @@ begin
   MemFrame.RegisterSize := 1;
 end;
 
-procedure TBinaryMemForm.SetMemType(mtype : TBinaryMemType);
+procedure TBinaryMemForm.SetMemType(mtype: TBinaryMemType);
 begin
   MemType := mtype;
-  if MemType=bmBINARYINP then
+  if MemType = bmBINARYINP then
     MemFrame.ByteGrid.Options := MemFrame.ByteGrid.Options - [goEditing];
-  MemFrame.MemTypeName  := BinaryMemName[MemType];
+  MemFrame.MemTypeName := BinaryMemName[MemType];
   MemFrame.PaintActivPage;
   ShowCaption;
 end;
 
-
 type
   PByteAr = ^TByteAr;
-  TByteAr = array[0..7] of byte;
+  TByteAr = array [0 .. 7] of byte;
 
-
-
-
-function TBinaryMemForm.GetPhAdr(Adr : cardinal):cardinal;
+function TBinaryMemForm.GetPhAdr(Adr: cardinal): cardinal;
 begin
   Result := Adr;
 end;
 
-function  TBinaryMemForm.ReadPtrValue(A : cardinal): cardinal;
+function TBinaryMemForm.ReadPtrValue(A: cardinal): cardinal;
 var
-  Size : integer;
-  tab  : array[0..3] of byte;
+  Size: integer;
+  tab: array [0 .. 3] of byte;
 begin
   case ProgCfg.PtrSize of
-  ps8  : Size:=1;
-  ps16 : Size:=2;
-  ps32 : Size:=4;
+    ps8:
+      Size := 1;
+    ps16:
+      Size := 2;
+    ps32:
+      Size := 4;
   else
     raise Exception.Create('Nieproawidlowa wartosc PtrSize');
   end;
-  if Dev.ReadDevMem(Handle,tab[0],A,Size)<>stOK then
+  if Dev.ReadDevMem(Handle, tab[0], A, Size) <> stOK then
     raise Exception.Create('Blad odczytu wskaznika');
 
   case ProgCfg.PtrSize of
-  ps8  : Result := Tab[0];
-  ps16 : Result := GetWord(@Tab,ProgCfg.ByteOrder);
-  ps32 : Result := GetDWord(@Tab,ProgCfg.ByteOrder);
+    ps8:
+      Result := tab[0];
+    ps16:
+      Result := GetWord(@tab, ProgCfg.ByteOrder);
+    ps32:
+      Result := GetDWord(@tab, ProgCfg.ByteOrder);
   else
     raise Exception.Create('Nieproawidlowa wartosc PtrSize');
   end;
 end;
 
-
-procedure TBinaryMemForm.GetFromText(var Adr : cardinal; var ShowAdr : cardinal; var Size : cardinal; var RegSize : cardinal);
+procedure TBinaryMemForm.GetFromText(var Adr: cardinal; var ShowAdr: cardinal; var Size: cardinal;
+  var RegSize: cardinal);
 var
-  S   : cardinal;
-  A   : cardinal;
+  s: cardinal;
+  A: cardinal;
 begin
   A := MapParser.StrToAdr(AdresBox.Text);
-  S := MapParser.StrToAdr(SizeBox.Text);
+  s := MapParser.StrToAdr(SizeBox.Text);
   RegSize := 1;
-  Size := S;
-  if A>0 then
+  Size := s;
+  if A > 0 then
   begin
-    ShowAdr := A-1;
-    Adr  := A-1;
+    ShowAdr := A - 1;
+    Adr := A - 1;
   end
   else
-    raise Exception.Create('Register adres = 0');  
+    raise Exception.Create('Register adres = 0');
 end;
 
-function TBinaryMemForm.ReadMem : TStatus;
+function TBinaryMemForm.ReadMem: TStatus;
 var
-  Adr     : cardinal;
-  ShowAdr : cardinal;
-  Size    : cardinal;
-  RegSize : cardinal;
-  TT      : cardinal;
+  Adr: cardinal;
+  ShowAdr: cardinal;
+  Size: cardinal;
+  RegSize: cardinal;
+  TT: cardinal;
 begin
   inherited;
-  GetFromText(Adr,ShowAdr,Size,RegSize);
+  GetFromText(Adr, ShowAdr, Size, RegSize);
   MemFrame.RegisterSize := RegSize;
-  MemFrame.MemSize      := Size;
-  MemFrame.SrcAdr       := ShowAdr;
+  MemFrame.MemSize := Size;
+  MemFrame.SrcAdr := ShowAdr;
 
-  if Size<>0 then
+  if Size <> 0 then
   begin
-    //MemFrame.ClrData;
+    // MemFrame.ClrData;
     TT := GetTickCount;
     case MemType of
-    bmBINARYINP:
-       Result:=Dev.RdInpTable(Handle,MemFrame.MemBuf[0],Adr,Size);
-    bmCOILS:
-       Result:=Dev.RdOutTable(Handle,MemFrame.MemBuf[0],Adr,Size);
+      bmBINARYINP:
+        Result := Dev.RdInpTable(Handle, MemFrame.MemBuf[0], Adr, Size);
+      bmCOILS:
+        Result := Dev.RdOutTable(Handle, MemFrame.MemBuf[0], Adr, Size);
     else
-       Result := stNoImpl;
+      Result := stNoImpl;
     end;
-    TT := GetTickCount-TT;
-    if Result=stOK then
+    TT := GetTickCount - TT;
+    if Result = stOK then
     begin
-      if TT<>0 then
-        DoMsg(Format('RdMem v=%.2f[kB/sek]',[(size/1024)/(TT/1000.0)]))
+      if TT <> 0 then
+        DoMsg(Format('RdMem v=%.2f[kB/sek]', [(Size / 1024) / (TT / 1000.0)]))
       else
         DoMsg('RdMem OK');
       MemFrame.SetNewData;
@@ -229,34 +232,30 @@ begin
     end;
   end
   else
-    Result:=-1;
+    Result := -1;
 end;
-
-
 
 procedure TBinaryMemForm.ReadMemActUpdate(Sender: TObject);
 begin
-  (Sender  as TAction).Enabled := IsConnected and not(AutoRepAct.Checked);
+  (Sender as TAction).Enabled := IsConnected and not(AutoRepAct.Checked);
 end;
 
 procedure TBinaryMemForm.SaveBufActUpdate(Sender: TObject);
 begin
   inherited;
-  (Sender  as TAction).Enabled := IsConnected and not(AutoRepAct.Checked) and (MemType = bmCOILS);
+  (Sender as TAction).Enabled := IsConnected and not(AutoRepAct.Checked) and (MemType = bmCOILS);
 end;
 
 procedure TBinaryMemForm.FillFFActUpdate(Sender: TObject);
 begin
   inherited;
-  (Sender  as TAction).Enabled := not(AutoRepAct.Checked) and (MemType = bmCOILS);
+  (Sender as TAction).Enabled := not(AutoRepAct.Checked) and (MemType = bmCOILS);
 end;
-
 
 procedure TBinaryMemForm.AutoReadActUpdate(Sender: TObject);
 begin
- (Sender  as TAction).Enabled := IsConnected
+  (Sender as TAction).Enabled := IsConnected
 end;
-
 
 procedure TBinaryMemForm.ReadMemActExecute(Sender: TObject);
 begin
@@ -267,33 +266,31 @@ begin
   ReadMem;
 end;
 
-
 procedure TBinaryMemForm.RdBackActExecute(Sender: TObject);
 var
-  Adr     : cardinal;
-  Size    : cardinal;
-  RegSize : cardinal;
-  ShowAdr : cardinal;
+  Adr: cardinal;
+  Size: cardinal;
+  RegSize: cardinal;
+  ShowAdr: cardinal;
 begin
   inherited;
-  GetFromText(Adr,ShowAdr,Size,RegSize);
-  Adr := ShowAdr-(Size div RegSize);
-  AdresBox.Text := '0x'+IntToHex(Adr,8);
+  GetFromText(Adr, ShowAdr, Size, RegSize);
+  Adr := ShowAdr - (Size div RegSize);
+  AdresBox.Text := '0x' + IntToHex(Adr, 8);
   ReadMem;
 end;
 
-
 procedure TBinaryMemForm.RdNextActExecute(Sender: TObject);
 var
-  Adr     : cardinal;
-  Size    : cardinal;
-  RegSize : cardinal;
-  ShowAdr : cardinal;
+  Adr: cardinal;
+  Size: cardinal;
+  RegSize: cardinal;
+  ShowAdr: cardinal;
 begin
   inherited;
-  GetFromText(Adr,ShowAdr,Size,RegSize);
-  Adr := ShowAdr+(Size div RegSize);
-  AdresBox.Text := '0x'+IntToHex(Adr,8);
+  GetFromText(Adr, ShowAdr, Size, RegSize);
+  Adr := ShowAdr + (Size div RegSize);
+  AdresBox.Text := '0x' + IntToHex(Adr, 8);
   ReadMem;
 end;
 
@@ -303,7 +300,6 @@ begin
   WriteMem;
   MemFrame.SetNewData;
 end;
-
 
 procedure TBinaryMemForm.FillZeroActExecute(Sender: TObject);
 begin
@@ -317,23 +313,23 @@ begin
   MemFrame.FillOnes;
 end;
 
-function TBinaryMemForm.WriteMem : TStatus;
+function TBinaryMemForm.WriteMem: TStatus;
 var
-  i       : Cardinal;
-  st      : TStatus;
-  Adr     : cardinal;
-  BufAdr  : cardinal;
+  i: cardinal;
+  st: TStatus;
+  Adr: cardinal;
+  BufAdr: cardinal;
 begin
   BufAdr := MapParser.StrToAdr(AdresBox.Text);
   try
     i := 0;
-    while i<MemFrame.MemSize do
+    while i < MemFrame.MemSize do
     begin
-      Adr := GetPhAdr(BufAdr)+i;
-      st := Dev.WrOutput(Handle,Adr,MemFrame.MemBuf[i]);
-      if st<>stOK then
+      Adr := GetPhAdr(BufAdr) + i;
+      st := Dev.WrOutput(Handle, Adr, MemFrame.MemBuf[i]);
+      if st <> stOK then
         break;
-      DoMsg(Format('WrOutput, Adr=%u',[Adr]));
+      DoMsg(Format('WrOutput, Adr=%u', [Adr]));
       MemFrame.MemState[i] := csFull;
       inc(i);
     end;
@@ -346,35 +342,34 @@ begin
   end;
 end;
 
-
 procedure TBinaryMemForm.SaveBufActExecute(Sender: TObject);
 var
-  i       : Cardinal;
-  st      : TStatus;
-  Adr     : cardinal;
-  BufAdr  : cardinal;
-  k       : integer;
+  i: cardinal;
+  st: TStatus;
+  Adr: cardinal;
+  BufAdr: cardinal;
+  k: integer;
 begin
   BufAdr := MapParser.StrToAdr(AdresBox.Text);
   try
     i := 0;
     k := 0;
-    while i<MemFrame.MemSize do
+    while i < MemFrame.MemSize do
     begin
-      if MemFrame.MemState[i]=csModify then
+      if MemFrame.MemState[i] = csModify then
       begin
-        Adr := GetPhAdr(BufAdr)+i;
-        st := Dev.WrOutput(Handle,Adr,MemFrame.MemBuf[i]);
-        if st<>stOK then
+        Adr := GetPhAdr(BufAdr) + i;
+        st := Dev.WrOutput(Handle, Adr, MemFrame.MemBuf[i]);
+        if st <> stOK then
           break;
-        DoMsg(Format('WrOutput, Adr=%u',[Adr]));
+        DoMsg(Format('WrOutput, Adr=%u', [Adr]));
         MemFrame.MemState[i] := csFull;
         inc(k);
       end;
       inc(i);
     end;
     MemFrame.PaintActivPage;
-    DoMsg(Format('WrOutput, k=%u  :%s',[k,Dev.GetErrStr(st)]));
+    DoMsg(Format('WrOutput, k=%u  :%s', [k, Dev.GetErrStr(st)]));
 
   except
     on E: Exception do
@@ -393,8 +388,8 @@ end;
 procedure TBinaryMemForm.AutoReadActExecute(Sender: TObject);
 begin
   inherited;
-  (Sender as Taction).Checked := not (Sender as Taction).Checked;
-  AutoRepTimer.Enabled := (Sender as Taction).Checked;
+  (Sender as TAction).Checked := not(Sender as TAction).Checked;
+  AutoRepTimer.Enabled := (Sender as TAction).Checked;
   try
     AutoRepTimer.Interval := StrToInt(AutoRepTmEdit.Text);
   except
@@ -405,38 +400,69 @@ end;
 procedure TBinaryMemForm.AutoRepTimerTimer(Sender: TObject);
 begin
   inherited;
-  AutoRepTimer.Enabled:=false;
-  if ReadMem=stOk then
-    AutoRepTimer.Enabled:=True
+  AutoRepTimer.Enabled := false;
+  if ReadMem = stOK then
+    AutoRepTimer.Enabled := True
   else
     AutoRepAct.Checked := false;
 end;
 
-procedure TBinaryMemForm.SaveToIni(Ini : TDotIniFile; SName : string);
+procedure TBinaryMemForm.SaveToIni(Ini: TDotIniFile; SName: string);
 begin
   inherited;
-  Ini.WriteString(SName,'MemType',BinaryMemName[MemType]);
-  Ini.WriteString(SName,'Adr',AdresBox.Text);
-  Ini.WriteString(SName,'Adrs',AdresBox.Items.CommaText);
-  Ini.WriteString(SName,'Size',SizeBox.Text);
-  Ini.WriteString(SName,'Sizes',SizeBox.Items.CommaText);
-  Ini.WriteString(SName,'RepTime',AutoRepTmEdit.Text);
-  Ini.WriteString(SName,'RepTimes',AutoRepTmEdit.Items.CommaText);
-  MemFrame.SaveToIni(Ini,SName);
+  Ini.WriteString(SName, 'MemType', BinaryMemName[MemType]);
+  Ini.WriteString(SName, 'Adr', AdresBox.Text);
+  Ini.WriteString(SName, 'Adrs', AdresBox.Items.CommaText);
+  Ini.WriteString(SName, 'Size', SizeBox.Text);
+  Ini.WriteString(SName, 'Sizes', SizeBox.Items.CommaText);
+  Ini.WriteString(SName, 'RepTime', AutoRepTmEdit.Text);
+  Ini.WriteString(SName, 'RepTimes', AutoRepTmEdit.Items.CommaText);
+  MemFrame.SaveToIni(Ini, SName);
 end;
 
-procedure TBinaryMemForm.LoadFromIni(Ini : TDotIniFile; SName : string);
+procedure TBinaryMemForm.LoadFromIni(Ini: TDotIniFile; SName: string);
 begin
   inherited;
-  SetMemType(GetMemType(Ini.ReadString(SName,'MemType',BinaryMemName[MemType])));
-  AdresBox.Text        := Ini.ReadString(SName,'Adr','0');
-  SizeBox.Text         := Ini.ReadString(SName,'Size','100');
-  AdresBox.Items.CommaText:=Ini.ReadString(SName,'Adrs','0,4000,8000,800000');
-  SizeBox.Items.CommaText :=Ini.ReadString(SName,'Sizes','100,200,400,1000');
-  AutoRepTmEdit.Items.CommaText := Ini.ReadString(SName,'RepTimes','');
-  MemFrame.LoadFromIni(Ini,SName);
+  SetMemType(GetMemType(Ini.ReadString(SName, 'MemType', BinaryMemName[MemType])));
+  AdresBox.Text := Ini.ReadString(SName, 'Adr', '0');
+  SizeBox.Text := Ini.ReadString(SName, 'Size', '100');
+  AdresBox.Items.CommaText := Ini.ReadString(SName, 'Adrs', '0,4000,8000,800000');
+  SizeBox.Items.CommaText := Ini.ReadString(SName, 'Sizes', '100,200,400,1000');
+  AutoRepTmEdit.Items.CommaText := Ini.ReadString(SName, 'RepTimes', '');
+  MemFrame.LoadFromIni(Ini, SName);
   ShowCaption;
 
+end;
+
+function TBinaryMemForm.GetJSONObject: TJSONBuilder;
+begin
+  Result := inherited GetJSONObject;
+  Result.Add('MemType', BinaryMemName[MemType]);
+  Result.Add('Adr', AdresBox.Text);
+  Result.Add('Adrs', AdresBox.Items);
+  Result.Add('Size', SizeBox.Text);
+  Result.Add('Sizes', SizeBox.Items);
+  Result.Add('RepTime', AutoRepTmEdit.Text);
+  Result.Add('RepTimes', AutoRepTmEdit.Items);
+
+  Result.Add('MemFrame', MemFrame.GetJSONObject);
+end;
+
+procedure TBinaryMemForm.LoadfromJson(jLoader: TJSONLoader);
+var
+  jLoader2: TJSONLoader;
+begin
+  SetMemType(GetMemType(jLoader.LoadDef('MemType', BinaryMemName[MemType])));
+  AdresBox.Text := jLoader.LoadDef('Adr', '0');
+  jLoader.Load('Adrs', AdresBox.Items);
+  SizeBox.Text := jLoader.LoadDef('Size', '100');
+  jLoader.Load('Sizes', SizeBox.Items);
+  AutoRepTmEdit.Text := jLoader.LoadDef('RepTime', '250');
+  jLoader.Load('RepTimes', AutoRepTmEdit.Items);
+
+  if jLoader2.Init(jLoader, 'MemFrame') then
+    MemFrame.LoadfromJson(jLoader2);
+  ShowCaption;
 end;
 
 procedure TBinaryMemForm.FormActivate(Sender: TObject);
@@ -445,21 +471,17 @@ begin
   ReloadMapParser;
 end;
 
-
-
 procedure TBinaryMemForm.SettingChg;
 begin
   inherited;
 end;
 
-
-procedure TBinaryMemForm.ShowMem(Adr : integer);
+procedure TBinaryMemForm.ShowMem(Adr: integer);
 begin
   AdresBox.Text := MapParser.IntToVarName(Adr);
   ReadMemAct.Execute;
   ShowParamAct.Execute;
 end;
-
 
 procedure TBinaryMemForm.AreaBoxChange(Sender: TObject);
 begin
@@ -479,23 +501,22 @@ begin
   ShowCaption;
 end;
 
-function  TBinaryMemForm.GetDefaultCaption : string;
+function TBinaryMemForm.GetDefaultCaption: string;
 begin
-  Result :=  BinaryMemName[MemType]+' : ' +AdresBox.Text;
+  Result := BinaryMemName[MemType] + ' : ' + AdresBox.Text;
 end;
 
-procedure TBinaryMemForm.doParamsVisible(vis : boolean);
+procedure TBinaryMemForm.doParamsVisible(vis: boolean);
 begin
   inherited;
   MemFrame.doParamVisible(vis);
 end;
 
-
 procedure TBinaryMemForm.SaveMemActExecute(Sender: TObject);
 var
-  Dlg : TSaveDialog;
-  Fname : string;
-  Strm  : TmemoryStream;
+  Dlg: TSaveDialog;
+  Fname: string;
+  Strm: TmemoryStream;
 begin
   inherited;
   Fname := '';
@@ -503,17 +524,17 @@ begin
   try
     Dlg.DefaultExt := '.bin';
     Dlg.Filter := 'pliki binarne|*.bin|Wszystkie pliki|*.*';
-    Dlg.Options := Dlg.Options +[ofOverwritePrompt];
+    Dlg.Options := Dlg.Options + [ofOverwritePrompt];
     if Dlg.Execute then
-      Fname :=Dlg.FileName;
+      Fname := Dlg.FileName;
   finally
     Dlg.Free;
   end;
-  if Fname<>'' then
+  if Fname <> '' then
   begin
     Strm := TmemoryStream.Create;
     try
-      Strm.Write(MemFrame.MemBuf[0],MemFrame.MemSize);
+      Strm.Write(MemFrame.MemBuf[0], MemFrame.MemSize);
       Strm.SaveToFile(Fname);
     finally
       Strm.Free;
@@ -523,9 +544,9 @@ end;
 
 procedure TBinaryMemForm.LoadMemActExecute(Sender: TObject);
 var
-  Dlg   : TOpenDialog;
-  Fname : string;
-  Strm  : TmemoryStream;
+  Dlg: TOpenDialog;
+  Fname: string;
+  Strm: TmemoryStream;
 begin
   inherited;
   Fname := '';
@@ -534,38 +555,33 @@ begin
     Dlg.DefaultExt := '.bin';
     Dlg.Filter := 'pliki binarne|*.bin|Wszystkie pliki|*.*';
     if Dlg.Execute then
-      Fname :=Dlg.FileName;
+      Fname := Dlg.FileName;
   finally
     Dlg.Free;
   end;
-  if Fname<>'' then
+  if Fname <> '' then
   begin
     Strm := TmemoryStream.Create;
     try
       Strm.LoadFromFile(Fname);
       MemFrame.MemSize := Strm.Size;
-      Strm.Read(MemFrame.MemBuf[0],MemFrame.MemSize);
+      Strm.Read(MemFrame.MemBuf[0], MemFrame.MemSize);
       MemFrame.SetNewData;
-      SizeBox.Text := Format('0x%X',[MemFrame.MemSize]);
+      SizeBox.Text := Format('0x%X', [MemFrame.MemSize]);
       AddToList(SizeBox);
 
-      DoMsg(Format('Wczytano %u [0x%X] bajtów',[MemFrame.MemSize,MemFrame.MemSize]));
+      DoMsg(Format('Wczytano %u [0x%X] bajtów', [MemFrame.MemSize, MemFrame.MemSize]));
     finally
       Strm.Free;
     end;
   end;
 end;
 
-
-
-
-
-
 procedure TBinaryMemForm.SaveMemTxtActExecute(Sender: TObject);
 var
-  Dlg : TSaveDialog;
-  Fname : string;
-  SL  : TStringList;
+  Dlg: TSaveDialog;
+  Fname: string;
+  SL: TStringList;
 begin
   inherited;
   Fname := '';
@@ -573,13 +589,13 @@ begin
   try
     Dlg.DefaultExt := '.txt';
     Dlg.Filter := 'pliki textowe|*.txt|Wszystkie pliki|*.*';
-    Dlg.Options := Dlg.Options +[ofOverwritePrompt];
+    Dlg.Options := Dlg.Options + [ofOverwritePrompt];
     if Dlg.Execute then
-      Fname :=Dlg.FileName;
+      Fname := Dlg.FileName;
   finally
     Dlg.Free;
   end;
-  if Fname<>'' then
+  if Fname <> '' then
   begin
     SL := TStringList.Create;
     try
@@ -590,8 +606,5 @@ begin
     end;
   end;
 end;
-
-
-
 
 end.

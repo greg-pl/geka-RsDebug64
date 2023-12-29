@@ -204,9 +204,11 @@ type
     property RegisterSize: integer read FRegisterSize write FSetRegisterSize;
 
     procedure SaveToIni(Ini: TMemIniFile; SName: string);
-    function GetJSONObject: TJSONObject;
-
     procedure LoadFromIni(Ini: TMemIniFile; SName: string);
+
+    function GetJSONObject: TJSONBuilder;
+    procedure LoadfromJson(jParent: TJSONLoader);
+
     procedure CopyToStringList(SL: TStrings);
     procedure doParamVisible(vis: Boolean);
   end;
@@ -1860,97 +1862,196 @@ begin
 
 end;
 
-function TMemFrame.GetJSONObject: TJSONObject;
+function TMemFrame.GetJSONObject: TJSONBuilder;
 var
   i: integer;
   n: string;
   SL: TStringList;
-  jObj: TJSONObject;
-  jObj2: TJSONObject;
+  jBuild: TJSONBuilder;
+  jBuild2: TJSONBuilder;
   jArr: TJSONArray;
   IntArr: TIntDynArr;
 begin
-  Result := TJSONObject.Create;
+  Result.Init;
 
   // zak³adka BYTE
-  jObj := TJSONObject.Create;
-  jObj.AddPair(CreateJsonPairInt('Col_Cnt', ByteColCntEdit.Value));
-  Result.AddPair('BytePage', jObj);
+  jBuild.Init;
+  jBuild.Add('Col_Cnt', ByteColCntEdit.Value);
+  Result.Add('BytePage', jBuild);
 
   // zak³adka WORD
-  jObj := TJSONObject.Create;
-  jObj.AddPair(CreateJsonPairInt('Col_Cnt', WordColCntEdit.Value));
-  Result.AddPair('WordPage', jObj);
+  jBuild.Init;
+  jBuild.Add('Col_Cnt', WordColCntEdit.Value);
+  Result.Add('WordPage', jBuild);
 
   // zak³adka CHART
-  jObj := TJSONObject.Create;
-  jObj.AddPair(CreateJsonPairInt('Chart_Cnt', SerCntEdit.Value));
+  jBuild.Init;
 
   jArr := TJSONArray.Create;
   FSetChartSerCount(SerCntEdit.Value);
   for i := 0 to SerCntEdit.Value - 1 do
   begin
-    jObj2 := TJSONObject.Create;
-    jObj2.AddPair('Name', SeriesListBox.Items.Strings[i]);
-    JSonAddPairColor(jObj2, 'Color', (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor);
-    jArr.AddElement(jObj2);
+    jBuild2.Init;
+    jBuild2.Add('Name', SeriesListBox.Items.Strings[i]);
+    jBuild2.AddColor('Color', (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor);
+    jArr.AddElement(jBuild2.jobj);
   end;
-  jObj.AddPair('Signals', jArr);
+  jBuild.Add('Signals', jArr);
 
-  JSonAddPair(jObj, 'Auto', AutoXYBox.Checked);
-  JSonAddPair(jObj, 'MinX', MinXEdit.Text);
-  JSonAddPair(jObj, 'MaxX', MaxXEdit.Text);
-  JSonAddPair(jObj, 'MinY', MinYEdit.Text);
-  JSonAddPair(jObj, 'MaxY', MaxYEdit.Text);
-  JSonAddPair(jObj, 'DataType', DataTypeBox.ItemIndex);
-  JSonAddPair(jObj, 'SereiesType', SerieTypeBox.ItemIndex);
-  JSonAddPair(jObj, 'DataSize', DataSizeBox.ItemIndex);
-  JSonAddPair(jObj, 'RZ30Data', RZ30MemBox.Checked);
-  JSonAddPair(jObj, 'Points', PointsBox.Checked);
+  jBuild.Add('Auto', AutoXYBox.Checked);
+  jBuild.Add('MinX', MinXEdit.Text);
+  jBuild.Add('MaxX', MaxXEdit.Text);
+  jBuild.Add('MinY', MinYEdit.Text);
+  jBuild.Add('MaxY', MaxYEdit.Text);
+  jBuild.Add('DataType', DataTypeBox.ItemIndex);
+  jBuild.Add('SereiesType', SerieTypeBox.ItemIndex);
+  jBuild.Add('DataSize', DataSizeBox.ItemIndex);
+  jBuild.Add('RZ30Data', RZ30MemBox.Checked);
+  jBuild.Add('Points', PointsBox.Checked);
 
   jArr := TJSONArray.Create;
   for i := 0 to MAX_MEM_BOX - 1 do
   begin
-    jObj2 := CreateJsonObjectTRect(CharMinMaxTab[i]);
-    jArr.AddElement(jObj2);
+    jBuild2.Init;
+    jBuild2.Add(CharMinMaxTab[i]);
+    jArr.AddElement(jBuild2.jobj);
   end;
-  jObj.AddPair('CharRanges', jArr);
+  jBuild.Add('CharRanges', jArr);
 
-  jObj2 := TJSONObject.Create;
-  JSonAddPair(jObj2, LasPosPoint);
-  JSonAddPair(jObj2, 'W', MeasurePanel.Width);
-  JSonAddPair(jObj2, 'H', MeasurePanel.Height);
-  SL := TStringList.Create;
-  try
-    SL.Assign(MeasureGrid.Cols[1]);
-    SL.Delete(0);
-    JSonAddPair(jObj2, 'Names', SL);
-  finally
-    SL.Free;
-  end;
+  jBuild2.Init;
+  jBuild2.Add(LasPosPoint);
+  jBuild2.Add('W', MeasurePanel.Width);
+  jBuild2.Add('H', MeasurePanel.Height);
 
   SetLength(IntArr, MeasureGrid.ColCount - 1);
   for i := 0 to MeasureGrid.ColCount - 2 do
     IntArr[i] := MeasureGrid.ColWidths[i + 1];
-  JSonAddPair(jObj2, 'ColWidth', IntArr);
+  jBuild2.Add('ColWidth', IntArr);
 
-  jObj.AddPair('MeasGrid', jObj2);
-  Result.AddPair('Chart', jObj);
+  jBuild.Add('MeasGrid', jBuild2.jobj);
+  Result.Add('Chart', jBuild.jobj);
 
   // zak³adka WEKTORY
-  jObj := TJSONObject.Create;
+  jBuild.Init;
   jArr := TJSONArray.Create;
 
   FSetWekSerCount(WekCntEdit.Value);
   for i := 0 to WekCntEdit.Value - 1 do
   begin
-    jObj2 := TJSONObject.Create;
-    JSonAddPair(jObj2, 'Name', WekListBox.Items.Strings[i]);
-    JSonAddPairColor(jObj2, 'Color', integer(WekListBox.Items.Objects[i]));
-    jArr.AddElement(jObj2);
+    jBuild2.Init;
+    jBuild2.Add('Name', WekListBox.Items.Strings[i]);
+    jBuild2.Add('Color', integer(WekListBox.Items.Objects[i]));
+    jArr.AddElement(jBuild2.jobj);
   end;
-  jObj.AddPair('Signals', jArr);
-  Result.AddPair('Vector', jObj);
+  jBuild.Add('Signals', jArr);
+  Result.Add('Vector', jBuild.jobj);
+end;
+
+procedure TMemFrame.LoadfromJson(jParent: TJSONLoader);
+var
+  n, i: integer;
+  s: string;
+  jArr: TJSONArray;
+  IntArr: TIntDynArr;
+  C: integer;
+  jLoader: TJSONLoader;
+  jLoader2: TJSONLoader;
+begin
+
+  // zak³adka BYTE
+  if jLoader.Init(jParent.GetObject('BytePage')) then
+  begin
+    jLoader.Load('Col_Cnt', ByteColCntEdit);
+  end;
+
+  // zak³adka WORD
+  if jLoader.Init(jParent.GetObject('WordPage')) then
+  begin
+    jLoader.Load('Col_Cnt', WordColCntEdit);
+  end;
+
+  // zak³adka CHART
+
+  if jLoader.Init(jParent.GetObject('Chart')) then
+  begin
+    jArr := jLoader.getArray('Signals');
+    if Assigned(jArr) then
+    begin
+      SerCntEdit.Value := jArr.Count;
+      FSetChartSerCount(SerCntEdit.Value);
+      if MeasureGrid.RowCount < jArr.Count then
+        MeasureGrid.RowCount := jArr.Count;
+
+      for i := 0 to SerCntEdit.Value - 1 do
+      begin
+        jLoader2.Init(jArr.Items[i]);
+
+        s := Format('Sig_%u', [i]);
+        jLoader2.Load('Name', s);
+        (SeriesListBox.Items.Objects[i] as TLineSeries).Title := s;
+        SeriesListBox.Items.Strings[i] := s;
+        MeasureGrid.Cells[1, 1 + i] := s;
+
+        C := (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor;
+        jLoader2.Load('Color', C);
+        (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor := C;
+      end;
+    end;
+
+    jLoader.Load('Auto', AutoXYBox);
+    jLoader.Load('MinX', MinXEdit);
+    jLoader.Load('MaxX', MaxXEdit);
+    jLoader.Load('MinY', MinYEdit);
+    jLoader.Load('MaxY', MaxYEdit);
+
+    jLoader.Load('DataType', DataTypeBox);
+    jLoader.Load('SereiesType', SerieTypeBox);
+    jLoader.Load('DataSize', DataSizeBox);
+
+    jLoader.Load('RZ30Data', RZ30MemBox);
+    jLoader.Load('Points', PointsBox);
+
+    jArr := jLoader.getArray('CharRanges');
+    if Assigned(jArr) then
+    begin
+      n := Math.Min(MAX_MEM_BOX, jArr.Count);
+      for i := 0 to n - 1 do
+      begin
+        jLoader2.Init(jArr.Items[i]);
+        jLoader2.Load(CharMinMaxTab[i]);
+      end;
+    end;
+
+    if jLoader2.Init(jLoader, 'MeasGrid') then
+    begin
+      jLoader2.Load(LasPosPoint);
+      jLoader2.Load_WH(MeasurePanel);
+      jLoader2.Load('ColWidth', IntArr);
+      n := Min(MeasureGrid.ColCount - 1, length(IntArr));
+      for i := 0 to n - 1 do
+        MeasureGrid.ColWidths[i + 1] := IntArr[i];
+    end;
+  end;
+
+  // zak³adka WEKTORY
+  if jLoader.Init(jParent.GetObject('Vector')) then
+  begin
+    jArr := jLoader.getArray('Signals');
+
+    FSetWekSerCount(jArr.Count);
+    for i := 0 to jArr.Count - 1 do
+    begin
+      jLoader2.Init(jArr.Items[i]);
+
+      s := WekListBox.Items.Strings[i];
+      jLoader2.Load('Name', s);
+      WekListBox.Items.Strings[i] := s;
+
+      C := integer(WekListBox.Items.Objects[i]);
+      jLoader2.Load('Color', C);
+      WekListBox.Items.Objects[i] := Pointer(C);
+    end;
+  end;
 end;
 
 procedure TMemFrame.LoadFromIni(Ini: TMemIniFile; SName: string);
