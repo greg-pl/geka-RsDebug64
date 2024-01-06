@@ -81,10 +81,9 @@ type
     procedure SaveMemTxtActExecute(Sender: TObject);
     procedure FillxxActExecute(Sender: TObject);
     procedure MemFramePointsBoxClick(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
     MemBxLeft: integer;
-    function OnToValueProc(MemName: string; Buf: pByte; TypeSign: char; var Val: OleVariant): integer;
-    function OnToBinProc(MemName: string; Mem: pByte; Size: integer; TypeSign: char; Val: OleVariant): integer;
     function ReadMem: TStatus;
     function WriteMem: TStatus;
     function GetPhAdr(Adr: cardinal): cardinal;
@@ -99,8 +98,9 @@ type
     procedure LoadfromJson(jLoader: TJSONLoader); override;
 
     procedure SettingChg; override;
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     function GetDefaultCaption: string; override;
+
 
     procedure ShowMem(Adr: integer); overload;
     procedure ShowMem(const AdrCpx1: TAdrCpx); overload;
@@ -120,131 +120,18 @@ Const
 procedure TMemForm.FormCreate(Sender: TObject);
 begin
   inherited;
-  MemFrame.OnToValue := OnToValueProc;
-  MemFrame.OnToBin := OnToBinProc;
+  MemFrame.Init;
   MemFrame.MemSize := $100;
   MemFrame.RegisterSize := 1;
+  MemFrame.setByteOrder(ProgCfg.ByteOrder);
 end;
 
-type
-  PByteAr = ^TByteAr;
-  TByteAr = array [0 .. 7] of byte;
-
-function TMemForm.OnToBinProc(MemName: string; Mem: pByte; Size: integer; TypeSign: char; Val: OleVariant): integer;
-
-  procedure SetDWord(Mem: pByte; W: cardinal);
-  begin
-    if ProgCfg.ByteOrder = boBig then
-    begin
-      PByteAr(Mem)^[0] := byte(W shr 24);
-      PByteAr(Mem)^[1] := byte(W shr 16);
-      PByteAr(Mem)^[2] := byte(W shr 8);
-      PByteAr(Mem)^[3] := byte(W);
-    end
-    else
-      pCardinal(Mem)^ := W;
-  end;
-
-  procedure SetWord(Mem: pByte; W: cardinal);
-  begin
-    if ProgCfg.ByteOrder = boBig then
-    begin
-      PByteAr(Mem)^[0] := byte(W shr 8);
-      PByteAr(Mem)^[1] := byte(W);
-    end
-    else
-      pWord(Mem)^ := W;
-  end;
-
-var
-  W: word;
-  D: cardinal;
-  f: Single;
+procedure TMemForm.FormDestroy(Sender: TObject);
 begin
-  case TypeSign of
-    'B':
-      PByteAr(Mem)^[0] := Val;
-    'W':
-      begin
-        W := Val;
-        SetWord(Mem, W);
-      end;
-    'D':
-      begin
-        D := Val;
-        SetDWord(Mem, D);
-      end;
-    'F':
-      begin
-        f := Val;
-        D := pCardinal(addr(f))^;
-        SetDWord(Mem, D);
-      end;
-  end;
-  Result := 0;
+  inherited;
+  MemFrame.Done;
 end;
 
-function TMemForm.OnToValueProc(MemName: string; Buf: pByte; TypeSign: char; var Val: OleVariant): integer;
-
-  function GetDWord(Buf: pByte): cardinal;
-  begin
-    if ProgCfg.ByteOrder = boBig then
-    begin
-      Result := (Buf^) shl 24;
-      inc(Buf);
-      Result := Result or ((Buf^) shl 16);
-      inc(Buf);
-      Result := Result or ((Buf^) shl 8);
-      inc(Buf);
-      Result := Result or Buf^;
-    end
-    else
-      Result := pCardinal(Buf)^;
-  end;
-
-  function GetWord(Dt: pByte): word;
-  begin
-    if ProgCfg.ByteOrder = boBig then
-    begin
-      Result := (Dt^) shl 8;
-      inc(Dt);
-      Result := Result or Dt^;
-    end
-    else
-      Result := pWord(Dt)^;
-  end;
-
-type
-  pDouble = ^Double;
-var
-  X: cardinal;
-  XT: array [0 .. 1] of cardinal;
-begin
-  Result := 0;
-  case TypeSign of
-    'B':
-      Val := PByteAr(Buf)^[0];
-    'W':
-      Val := GetWord(Buf);
-    'D':
-      Val := GetDWord(Buf);
-    'F':
-      begin
-        X := GetDWord(Buf);
-        Val := psingle(addr(X))^;
-      end;
-    'E':
-      begin
-        XT[0] := GetDWord(Buf);
-        inc(Buf, 4);
-        XT[1] := GetDWord(Buf);
-        Val := pDouble(addr(XT))^;
-      end;
-  else
-    Val := 0;
-    Result := 1;
-  end;
-end;
 
 function TMemForm.GetPhAdr(Adr: cardinal): cardinal;
 begin
@@ -318,8 +205,8 @@ begin
   if Size <> 0 then
   begin
     MemFrame.ClrData;
-    CommThread.AddToDoItem(TWorkRdMemItem.Create(Handle, wm_ReadMem1, AdrModeGroup.ItemIndex = 1, MemFrame.MemBuf[0],
-      Adr, Size));
+    CommThread.AddToDoItem(TWorkRdMemItem.Create(Handle, wm_ReadMem1, AdrModeGroup.ItemIndex = 1,
+      MemFrame.MemBuf.Buf[0], Adr, Size));
   end;
 end;
 
@@ -353,7 +240,7 @@ var
   RegSize: cardinal;
 begin
   GetFromText(Adr, ShowAdr, Size, RegSize);
-  CommThread.AddToDoItem(TWorkWrMemItem.Create(Handle, wm_WriteMem1, MemFrame.MemBuf[0], Adr, Size));
+  CommThread.AddToDoItem(TWorkWrMemItem.Create(Handle, wm_WriteMem1, MemFrame.MemBuf.Buf[0], Adr, Size));
 end;
 
 procedure TMemForm.wmWriteMem1(var Msg: TMessage);
@@ -452,22 +339,22 @@ begin
     i := 0;
     while i < MemFrame.MemSize do
     begin
-      if MemFrame.MemState[i] = csModify then
+      if MemFrame.MemBuf.MemState[i] = csModify then
       begin
         n := 0;
-        while ((i + n) < MemFrame.MemSize) and (MemFrame.MemState[i + n] = csModify) do
+        while ((i + n) < MemFrame.MemSize) and (MemFrame.MemBuf.MemState[i + n] = csModify) do
         begin
           inc(n);
         end;
         if n <> 0 then
         begin
           Adr := GetPhAdr(BufAdr) + i;
-          CommThread.AddToDoItem(TWorkWrMemItem.Create(Handle, wm_WriteMem2, MemFrame.MemBuf[i], Adr, n));
+          CommThread.AddToDoItem(TWorkWrMemItem.Create(Handle, wm_WriteMem2, MemFrame.MemBuf.Buf[i], Adr, n));
           DoMsg(Format('WriteMem, adr=0x%X, size=%u', [Adr, n]));
 
           for j := 0 to n - 1 do
           begin
-            MemFrame.MemState[i + j] := csFull;
+            MemFrame.MemBuf.MemState[i + j] := csFull;
           end;
         end;
       end;
@@ -563,19 +450,20 @@ end;
 procedure TMemForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
   MemBxLeft := VarListBox.Left;
 end;
 
-procedure TMemForm.ReloadMapParser;
+procedure TMemForm.ReloadVarList;
 begin
   inherited;
-  MapParser.MapItemList.LoadToList(VarListBox.Items);
+  MapParser.MapItemList.LoadToList(VarListBox.Items, ProgCfg.SectionsCfg);
 end;
 
 procedure TMemForm.SettingChg;
 begin
   inherited;
+  MemFrame.setByteOrder(ProgCfg.ByteOrder);
 end;
 
 procedure TMemForm.ShowMem(Adr: integer);
@@ -588,7 +476,7 @@ end;
 procedure TMemForm.ShowMem(const AdrCpx1: TAdrCpx);
 begin
   ShowMem(AdrCpx1.Adres);
-  Title := AdrCpx1.Caption;
+  PrvTitle := AdrCpx1.Caption;
   ShowCaption;
   SizeBox.Text := Format('0x%X', [AdrCpx1.Size]);
 
@@ -637,13 +525,7 @@ begin
   end;
   if Fname <> '' then
   begin
-    Strm := TmemoryStream.Create;
-    try
-      Strm.Write(MemFrame.MemBuf[0], MemFrame.MemSize);
-      Strm.SaveToFile(Fname);
-    finally
-      Strm.Free;
-    end;
+    MemFrame.MemBuf.SaveToFile(Fname);
   end;
 end;
 
@@ -666,18 +548,13 @@ begin
   end;
   if Fname <> '' then
   begin
-    Strm := TmemoryStream.Create;
-    try
-      Strm.LoadFromFile(Fname);
-      MemFrame.MemSize := Strm.Size;
-      Strm.Read(MemFrame.MemBuf[0], MemFrame.MemSize);
+    if MemFrame.MemBuf.LoadFromFile(Fname) then
+    begin
+      MemFrame.MemSize := MemFrame.MemBuf.len;
       MemFrame.SetNewData;
       SizeBox.Text := Format('0x%X', [MemFrame.MemSize]);
       AddToList(SizeBox);
-
       DoMsg(Format('Wczytano %u [0x%X] bajtów', [MemFrame.MemSize, MemFrame.MemSize]));
-    finally
-      Strm.Free;
     end;
   end;
 end;

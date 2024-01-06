@@ -14,7 +14,8 @@ uses
   ToolsUnit,
   RsdDll, System.Actions, System.ImageList,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  EditSectionsDialog;
 
 type
   TType = (ppByte, ppHex8, ppWord, ppInt16, ppHex16);
@@ -29,25 +30,28 @@ type
     FRep: integer;
     OldMem: array of byte;
     FOwner: TViewVarList;
+    Mem: array of byte;
     procedure FSetTypName(AName: string);
     procedure FSetRep(ARep: integer);
     procedure FSetFillFlag(AFlag: boolean);
+    function FGetSize: integer;
   public
     Name: string;
-    AreaAdres: cardinal;
+    VarAdres: cardinal;
     TxMode: TShowMode;
     Manual: boolean;
-    Mem: array of byte;
     property FillFlag: boolean read FFillFlag write FSetFillFlag;
     property TypName: string read FTypName write FSetTypName;
     property Typ: THType read FTyp;
     property Rep: integer read FRep write FSetRep;
+    property Size: integer read FGetSize;
     Constructor Create(AOwner: TViewVarList);
     function ToText(ByteOrder: TByteOrder): string;
     function LoadFromTxt(ByteOrder: TByteOrder; tx: string): boolean;
     function WriteToDev(RHan: THandle; dev: TCmmDevice): TStatus;
     procedure TypeDefChg;
     procedure ReloadMapParser(OnMsg: TOnMsg);
+
     procedure SaveToIni(Ini: TDotIniFile; SName, IName: string);
     procedure LoadFromIni(Ini: TDotIniFile; SName, IName: string);
 
@@ -69,12 +73,14 @@ type
     property Items[Index: integer]: TViewVar read GetItem;
     procedure TypeDefChg;
     procedure ReloadMapParser(OnMsg: TOnMsg);
-    procedure SaveToIni(Ini: TDotIniFile; SName: string);
-    function GetJSONObject: TJSONValue;
-    procedure LoadfromJson(jObj: TJSONValue);
-    procedure LoadFromIni(Ini: TDotIniFile; SName: string);
     function ReadVars(RHan: THandle; OnMsg: TOnMsg; dev: TCmmDevice): boolean;
     function FindVar(Nm: string): TViewVar;
+
+    function GetJSONObject: TJSONValue;
+    procedure LoadfromJson(jObj: TJSONValue);
+
+    procedure SaveToIni(Ini: TDotIniFile; SName: string);
+    procedure LoadFromIni(Ini: TDotIniFile; SName: string);
   end;
 
   TVarListForm = class(TChildForm)
@@ -112,7 +118,6 @@ type
     Showmemory1: TMenuItem;
     CopyAdrAct: TAction;
     EditTitleAct1: TMenuItem;
-    Closewindow1: TMenuItem;
     ShowStructAct: TAction;
     ShowStructAct1: TMenuItem;
     AutoReadBtn: TToolButton;
@@ -127,6 +132,12 @@ type
     ToolButton4: TToolButton;
     SaveItemsBtn: TToolButton;
     AddItemsBtn: TToolButton;
+    EditSectionsAct: TAction;
+    ToolButton5: TToolButton;
+    ReloadListAct: TAction;
+    AddSectionToListAct: TAction;
+    Addsectiontosectionlist1: TMenuItem;
+    N2: TMenuItem;
     procedure FormActivate(Sender: TObject);
     procedure VarListViewCompare(Sender: TObject; Item1, Item2: TListItem; Data: integer; var Compare: integer);
     procedure VarListViewColumnClick(Sender: TObject; Column: TListColumn);
@@ -172,6 +183,16 @@ type
     procedure InsertVarActExecute(Sender: TObject);
     procedure SaveItemsBtnClick(Sender: TObject);
     procedure AddItemsBtnClick(Sender: TObject);
+    procedure EditSectionsActExecute(Sender: TObject);
+    procedure EditSectionsActUpdate(Sender: TObject);
+    procedure ReloadListActExecute(Sender: TObject);
+    procedure AddSectionToListActExecute(Sender: TObject);
+    procedure AddSectionToListActUpdate(Sender: TObject);
+    procedure ShowVarGridMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
+      X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
+    procedure VarListViewMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
+      X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
+    procedure VarListViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
   private
     FSortType: integer;
     GridVarList: TViewVarList;
@@ -180,15 +201,19 @@ type
     LastIntTxMode: TShowMode;
     LastLongTxMode: TShowMode;
     BufSt: boolean;
+    ShowVarCfg: TSectionsCfg;
     procedure FillShowVarGrid;
     procedure PrepareFilter;
     function FilterAccept(s: string): boolean;
+    procedure ReloadVarListNoMove;
+  protected
+    procedure CopyFromTemplateWin(TemplateWin: TChildForm); override;
   public
 
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
 
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     procedure TypeDefChg; override;
     procedure SettingChg; override;
     function GetDefaultCaption: string; override;
@@ -268,14 +293,14 @@ end;
 
 function TViewVar.PhAdres: cardinal;
 begin
-  Result := AreaAdres;
+  Result := VarAdres;
 end;
 
 procedure TViewVar.CopyDefFrom(Src: TViewVar);
 begin
   Manual := Src.Manual;
   Name := Src.Name;
-  AreaAdres := Src.AreaAdres;
+  VarAdres := Src.VarAdres;
   TxMode := Src.TxMode;
   Rep := Src.Rep;
 end;
@@ -346,6 +371,11 @@ begin
   SetLength(OldMem, n);
 end;
 
+function TViewVar.FGetSize: integer;
+begin
+  Result := Length(Mem);
+end;
+
 procedure TViewVar.ReloadMapParser(OnMsg: TOnMsg);
 var
   A: cardinal;
@@ -354,7 +384,7 @@ begin
   begin
     A := MapParser.GetVarAdress(Name);
     if A <> UNKNOWN_ADRESS then
-      AreaAdres := A
+      VarAdres := A
     else
       OnMsg('nie odnaleziono zmiennej: ' + Name);
   end;
@@ -372,7 +402,7 @@ begin
     SL.Add(ShowModeTxt[TxMode]);
     SL.Add('-');
     SL.Add(BoolToStr(Manual));
-    SL.Add(IntToStr(AreaAdres));
+    SL.Add(IntToStr(VarAdres));
     Ini.WriteTStrings(SName, IName, SL);
   finally
     SL.Free;
@@ -397,7 +427,7 @@ begin
     if SL.Count >= 6 then
       Manual := StrToBool(SL.Strings[5]);
     if SL.Count >= 7 then
-      AreaAdres := StrToInt64(SL.Strings[6]);
+      VarAdres := StrToInt64(SL.Strings[6]);
   finally
     SL.Free;
   end;
@@ -411,7 +441,7 @@ begin
   Result.Add('Rep', Rep);
   Result.Add('TxMode', ShowModeTxt[TxMode]);
   Result.Add('Manual', Manual);
-  Result.Add('AreaAdres', AreaAdres);
+  Result.Add('AreaAdres', VarAdres);
 end;
 
 procedure TViewVar.LoadfromJson(jLoader: TJSONLoader);
@@ -421,7 +451,7 @@ begin
   Rep := jLoader.LoadDef('Rep', Rep);
   TxMode := StrToShowMode(jLoader.LoadDef('TxMode', ShowModeTxt[TxMode]), smSIGN);
   jLoader.Load('Manual', Manual);
-  AreaAdres := jLoader.LoadDef('AreaAdres', AreaAdres);
+  VarAdres := jLoader.LoadDef('AreaAdres', integer(VarAdres));
 end;
 
 // ------------ TViewVarList --------------------------------------------------
@@ -520,7 +550,7 @@ begin
   Result := TJSONArray.Create;
   for i := 0 to Count - 1 do
   begin
-    (Result as TJSONArray).AddElement(Items[i].GetJSONObject.jobj);
+    (Result as TJSONArray).AddElement(Items[i].GetJSONObject.jObj);
   end;
 end;
 
@@ -529,7 +559,7 @@ var
   i: integer;
   V: TViewVar;
   jArr: TJSONArray;
-  jLoader : TJSONLoader;
+  jLoader: TJSONLoader;
 begin
   if jObj is TJSONArray then
   begin
@@ -669,6 +699,9 @@ begin
   LastCharTxMode := smHEX;
   LastIntTxMode := smUNSIGN;
   LastLongTxMode := smHEX;
+  ShowVarCfg.Init;
+  ShowVarCfg.CopyFrom(ProgCfg.SectionsCfg);
+
 end;
 
 procedure TVarListForm.FormDestroy(Sender: TObject);
@@ -676,12 +709,13 @@ begin
   inherited;
   GridVarList.Free;
   FilterList.Free;
+  ShowVarCfg.Done;
 end;
 
 procedure TVarListForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 procedure TVarListForm.FormShow(Sender: TObject);
@@ -689,6 +723,22 @@ begin
   inherited;
   ShowParamAct.Checked := true;
   ShowParamAct.Execute;
+end;
+
+procedure TVarListForm.CopyFromTemplateWin(TemplateWin: TChildForm);
+var
+  Src: TVarListForm;
+  i: integer;
+begin
+  Src := TemplateWin as TVarListForm;
+  for i := 0 to VarListView.Columns.Count - 1 do
+    VarListView.Columns.Items[i].Width := Src.VarListView.Columns.Items[i].Width;
+
+  for i := 1 to ShowVarGrid.ColCount - 1 do
+    ShowVarGrid.ColWidths[i] := Src.ShowVarGrid.ColWidths[i];
+
+  ListPanel.Width := Src.ListPanel.Width;
+
 end;
 
 function TVarListForm.GetJSONObject: TJSONBuilder;
@@ -700,11 +750,13 @@ begin
   Result.Add('ListVisible', ShowVarPanelAct.Checked);
   Result.Add('FilterStr', FilterEdit.Text);
   Result.Add('VarList', GridVarList.GetJSONObject);
+  Result.Add('ShowVarCfg', ShowVarCfg.getJsonValue);
+
 end;
 
 procedure TVarListForm.LoadfromJson(jParent: TJSONLoader);
 var
-  aArr: TIntDynArr;
+  aArr: TIntArr;
   jParent2: TJSONLoader;
 begin
   inherited;
@@ -712,14 +764,16 @@ begin
   SetGridColumnWidts(ShowVarGrid, jParent.getDynIntArray('GridColWidth'));
 
   ListPanel.Width := jParent.LoadDef('ListWidth', ListPanel.Width);
-  ShowVarPanelAct.Checked := jParent.LoadDef('ListVisible', ShowVarPanelAct.Checked);
+  jParent.Load('ListVisible', ShowVarPanelAct);
+
   jParent.Load('FilterStr', FilterEdit);
   GridVarList.LoadfromJson(jParent.getArray('VarList'));
-
-  ReloadMapParser;
+  if jParent2.Init(jParent, 'ShowVarCfg') then
+    ShowVarCfg.JSONLoad(jParent2);
+  ListPanel.Visible := ShowVarPanelAct.Checked;
+  ReloadVarList;
   FillShowVarGrid;
 end;
-
 
 procedure TVarListForm.PrepareFilter;
 var
@@ -835,7 +889,35 @@ begin
   end;
 end;
 
-procedure TVarListForm.ReloadMapParser;
+procedure TVarListForm.ReloadListActExecute(Sender: TObject);
+begin
+  inherited;
+  ReloadVarList;
+end;
+
+procedure TVarListForm.ReloadVarListNoMove;
+var
+  ptr: Pointer;
+  i: integer;
+begin
+  ptr := nil;
+  if Assigned(VarListView.Selected) then
+    ptr := VarListView.Selected.Data;
+  ReloadVarList;
+  if Assigned(ptr) then
+  begin
+    for i := 0 to VarListView.Items.Count - 1 do
+    begin
+      if VarListView.Items[i].Data = ptr then
+      begin
+        VarListView.Items[i].Selected := true;
+        Break;
+      end;
+    end;
+  end;
+end;
+
+procedure TVarListForm.ReloadVarList;
 var
   i: integer;
   L: TListItem;
@@ -847,7 +929,7 @@ begin
   for i := 0 to MapParser.MapItemList.Count - 1 do
   begin
     M := MapParser.MapItemList.Items[i];
-    if M.IsNeeded and FilterAccept(M.Name) then
+    if M.IsNeeded(ShowVarCfg) and FilterAccept(M.Name) then
     begin
       L := VarListView.Items.Add;
       L.Caption := IntToStr(i);
@@ -861,6 +943,7 @@ begin
       L.Data := M;
     end;
   end;
+  VarListView.AlphaSort;
   VarListView.Items.EndUpdate;
   GridVarList.ReloadMapParser(DoMsg);
   FillShowVarGrid;
@@ -870,13 +953,13 @@ end;
 procedure TVarListForm.FilterOnBtnClick(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarListNoMove;
 end;
 
 procedure TVarListForm.RefreshBtnClick(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 procedure TVarListForm.TypeDefChg;
@@ -888,13 +971,13 @@ end;
 procedure TVarListForm.SettingChg;
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 
 end;
 
 function TVarListForm.GetDefaultCaption: string;
 begin
-  Result := MapParser.FileName;
+  Result := 'VarList:' + IntToStr(ChildIndex);
 end;
 
 procedure TVarListForm.VarListViewColumnClick(Sender: TObject; Column: TListColumn);
@@ -982,7 +1065,7 @@ begin
     M := GridVarList.Items[i];
     ShowVarGrid.Cells[0, i + 1] := IntToStr(i + 1);
     ShowVarGrid.Cells[1, i + 1] := M.Name;
-    ShowVarGrid.Cells[2, i + 1] := IntToHex(M.AreaAdres, 6);
+    ShowVarGrid.Cells[2, i + 1] := IntToHex(M.VarAdres, 6);
     ShowVarGrid.Cells[3, i + 1] := ShowModeSymb[M.TxMode] + IntToStr(Length(M.Mem));
 
     ShowVarGrid.Cells[4, i + 1] := M.TypName;
@@ -1006,6 +1089,34 @@ begin
   (Sender as TAction).Enabled := (VarListView.Items.Count > 0) and (VarListView.Selected <> nil);
 end;
 
+procedure TVarListForm.AddSectionToListActUpdate(Sender: TObject);
+var
+  q: boolean;
+  SectionName: string;
+begin
+  inherited;
+  q := false;
+  if (VarListView.Items.Count > 0) and (VarListView.Selected <> nil) then
+  begin
+    SectionName := TMapItem(VarListView.Selected.Data).Section;
+    q := (ShowVarCfg.SelSections.IndexOf(SectionName) < 0);
+  end;
+  (Sender as TAction).Enabled := q;
+end;
+
+procedure TVarListForm.AddSectionToListActExecute(Sender: TObject);
+var
+  SectionName: string;
+begin
+  inherited;
+  if VarListView.Selected <> nil then
+  begin
+    SectionName := TMapItem(VarListView.Selected.Data).Section;
+    ShowVarCfg.SelSections.Add(SectionName);
+    ReloadVarListNoMove;
+  end;
+end;
+
 procedure TVarListForm.AddVarActExecute(Sender: TObject);
 var
   i: integer;
@@ -1020,7 +1131,7 @@ begin
       M := TMapItem(VarListView.Items[i].Data);
       MN := TViewVar.Create(GridVarList);
       MN.Name := M.Name;
-      MN.AreaAdres := M.Adres;
+      MN.VarAdres := M.Adres;
       if M.Size = 1 then
       begin
         MN.TypName := 'char';
@@ -1139,7 +1250,7 @@ end;
 procedure TVarListForm.Odwie1Click(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 procedure TVarListForm.PropertyActUpdate(Sender: TObject);
@@ -1165,7 +1276,7 @@ begin
     try
       GlobTypeList.LoadTypeList(Dlg.TypeList);
       Dlg.VarName := M.Name;
-      Dlg.VarAdress := M.AreaAdres;
+      Dlg.VarAdress := M.VarAdres;
       Dlg.Rep := M.Rep;
       Dlg.TypName := M.TypName;
       Dlg.ShowMode := M.TxMode;
@@ -1173,7 +1284,7 @@ begin
       if Dlg.ShowModal = mrOk then
       begin
         M.Name := Dlg.VarName;
-        M.AreaAdres := Dlg.VarAdress;
+        M.VarAdres := Dlg.VarAdress;
         if Dlg.TypName = 'char' then
           LastCharTxMode := Dlg.ShowMode;
         if Dlg.TypName = 'int' then
@@ -1223,7 +1334,7 @@ begin
       M := TViewVar.Create(GridVarList);
       M.Manual := true;
       M.Name := Dlg.VarName;
-      M.AreaAdres := Dlg.VarAdress;
+      M.VarAdres := Dlg.VarAdress;
       M.TypName := Dlg.TypName;
       M.Rep := Dlg.Rep;
       M.TxMode := Dlg.ShowMode;
@@ -1272,12 +1383,25 @@ begin
     Item.ImageIndex := 0;
 end;
 
+procedure TVarListForm.VarListViewMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
+  X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
+begin
+  inherited;
+  DoMsg('VarListViewMouseActivate')
+end;
+
+procedure TVarListForm.VarListViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+begin
+  inherited;
+  DoMsg('VarListViewMouseUp')
+end;
+
 procedure TVarListForm.FilterEditKeyPress(Sender: TObject; var Key: Char);
 begin
   inherited;
   if Key = #10 then
   begin
-    ReloadMapParser;
+    ReloadVarList;
     Key := #0;
   end;
 end;
@@ -1296,6 +1420,13 @@ begin
   begin
     EditValAct.Execute;
   end;
+end;
+
+procedure TVarListForm.ShowVarGridMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
+  X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
+begin
+  inherited;
+  DoMsg('Moved');
 end;
 
 procedure TVarListForm.ShowVarGridDblClick(Sender: TObject);
@@ -1322,6 +1453,30 @@ begin
   end;
   p := p and (GridVarList.Count > 0) and IsConnected;
   (Sender as TAction).Enabled := p;
+end;
+
+procedure TVarListForm.EditSectionsActUpdate(Sender: TObject);
+begin
+  inherited;
+  (Sender as TAction).Enabled := (MapParser.MapItemList.Count > 0) and (ListPanel.Visible);
+end;
+
+procedure TVarListForm.EditSectionsActExecute(Sender: TObject);
+var
+  Dlg: TEditSectionsDlg;
+begin
+  inherited;
+  Dlg := TEditSectionsDlg.Create(self);
+  try
+    Dlg.setSectionDef(ShowVarCfg);
+    if Dlg.ShowModal = mrOk then
+    begin
+      Dlg.getSectionDef(ShowVarCfg);
+      ReloadVarListNoMove;
+    end;
+  finally
+    Dlg.Free;
+  end;
 end;
 
 procedure TVarListForm.EditValActExecute(Sender: TObject);
@@ -1389,7 +1544,7 @@ begin
     if M.Typ <> nil then
       if M.Typ.IsStruct then
       begin
-        AdrCpx.Adres := M.AreaAdres;
+        AdrCpx.Adres := M.VarAdres;
         PostMessage(Application.MainForm.Handle, wm_ShowStruct, integer(@AdrCpx), cardinal(M.Typ));
       end;
   end;
@@ -1430,9 +1585,9 @@ end;
 function SortByAdressProc(Item1, Item2: Pointer): integer;
 begin
   Result := 0;
-  if TViewVar(Item1).AreaAdres > TViewVar(Item2).AreaAdres then
+  if TViewVar(Item1).VarAdres > TViewVar(Item2).VarAdres then
     Result := 1;
-  if TViewVar(Item1).AreaAdres < TViewVar(Item2).AreaAdres then
+  if TViewVar(Item1).VarAdres < TViewVar(Item2).VarAdres then
     Result := -1;
 end;
 
@@ -1499,7 +1654,10 @@ begin
   n := ShowVarGrid.Row - 1;
   if n < GridVarList.Count then
   begin
-    AdrCpx.Adres := GridVarList.Items[n].AreaAdres;
+    AdrCpx.Adres := GridVarList.Items[n].VarAdres;
+    AdrCpx.Size := GridVarList.Items[n].Size;
+    AdrCpx.Caption := GridVarList.Items[n].Name;
+
     PostMessage(Application.MainForm.Handle, wm_ShowmemWin, integer(@AdrCpx), 0);
   end;
 end;
@@ -1518,7 +1676,7 @@ begin
   n := ShowVarGrid.Row - 1;
   if n < GridVarList.Count then
   begin
-    clipboard.SetTextBuf(pchar(GridVarList.Items[n].Name));
+    clipboard.SetTextBuf(pchar('0x' + IntToHex(GridVarList.Items[n].VarAdres, 2)));
   end;
 end;
 

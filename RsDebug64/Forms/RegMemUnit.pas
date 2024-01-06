@@ -104,7 +104,7 @@ type
     procedure LoadfromJson(jLoader: TJSONLoader); override;
 
     procedure SettingChg; override;
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     function GetDefaultCaption: string; override;
     procedure doParamsVisible(vis: boolean); override;
     procedure ShowMem(Adr: integer);
@@ -119,8 +119,6 @@ implementation
 {$R *.dfm}
 
 Const
-  smfH8_RESET = 0;
-  smfDSP_RESET = 6;
   RegMemName: array [TRegMemType] of string = ('ANALOG_INP', 'REGISTERS');
 
 function GetMemType(s: string): TRegMemType;
@@ -592,10 +590,10 @@ end;
 procedure TRegMemForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
-procedure TRegMemForm.ReloadMapParser;
+procedure TRegMemForm.ReloadVarList;
 begin
   inherited;
 end;

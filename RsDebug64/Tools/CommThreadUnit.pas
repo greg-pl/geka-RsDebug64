@@ -187,6 +187,7 @@ end;
 constructor TCommThread.Create;
 begin
   inherited Create(true);
+  NameThreadForDebugging('TCommThread');
   FToDoList := TSafeList.Create;
   FThDev := nil;
   FAsyncMutex := CreateEvent(Nil, true, False, 'FRE_EVENT');

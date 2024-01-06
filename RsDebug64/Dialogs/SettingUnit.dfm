@@ -4,8 +4,8 @@ object SettingForm: TSettingForm
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'SettingForm'
-  ClientHeight = 422
-  ClientWidth = 450
+  ClientHeight = 550
+  ClientWidth = 396
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,44 +15,57 @@ object SettingForm: TSettingForm
   OldCreateOrder = False
   Position = poOwnerFormCenter
   OnActivate = FormActivate
+  DesignSize = (
+    396
+    550)
   PixelsPerInch = 96
   TextHeight = 13
   object OkBtn: TButton
-    Left = 280
-    Top = 392
+    Left = 221
+    Top = 518
     Width = 75
     Height = 25
+    Anchors = [akRight, akBottom]
     Caption = '&Ok'
     Default = True
     ModalResult = 1
     TabOrder = 0
     OnClick = OkBtnClick
+    ExplicitTop = 509
   end
   object Button2: TButton
-    Left = 368
-    Top = 392
+    Left = 309
+    Top = 518
     Width = 75
     Height = 25
+    Anchors = [akRight, akBottom]
     Caption = '&Cancel'
     ModalResult = 2
     TabOrder = 1
+    ExplicitTop = 509
   end
   object PageControl1: TPageControl
     Left = 5
     Top = 4
-    Width = 444
-    Height = 381
+    Width = 385
+    Height = 507
     ActivePage = TabSheet1
+    Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 2
+    ExplicitHeight = 498
     object TabSheet1: TTabSheet
       Caption = 'Og'#243'lne'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 470
       object Label1: TLabel
-        Left = 74
-        Top = 8
-        Width = 200
+        Left = 4
+        Top = 4
+        Width = 167
         Height = 17
         Alignment = taRightJustify
-        Caption = 'Zapisz ustawienia przy wyj'#347'ciu'
+        Caption = 'Save setting on shutdown'
         Font.Charset = EASTEUROPE_CHARSET
         Font.Color = clWindowText
         Font.Height = -15
@@ -61,12 +74,12 @@ object SettingForm: TSettingForm
         ParentFont = False
       end
       object Label2: TLabel
-        Left = 111
-        Top = 32
-        Width = 163
+        Left = 4
+        Top = 28
+        Width = 174
         Height = 17
         Alignment = taRightJustify
-        Caption = 'Autom. od'#347'wie'#380' plik MAP'
+        Caption = 'Autom. refresh of variables'
         Font.Charset = EASTEUROPE_CHARSET
         Font.Color = clWindowText
         Font.Height = -15
@@ -75,12 +88,12 @@ object SettingForm: TSettingForm
         ParentFont = False
       end
       object Label3: TLabel
-        Left = 30
-        Top = 56
-        Width = 242
+        Left = 25
+        Top = 102
+        Width = 233
         Height = 17
         Alignment = taRightJustify
-        Caption = #321#261'cz obszary do czytania poni'#380'ej (bt)'
+        Caption = 'Connect memory regions below (bt)'
         Font.Charset = EASTEUROPE_CHARSET
         Font.Color = clWindowText
         Font.Height = -15
@@ -89,12 +102,12 @@ object SettingForm: TSettingForm
         ParentFont = False
       end
       object Label4: TLabel
-        Left = 125
-        Top = 80
-        Width = 147
+        Left = 143
+        Top = 126
+        Width = 115
         Height = 17
         Alignment = taRightJustify
-        Caption = 'Max. rozmiar zmiennej'
+        Caption = 'Max. variable size'
         Font.Charset = EASTEUROPE_CHARSET
         Font.Color = clWindowText
         Font.Height = -15
@@ -103,8 +116,8 @@ object SettingForm: TSettingForm
         ParentFont = False
       end
       object MaxVarSizeEdit: TSpinEdit
-        Left = 288
-        Top = 80
+        Left = 274
+        Top = 125
         Width = 65
         Height = 22
         Font.Charset = EASTEUROPE_CHARSET
@@ -115,72 +128,40 @@ object SettingForm: TSettingForm
         MaxValue = 0
         MinValue = 0
         ParentFont = False
-        TabOrder = 0
+        TabOrder = 4
         Value = 16
       end
       object AutoRefreshmapBox: TComboBox
-        Left = 287
-        Top = 31
+        Left = 191
+        Top = 27
         Width = 73
         Height = 21
         Style = csDropDownList
         ItemIndex = 0
         TabOrder = 1
-        Text = 'NIE'
+        Text = 'NO'
         Items.Strings = (
-          'NIE'
-          'TAK'
-          'PYTAJ')
+          'NO'
+          'YES'
+          'ASK')
       end
       object AutoSaveBox: TComboBox
-        Left = 287
-        Top = 7
+        Left = 191
+        Top = 3
         Width = 73
         Height = 21
         Style = csDropDownList
         ItemIndex = 0
-        TabOrder = 2
-        Text = 'NIE'
+        TabOrder = 0
+        Text = 'NO'
         Items.Strings = (
-          'NIE'
-          'TAK'
-          'PYTAJ')
-      end
-      object GroupBox1: TGroupBox
-        Left = 16
-        Top = 120
-        Width = 153
-        Height = 73
-        Caption = 'W listach zmienny umie'#347#263':'
-        TabOrder = 3
-        object SelectAsmBox: TCheckBox
-          Left = 8
-          Top = 16
-          Width = 137
-          Height = 17
-          Caption = 'Zmienne assemblera'
-          TabOrder = 0
-        end
-        object SelectC_Box: TCheckBox
-          Left = 8
-          Top = 32
-          Width = 97
-          Height = 17
-          Caption = 'Zmienne "C"'
-          TabOrder = 1
-        end
-        object SelectSysBox: TCheckBox
-          Left = 8
-          Top = 48
-          Width = 129
-          Height = 17
-          Caption = 'Zmienne systemowe'
-          TabOrder = 2
-        end
+          'NO'
+          'YES'
+          'ASK')
       end
       object ScalMemEdit: TSpinEdit
-        Left = 288
-        Top = 56
+        Left = 274
+        Top = 102
         Width = 65
         Height = 22
         Font.Charset = EASTEUROPE_CHARSET
@@ -191,75 +172,26 @@ object SettingForm: TSettingForm
         MaxValue = 200
         MinValue = 2
         ParentFont = False
-        TabOrder = 4
+        TabOrder = 3
         Value = 10
       end
-      object SectionBox: TGroupBox
-        Left = 192
-        Top = 120
-        Width = 169
-        Height = 161
-        Caption = 'Przynale'#380'no'#347'c do sekcji '
-        TabOrder = 5
-        object AllSectionBox: TRadioButton
-          Left = 8
-          Top = 16
-          Width = 113
-          Height = 17
-          Caption = 'Wszystkie zmienne'
-          TabOrder = 0
-        end
-        object SelSectionBox: TRadioButton
-          Left = 8
-          Top = 32
-          Width = 137
-          Height = 17
-          Caption = 'Tylko z zmienne z sekcji'
-          TabOrder = 1
-        end
-        object SectionsEdit: TMemo
-          Left = 8
-          Top = 72
-          Width = 153
-          Height = 81
-          Font.Charset = EASTEUROPE_CHARSET
-          Font.Color = clWindowText
-          Font.Height = -11
-          Font.Name = 'Courier'
-          Font.Style = []
-          Lines.Strings = (
-            '.text')
-          ParentFont = False
-          TabOrder = 2
-        end
-        object SelNoSectionBox: TRadioButton
-          Left = 8
-          Top = 48
-          Width = 137
-          Height = 17
-          Caption = 'Za wyj'#261'tkiem sekcji'
-          Checked = True
-          TabOrder = 3
-          TabStop = True
-        end
-      end
       object MotorolaBox: TRadioGroup
-        Left = 16
-        Top = 200
-        Width = 153
-        Height = 65
-        Caption = 'Porz'#261'dek pami'#281'ci'
+        Left = 10
+        Top = 160
+        Width = 96
+        Height = 76
+        Caption = 'Byte order'
         ItemIndex = 0
         Items.Strings = (
-          'Intel'
-          'Motorola')
-        TabOrder = 6
+          'Litle indian'
+          'Big indian')
+        TabOrder = 5
       end
       object WinTabsBox: TRadioGroup
-        Left = 16
-        Top = 272
-        Width = 153
-        Height = 65
+        Left = 245
+        Top = 160
+        Width = 75
+        Height = 76
         Caption = 'WinTabs'
         Items.Strings = (
           'Off'
@@ -268,17 +200,81 @@ object SettingForm: TSettingForm
         TabOrder = 7
       end
       object MainPtrSizeGrp: TRadioGroup
-        Left = 200
-        Top = 285
-        Width = 97
-        Height = 65
+        Left = 126
+        Top = 160
+        Width = 95
+        Height = 76
         Caption = 'PtrSize'
         ItemIndex = 2
         Items.Strings = (
           '8bit'
           '16bit'
           '32bit')
+        TabOrder = 6
+      end
+      object ObjdumpPathEdit: TLabeledEdit
+        Left = 11
+        Top = 258
+        Width = 349
+        Height = 25
+        EditLabel.Width = 151
+        EditLabel.Height = 17
+        EditLabel.Caption = 'Path to "objdump" tools'
+        EditLabel.Font.Charset = EASTEUROPE_CHARSET
+        EditLabel.Font.Color = clWindowText
+        EditLabel.Font.Height = -15
+        EditLabel.Font.Name = 'Arial'
+        EditLabel.Font.Style = []
+        EditLabel.ParentFont = False
+        Font.Charset = EASTEUROPE_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Arial'
+        Font.Style = []
+        ParentFont = False
         TabOrder = 8
+      end
+      object LoadOnStartUpBox: TCheckBox
+        Left = 3
+        Top = 69
+        Width = 247
+        Height = 17
+        Caption = 'Load last map file on start up'
+        Font.Charset = EASTEUROPE_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Arial'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 2
+      end
+    end
+  end
+  inline SectionsDefFrame: TSectionsDefFrame
+    Left = 20
+    Top = 320
+    Width = 349
+    Height = 178
+    TabOrder = 3
+    ExplicitLeft = 20
+    ExplicitTop = 320
+    ExplicitWidth = 349
+    ExplicitHeight = 178
+    inherited Panel1: TPanel
+      Width = 349
+      Height = 178
+      ExplicitWidth = 349
+      ExplicitHeight = 178
+      inherited Label1: TLabel
+        Width = 108
+        Font.Name = 'MS Sans Serif'
+        ExplicitWidth = 108
+      end
+      inherited SectionsListMemo: TMemo
+        Width = 159
+        Height = 156
+        ExplicitWidth = 159
+        ExplicitHeight = 156
       end
     end
   end

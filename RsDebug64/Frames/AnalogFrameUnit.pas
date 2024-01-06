@@ -1733,7 +1733,7 @@ var
   jBuild: TJSONBuilder;
   jBuild2: TJSONBuilder;
   jArr: TJSONArray;
-  IntArr: TIntDynArr;
+  IntArr: TIntArr;
 begin
   Result.Init;
 
@@ -1811,7 +1811,7 @@ var
   n, i: integer;
   s: string;
   jArr: TJSONArray;
-  IntArr: TIntDynArr;
+  IntArr: TIntArr;
   C: integer;
   jLoader: TJSONLoader;
   jLoader2: TJSONLoader;

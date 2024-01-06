@@ -9,18 +9,18 @@ inherited Rz40EventsForm: TRz40EventsForm
   end
   inherited ToolBar1: TToolBar
     object ToolButton1: TToolButton
-      Left = 178
+      Left = 81
       Top = 0
       Action = actReadEvents
     end
     object ReadRepeatBtn: TToolButton
-      Left = 201
+      Left = 104
       Top = 0
       Action = actReadRepeat
       Style = tbsCheck
     end
     object ToolButton4: TToolButton
-      Left = 224
+      Left = 127
       Top = 0
       Width = 17
       Caption = 'ToolButton4'
@@ -28,17 +28,17 @@ inherited Rz40EventsForm: TRz40EventsForm
       Style = tbsSeparator
     end
     object ToolButton2: TToolButton
-      Left = 241
+      Left = 144
       Top = 0
       Action = actLoadEvDef
     end
     object ToolButton5: TToolButton
-      Left = 264
+      Left = 167
       Top = 0
       Action = actShowEvendsDef
     end
     object ToolButton6: TToolButton
-      Left = 287
+      Left = 190
       Top = 0
       Action = actClearMemo
     end
@@ -95,31 +95,31 @@ inherited Rz40EventsForm: TRz40EventsForm
     ExplicitHeight = 366
   end
   inherited ActionList2: TActionList
-    object actReadEvents: TAction
+    object actReadEvents: TAction [2]
       Caption = 'actReadEvents'
       ImageIndex = 4
       OnExecute = actReadEventsExecute
       OnUpdate = actReadEventsUpdate
     end
-    object actLoadEvDef: TAction
+    object actLoadEvDef: TAction [3]
       Caption = 'actLoadEvDef'
       Hint = 'Load Events Def in Etmanager Format'
       ImageIndex = 12
       OnExecute = actLoadEvDefExecute
     end
-    object actShowEvendsDef: TAction
+    object actShowEvendsDef: TAction [4]
       Caption = 'actShowEvendsDef'
       Hint = 'Poka'#380' definicj'#281' zdarze'#324
       ImageIndex = 14
       OnExecute = actShowEvendsDefExecute
     end
-    object actClearMemo: TAction
+    object actClearMemo: TAction [5]
       Caption = 'actClearMemo'
       Hint = 'Wyczy'#347#263' memo'
       ImageIndex = 15
       OnExecute = actClearMemoExecute
     end
-    object actReadRepeat: TAction
+    object actReadRepeat: TAction [6]
       Caption = 'actReadRepeat'
       Hint = 'Odczyt ci'#261'g'#322'y'
       ImageIndex = 7
@@ -129,7 +129,7 @@ inherited Rz40EventsForm: TRz40EventsForm
   end
   inherited TreeImages: TImageList
     Bitmap = {
-      494C010104000900240010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010104000900300010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -402,7 +402,7 @@ inherited Rz40EventsForm: TRz40EventsForm
   end
   inherited ToolBarImgList: TImageList
     Bitmap = {
-      494C010110001300140010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101100013001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

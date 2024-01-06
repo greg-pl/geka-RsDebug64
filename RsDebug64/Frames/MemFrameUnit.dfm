@@ -9,17 +9,13 @@ object MemFrame: TMemFrame
     Top = 0
     Width = 951
     Height = 673
-    ActivePage = ChartSheet
+    ActivePage = ByteSheet
     Align = alClient
     TabOrder = 0
     TabPosition = tpBottom
     object ByteSheet: TTabSheet
       Caption = 'BYTE'
       OnShow = ByteSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object ByteGrid: TStringGrid
         Left = 0
         Top = 33
@@ -70,10 +66,6 @@ object MemFrame: TMemFrame
       Caption = 'WORD'
       ImageIndex = 1
       OnShow = WordSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object WordGRid: TStringGrid
         Left = 0
         Top = 33
@@ -124,10 +116,6 @@ object MemFrame: TMemFrame
       Caption = 'DWord'
       ImageIndex = 3
       OnShow = DWordSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object DWordGrid: TStringGrid
         Left = 0
         Top = 0
@@ -150,10 +138,6 @@ object MemFrame: TMemFrame
       Caption = 'FLOAT'
       ImageIndex = 2
       OnShow = FloatSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object FloatGrid: TStringGrid
         Left = 0
         Top = 0
@@ -172,63 +156,10 @@ object MemFrame: TMemFrame
         OnSetEditText = FloatGridSetEditText
       end
     end
-    object DFloatSheet: TTabSheet
-      Caption = 'DFLOAT'
-      ImageIndex = 8
-      OnShow = DFloatSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
-      object DFloatGrid: TStringGrid
-        Left = 0
-        Top = 0
-        Width = 943
-        Height = 647
-        Align = alClient
-        ColCount = 9
-        DefaultColWidth = 90
-        DefaultRowHeight = 18
-        DefaultDrawing = False
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
-        TabOrder = 0
-        OnDrawCell = GridDrawCell
-        OnGetEditText = GridGetEditText
-        OnKeyDown = GridKeyDown
-        OnSetEditText = DFloatGridSetEditText
-      end
-    end
-    object DspProgSheet: TTabSheet
-      Caption = 'DspProg'
-      ImageIndex = 4
-      OnShow = DspProgSheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
-      object DspProgGrid: TStringGrid
-        Left = 0
-        Top = 0
-        Width = 943
-        Height = 647
-        Align = alClient
-        ColCount = 9
-        DefaultColWidth = 60
-        DefaultRowHeight = 18
-        DefaultDrawing = False
-        TabOrder = 0
-        OnDrawCell = GridDrawCell
-        OnGetEditText = GridGetEditText
-      end
-    end
     object F1_15Sheet: TTabSheet
       Caption = '1.15'
       ImageIndex = 5
       OnShow = F1_15SheetShow
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object F1_15Grid: TStringGrid
         Left = 0
         Top = 0
@@ -279,10 +210,11 @@ object MemFrame: TMemFrame
           object Label1: TLabel
             Left = 0
             Top = 0
-            Width = 65
+            Width = 150
             Height = 13
             Align = alTop
             Caption = 'Ilo'#347#263' kana'#322#243'w'
+            ExplicitWidth = 65
           end
           object SerCntEdit: TSpinEdit
             Left = 0
@@ -602,113 +534,6 @@ object MemFrame: TMemFrame
         end
       end
     end
-    object WekSheet: TTabSheet
-      Caption = 'Wektory'
-      ImageIndex = 7
-      OnShow = WekSheetShow
-      object Panel3: TPanel
-        Left = 0
-        Top = 0
-        Width = 113
-        Height = 647
-        Align = alLeft
-        BevelOuter = bvNone
-        TabOrder = 0
-        object Label2: TLabel
-          Left = 0
-          Top = 0
-          Width = 113
-          Height = 13
-          Align = alTop
-          Caption = 'Ilo'#347#263' wektor'#243'w'
-          ExplicitWidth = 72
-        end
-        object WekCntEdit: TSpinEdit
-          Left = 0
-          Top = 19
-          Width = 105
-          Height = 22
-          Font.Charset = EASTEUROPE_CHARSET
-          Font.Color = clWindowText
-          Font.Height = -11
-          Font.Name = 'Courier'
-          Font.Style = []
-          MaxValue = 32
-          MinValue = 1
-          ParentFont = False
-          TabOrder = 0
-          Value = 4
-          OnChange = WekCntEditChange
-        end
-        object WekListBox: TListBox
-          Left = 0
-          Top = 48
-          Width = 105
-          Height = 265
-          Font.Charset = EASTEUROPE_CHARSET
-          Font.Color = clWindowText
-          Font.Height = -11
-          Font.Name = 'Courier'
-          Font.Style = []
-          ItemHeight = 13
-          ParentFont = False
-          PopupMenu = WekListMenu
-          TabOrder = 1
-        end
-      end
-      object WekChart: TChart
-        Left = 113
-        Top = 0
-        Width = 830
-        Height = 647
-        BackWall.Brush.Style = bsClear
-        Legend.ColorWidth = 80
-        Legend.LegendStyle = lsValues
-        Legend.Symbol.Width = 80
-        Title.Text.Strings = (
-          'TChart')
-        Title.Visible = False
-        BottomAxis.DateTimeFormat = 'yy-MM-dd'
-        BottomAxis.LabelStyle = talValue
-        LeftAxis.LabelsSize = 4
-        LeftAxis.MinorTickCount = 5
-        TopAxis.LabelsMultiLine = True
-        TopAxis.LabelsSeparation = 90
-        TopAxis.LabelsSize = 2
-        TopAxis.LabelStyle = talValue
-        TopAxis.MinorTickCount = 9
-        View3D = False
-        Align = alClient
-        TabOrder = 1
-        DefaultCanvas = 'TGDIPlusCanvas'
-        ColorPaletteIndex = 13
-        object WekSeries: TArrowSeries
-          HorizAxis = aTopAxis
-          Marks.Frame.Visible = False
-          Marks.Transparent = True
-          SeriesColor = clRed
-          ClickableLine = False
-          Pointer.HorizSize = 5
-          Pointer.InflateMargins = False
-          Pointer.Style = psRectangle
-          Pointer.VertSize = 10
-          XValues.DateTime = False
-          XValues.Name = 'X'
-          XValues.Order = loAscending
-          YValues.Name = 'Y'
-          YValues.Order = loNone
-          EndXValues.Name = 'EndX'
-          EndXValues.Order = loNone
-          EndYValues.Name = 'EndY'
-          EndYValues.Order = loNone
-          StartXValues.DateTime = False
-          StartXValues.Name = 'X'
-          StartXValues.Order = loAscending
-          StartYValues.Name = 'Y'
-          StartYValues.Order = loNone
-        end
-      end
-    end
   end
   object ChartListMenu: TPopupMenu
     Left = 40
@@ -739,11 +564,9 @@ object MemFrame: TMemFrame
     Top = 72
     object Zmienazw1: TMenuItem
       Caption = 'Zmie'#324' nazw'#281
-      OnClick = Zmienazw1Click
     end
     object Zmiekolor1: TMenuItem
       Caption = 'Zmie'#324' kolor'
-      OnClick = Zmiekolor1Click
     end
   end
 end

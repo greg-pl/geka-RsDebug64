@@ -87,7 +87,7 @@ type
     procedure SaveToIni(Ini : TDotIniFile; SName : string);
     procedure LoadFromIni(Ini : TDotIniFile; SName : string); //todo
 
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     procedure TypeDefChg; override;
     function  GetDefaultCaption : string; override;
     procedure SetStruct(Adr : integer; Typ : THType);
@@ -116,7 +116,7 @@ begin
   inherited;
   s := TypeDefBox.Text;
   GlobTypeList.LoadTypeList(TypeDefBox.Items);
-  ReloadMapParser;
+  ReloadVarList;
   BufSt := false;
   TypeDefBox.ItemIndex := TypeDefBox.Items.IndexOf(s);
   MemBxLeft := VarListBox.Left;
@@ -129,10 +129,10 @@ begin
   ShowParamAct.Execute;
 end;
 
-procedure TStructShowForm.ReloadMapParser;
+procedure TStructShowForm.ReloadVarList;
 begin
   inherited;
-  MapParser.MapItemList.LoadToList(VarListBox.Items);
+  MapParser.MapItemList.LoadToList(VarListBox.Items,ProgCfg.SectionsCfg);
 end;
 
 procedure TStructShowForm.TypeDefChg;

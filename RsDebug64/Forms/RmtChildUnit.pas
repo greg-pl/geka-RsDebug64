@@ -2,6 +2,8 @@ unit RmtChildUnit;
 
 interface
 
+{$DEFINE UsingVCL}
+
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, StdCtrls,
   Dialogs, IniFiles, RsdDll, CommThreadUnit, ImgList, ComCtrls, ActnList, ToolWin, ExtCtrls,
@@ -32,13 +34,18 @@ type
     ShowParamAct: TAction;
     TreeImages: TImageList;
     ToolBarImgList: TImageList;
+    ToolButton13: TToolButton;
+    CloseWinNoAddAct: TAction;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure StatusBarDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
     procedure EditTitleActExecute(Sender: TObject);
     procedure ShowParamActExecute(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormActivate(Sender: TObject);
+    procedure CloseWinNoAddActExecute(Sender: TObject);
   private
+    FNoAddToWinCloseList: boolean;
+
     FTrnLamp: boolean;
     FProgress: real;
     MainWinInterf: IMainWinInterf;
@@ -46,8 +53,10 @@ type
     procedure DrawProgress;
     function FGetDev: TCmmDevice;
     function FGetCommThread: TCommThread;
+    function FGetTitle: string;
   protected
-    Title: string;
+    PrvTitle: string;
+    ChildIndex: integer;
 
     AdrCpx: TAdrCpx;
     procedure DoMsg(s: string);
@@ -56,18 +65,21 @@ type
     procedure FSetTrnLamp(ALamp: boolean);
     function IsConnected: boolean;
     procedure doParamsVisible(vis: boolean); virtual;
+    procedure CopyFromTemplateWin(TemplateWin : TChildForm); virtual;
   public
-    constructor CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent);
+    constructor CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent; TemplateWin : TChildForm);
     property Dev: TCmmDevice read FGetDev;
     function isDevConnected: boolean;
     property CommThread: TCommThread read FGetCommThread;
+    property Title: string read FGetTitle;
+    procedure NoAddToClosedList;
 
     procedure Start; virtual;
 
     function GetJSONObject: TJSONBuilder; virtual;
     procedure LoadfromJson(jParent: TJSONLoader); virtual;
 
-    procedure ReloadMapParser; virtual;
+    procedure ReloadVarList; virtual;
     procedure TypeDefChg; virtual;
     procedure SettingChg; virtual;
     function GetDefaultCaption: string; virtual;
@@ -78,23 +90,53 @@ type
 
   end;
 
-var
-  ChildForm: TChildForm;
+  TChildFormClass = class of TChildForm;
 
 implementation
 
 {$R *.dfm}
 
-constructor TChildForm.CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent);
+uses Main;
+
+var
+  GlobaChildIdx: integer;
+
+constructor TChildForm.CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent; TemplateWin : TChildForm);
 begin
   Create(AOwner);
   MainWinInterf := AMainWinInterf;
+  ChildIndex := GlobaChildIdx;
+  inc(GlobaChildIdx);
+  FNoAddToWinCloseList := false;
+  if Assigned(TemplateWin) then
+    CopyFromTemplateWin(TemplateWin);
 end;
 
 procedure TChildForm.FormDestroy(Sender: TObject);
+var
+  jBuilder: TJSONBuilder;
+  jLoader: TJSONLoader;
+  Item: TClosedWin;
 begin
   if Assigned(Application.MainForm) then // nil jesli aplikacja zamykana
+  begin
+    if FNoAddToWinCloseList = false then
+    begin
+      jBuilder := GetJSONObject;
+      jLoader.Init(jBuilder.jobj);
+      Item := TClosedWin.Create;
+      if Item.LoadfromJson(jLoader) then
+        ProgCfg.ClosedWinList.Insert(0, Item)
+      else
+        Item.Free;
+    end;
     PostMessage(Application.MainForm.Handle, wm_ChildClosed, integer(self), 0);
+  end;
+end;
+
+procedure TChildForm.NoAddToClosedList;
+begin
+  FNoAddToWinCloseList := true;
 end;
 
 procedure TChildForm.FormActivate(Sender: TObject);
@@ -117,7 +159,8 @@ end;
 
 procedure TChildForm.DoMsg(s: string);
 begin
-  MainWinInterf.Msg(s);
+  if Assigned(MainWinInterf) then
+    MainWinInterf.Msg(s);
 end;
 
 procedure TChildForm.Start;
@@ -134,8 +177,8 @@ function TChildForm.GetJSONObject: TJSONBuilder;
 begin
   Result.Init;
 
-  Result.Add('WinType', ClassName);
-  Result.Add('Title', Title);
+  Result.Add(JSON_WIN_TYPE, ClassName);
+  Result.Add(JSON_WIN_TITLE, Title);
   Result.Add('WinState', ord(WindowState));
   Result.Add('ParamPanel', ParamPanelBtn.Down);
   if WindowState = wsNormal then
@@ -143,9 +186,14 @@ begin
 end;
 
 procedure TChildForm.LoadfromJson(jParent: TJSONLoader);
+var
+  rdTitle: string;
 begin
   WindowState := TWindowState(jParent.LoadDef('WinState', ord(wsNormal)));
-  jParent.Load('Title', Title);
+  jParent.Load('Title', rdTitle);
+  if rdTitle <> GetDefaultCaption then
+    PrvTitle := rdTitle;
+
   jParent.Load_TLWH(self);
   jParent.LoadBtnDown('ParamPanel', ParamPanelBtn);
   ParamPanel.Visible := ParamPanelBtn.Down;
@@ -153,7 +201,7 @@ begin
   ShowCaption;
 end;
 
-procedure TChildForm.ReloadMapParser;
+procedure TChildForm.ReloadVarList;
 begin
 
 end;
@@ -258,6 +306,13 @@ begin
   Result := MainWinInterf.GetCommThread;
 end;
 
+function TChildForm.FGetTitle: string;
+begin
+  Result := PrvTitle;
+  if Result = '' then
+    Result := GetDefaultCaption;
+end;
+
 procedure TChildForm.StatusBarDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
 begin
   if Panel.ID = 0 then
@@ -270,10 +325,10 @@ procedure TChildForm.EditTitleActExecute(Sender: TObject);
 var
   s: string;
 begin
-  s := Title;
+  s := PrvTitle;
   if InputQuery('Title', 'Input title :', s) then
   begin
-    Title := s;
+    PrvTitle := s;
     ShowCaption;
   end;
 end;
@@ -287,12 +342,12 @@ procedure TChildForm.ShowCaption;
 var
   txt: string;
 begin
-  if Title <> '' then
+  if PrvTitle <> '' then
   begin
     txt := getChildSign;
     if txt <> '' then
       txt := txt + ': ';
-    Caption := txt + Title
+    Caption := txt + PrvTitle
   end
   else
     Caption := GetDefaultCaption;
@@ -313,5 +368,21 @@ procedure TChildForm.doParamsVisible(vis: boolean);
 begin
 
 end;
+
+procedure TChildForm.CloseWinNoAddActExecute(Sender: TObject);
+begin
+  FNoAddToWinCloseList := true;
+  Close;
+end;
+
+procedure TChildForm.CopyFromTemplateWin(TemplateWin : TChildForm);
+begin
+
+end;
+
+
+initialization
+
+GlobaChildIdx := 1;
 
 end.

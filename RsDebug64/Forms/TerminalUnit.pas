@@ -13,7 +13,6 @@ uses
   System.JSON,
   JSonUtils;
 
-
 type
   TTerminalForm = class(TChildForm)
     ReadBtn: TToolButton;
@@ -27,9 +26,12 @@ type
   private
     TermMemo: TExtG2Memo;
     procedure TerminalKeyPressEventProc(Sender: TObject; var Key: Char);
+  protected
+    function GetDefaultCaption: string; override;
+
   public
     function GetJSONObject: TJSONBuilder; override;
-    procedure LoadfromJson(jParent: TJSONLoader); override;
+    procedure LoadfromJson(jLoader: TJSONLoader); override;
 
     procedure AfterConnChanged; override;
   end;
@@ -53,13 +55,10 @@ end;
 procedure TTerminalForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  if Title = '' then
-    Title := 'Term';
   ShowCaption;
   if isDevConnected then
     dev.TerminalSetPipe(TERMINAL_ZERO, TermMemo.PipeInHandle);
 end;
-
 
 procedure TTerminalForm.TerminalKeyPressEventProc(Sender: TObject; var Key: Char);
 var
@@ -106,19 +105,38 @@ begin
   end;
 end;
 
+function TTerminalForm.GetDefaultCaption: string;
+begin
+  Result := 'Terminal';
+end;
 
 function TTerminalForm.GetJSONObject: TJSONBuilder;
 begin
   Result := inherited GetJSONObject;
-
+  Result.Add('AddTimeToLog', TermMemo.AddTimeToLog);
+  Result.Add('ScrollToEnd', TermMemo.ScrollToEnd);
+  Result.Add('Logging', TermMemo.Logging);
+  Result.Add('LogFileName', TermMemo.LogFileName);
 end;
 
-procedure TTerminalForm.LoadfromJson(jParent: TJSONLoader);
+procedure TTerminalForm.LoadfromJson(jLoader: TJSONLoader);
+var
+  q: boolean;
+  s: string;
 begin
   inherited;
+  if jLoader.Load('AddTimeToLog', q) then
+    TermMemo.AddTimeToLog := q;
 
+  if jLoader.Load('ScrollToEnd', q) then
+    TermMemo.ScrollToEnd := q;
+
+  if jLoader.Load('LogFileName', s) then
+    TermMemo.LogFileName := s;
+
+  if jLoader.Load('Logging', q) then
+    TermMemo.Logging := q;
 end;
-
 
 procedure TTerminalForm.ReadBtnClick(Sender: TObject);
 var

@@ -19,6 +19,7 @@ type
     ProgressHandle: THandle;
     FShortDriverName: string;
     SubGroups: TSubGroups;
+    procedure FreeLibMemory(pch: pAnsiChar);
   public
     constructor Create(AHandle: THandle; ConnectParamJson: string);
     destructor Destroy; override;
@@ -34,10 +35,10 @@ type
     function IsDllReady: boolean;
     function getDriverShortName: string;
 
-    function GetDrvParamList(ToSet: boolean): string; stdcall;
-    function SetDrvParam(ParamName, ParamValue: string): TStatus; stdcall;
-    function GetDrvStatus(ParamName: string; var ParamValue: string): TStatus; stdcall;
-
+    function GetDrvParamList(ToSet: boolean): string;
+    function GetDrvParams: String;
+    function SetDrvParam(ParamName, ParamValue: string): TStatus;
+    function GetDrvInfo: String;
   public
     // funkcje podstawowe Modbusa
     function isStdModbus: boolean;
@@ -84,6 +85,8 @@ type
     FileName: string;
     LibProperty: string;
     LibID: integer;
+    constructor Create;
+    destructor Destroy; override;
     procedure SetLibProperty(txt: string);
     procedure SetLoggerHandle(H: THandle);
     procedure RegisterMe;
@@ -105,6 +108,8 @@ type
     procedure SetLoggerHandle(H: THandle);
     function FindLibraryByName(Name: string): TCmmLibrary;
     function FindLibraryByLibID(LibID: integer): TCmmLibrary;
+    function FindLibraryByHandle(CmmHandle: THandle): TCmmLibrary;
+
     function LibraryGetMemFunc(LibID: integer; size: integer): pointer;
     procedure LoadDriverList(LibList: TStrings);
   end;
@@ -148,7 +153,8 @@ type
   TRegisterCallBackFun = function(ID: TAccId; CmmId: integer; CallBackFunc: TCallBackFunc): TStatus; stdcall;
   TSetBreakFlag = function(ID: TAccId; Val: boolean): TStatus; stdcall;
 
-  TGetDrvStatus = function(ID: TAccId; ParamName: pAnsiChar; ParamValue: pAnsiChar; MaxRpl: integer): TStatus; stdcall;
+  TGetDrvInfo = function(ID: TAccId): pAnsiChar; stdcall;
+  TGetDrvParams = function(ID: TAccId): pAnsiChar; stdcall;
   TSetDrvParam = function(ID: TAccId; ParamName: pAnsiChar; ParamValue: pAnsiChar): TStatus; stdcall;
 
   // funkcje podstawowe Modbusa
@@ -533,7 +539,7 @@ begin
   end;
 end;
 
-function TCmmDevice.GetDrvParamList(ToSet: boolean): string; stdcall;
+function TCmmDevice.GetDrvParamList(ToSet: boolean): string;
 var
   _GetDrvParamList: TGetDrvParamList;
 begin
@@ -544,7 +550,34 @@ begin
     Result := '';
 end;
 
-function TCmmDevice.SetDrvParam(ParamName, ParamValue: string): TStatus; stdcall;
+procedure TCmmDevice.FreeLibMemory(pch: pAnsiChar);
+var
+  CmmLibrary: TCmmLibrary;
+begin
+  CmmLibrary := CmmLibraryList.FindLibraryByHandle(DllHandle);
+  if Assigned(CmmLibrary) then
+    CmmLibrary.FreeLibMemory(pch)
+  else
+    raise Exception.Create('Library not found');
+end;
+
+function TCmmDevice.GetDrvParams: String;
+var
+  _GetDrvParams: TGetDrvParams;
+  pch: pAnsiChar;
+begin
+  @_GetDrvParams := GetProcAddress(DllHandle, 'GetDrvParams');
+  if Assigned(_GetDrvParams) then
+  begin
+    pch := _GetDrvParams(FID);
+    Result := String(pch);
+    FreeLibMemory(pch)
+  end
+  else
+    Result := '';
+end;
+
+function TCmmDevice.SetDrvParam(ParamName, ParamValue: string): TStatus;
 var
   _SetDrvParam: TSetDrvParam;
 begin
@@ -555,19 +588,20 @@ begin
     Result := stNoImpl;
 end;
 
-function TCmmDevice.GetDrvStatus(ParamName: string; var ParamValue: string): TStatus; stdcall;
+function TCmmDevice.GetDrvInfo: String;
 var
-  _GetDrvStatus: TGetDrvStatus;
+  _GetDrvInfo: TGetDrvInfo;
+  pch: pAnsiChar;
 begin
-  @_GetDrvStatus := GetProcAddress(DllHandle, 'GetDrvStatus');
-  if Assigned(_GetDrvStatus) then
+  @_GetDrvInfo := GetProcAddress(DllHandle, 'GetDrvInfo');
+  if Assigned(_GetDrvInfo) then
   begin
-    setlength(ParamValue, 100);
-    Result := _GetDrvStatus(FID, pAnsiChar(ParamName), pAnsiChar(ParamValue), length(ParamValue) - 1);
-    setlength(ParamValue, strlen(pchar(ParamValue)));
+    pch := _GetDrvInfo(FID);
+    Result := String(pch);
+    FreeLibMemory(pch);
   end
   else
-    Result := stNoImpl;
+    Result := '';
 end;
 
 procedure TCmmDevice.SetProgress(Ev: integer; R: real);
@@ -592,7 +626,6 @@ begin
       evFlow:
         begin
           SendMessage(ProgressHandle, wm_TrnsFlow, trunc(R), 0);
-
 
         end;
     end;
@@ -630,9 +663,21 @@ end;
 
 // ----- TCmmLibrary ---------------------------------------------------------------------------------------------
 
-function LibGetMemFunction(LibID: integer; MemSize: integer): pointer; stdcall;
+function GlobLibGetMemFunction(LibID: integer; MemSize: integer): pointer; stdcall;
 begin
   Result := CmmLibraryList.LibraryGetMemFunc(LibID, MemSize);
+end;
+
+constructor TCmmLibrary.Create;
+begin
+  inherited;
+   MemList:= TObjectList.Create;
+end;
+
+destructor TCmmLibrary.Destroy;
+begin
+  inherited;
+  MemList.Free;
 end;
 
 procedure TCmmLibrary.RegisterMe;
@@ -644,7 +689,7 @@ begin
   @_SetGetMemFunction := GetProcAddress(CmmHandle, 'SetGetMemFunction');
   if Assigned(_SetGetMemFunction) then
   begin
-    _SetGetMemFunction(LibID, LibGetMemFunction);
+    _SetGetMemFunction(LibID, GlobLibGetMemFunction);
   end;
 
   @_GetLibProperty := GetProcAddress(CmmHandle, 'GetLibProperty');
@@ -689,7 +734,9 @@ begin
   begin
     MemList.Delete(idx);
     Result := true;
-  end;
+  end
+  else
+    raise Exception.Create('Memory to release not found');
 end;
 
 procedure TCmmLibrary.SetLibProperty(txt: string);
@@ -761,6 +808,21 @@ begin
   for i := 0 to Count - 1 do
   begin
     if (Items[i] as TCmmLibrary).LibID = LibID then
+    begin
+      Result := (Items[i] as TCmmLibrary);
+      break;
+    end;
+  end;
+end;
+
+function TCmmLibraryList.FindLibraryByHandle(CmmHandle: THandle): TCmmLibrary;
+var
+  i: integer;
+begin
+  Result := nil;
+  for i := 0 to Count - 1 do
+  begin
+    if (Items[i] as TCmmLibrary).CmmHandle = CmmHandle then
     begin
       Result := (Items[i] as TCmmLibrary);
       break;

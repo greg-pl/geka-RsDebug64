@@ -20,6 +20,7 @@ uses
   MemFrameUnit in 'Frames\MemFrameUnit.pas' {MemFrame: TFrame},
   AnalogFrameUnit in 'Frames\AnalogFrameUnit.pas' {AnalogFrame: TFrame},
   BinaryFrameUnit in 'Frames\BinaryFrameUnit.pas' {BinaryFrame: TFrame},
+  SectionsDefUnit in 'Frames\SectionsDefUnit.pas' {SectionsDefFrame: TFrame},
   StructShowUnit in 'Forms\StructShowUnit.pas' {StructShowForm},
   RegMemUnit in 'Forms\RegMemUnit.pas' {RegMemForm: TMemForm},
   BinaryMemUnit in 'Forms\BinaryMemUnit.pas' {BinaryMemForm},
@@ -50,7 +51,11 @@ uses
   SttFrameAddrIpUnit in '..\JSonSTT\SttFrameAddrIpUnit.pas' {SttFrameAddrIp: TFrame},
   SttScrollBoxUnit in '..\JSonSTT\SttScrollBoxUnit.pas',
   ExtG2MemoUnit in 'DComp\ExtG2MemoUnit.pas',
-  JSonUtils in '..\Common\JSonUtils.pas';
+  JSonUtils in '..\Common\JSonUtils.pas',
+  ElfParserUnit in 'Tools\ElfParserUnit.pas',
+  CallProcessUnit in 'Tools\CallProcessUnit.pas',
+  ProgressWindowUnit in 'Tools\ProgressWindowUnit.pas' {ProgressForm},
+  EditSectionsDialog in 'Dialogs\EditSectionsDialog.pas' {EditSectionsDlg};
 
 {$R *.res}
 

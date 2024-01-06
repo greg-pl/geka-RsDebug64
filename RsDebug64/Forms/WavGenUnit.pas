@@ -103,7 +103,7 @@ type
     procedure wmReadMem1(var Msg: TMessage); message wm_ReadMem1;
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
   public
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     function GetDefaultCaption: string; override;
 
     function GetJSONObject: TJSONBuilder; override;
@@ -135,7 +135,7 @@ end;
 procedure TWavGenForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 procedure TWavGenForm.PrepareHarmonGrid;
@@ -217,10 +217,10 @@ begin
   ShowCaption;
 end;
 
-procedure TWavGenForm.ReloadMapParser;
+procedure TWavGenForm.ReloadVarList;
 begin
   inherited;
-  MapParser.MapItemList.LoadToList(VarListBox.Items);
+  MapParser.MapItemList.LoadToList(VarListBox.Items,ProgCfg.SectionsCfg);
 end;
 
 function TWavGenForm.GetDefaultCaption: string;

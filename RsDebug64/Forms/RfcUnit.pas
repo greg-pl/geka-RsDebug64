@@ -72,7 +72,7 @@ type
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
 
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     function GetDefaultCaption: string; override;
   end;
 
@@ -115,7 +115,7 @@ begin
   begin
     ParameterList.Cells[0, i + 1] := IntToStr(i + 1);
   end;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 function TRfcForm.GetDefaultCaption: string;
@@ -123,7 +123,7 @@ begin
   result := 'RFC: ' + FunctionSelectBox.Text;
 end;
 
-procedure TRfcForm.ReloadMapParser;
+procedure TRfcForm.ReloadVarList;
 begin
   RfcInstanceAdr := MapParser.GetVarAdress(RFC_INSTANCE);
   if RfcInstanceAdr = UNKNOWN_ADRESS then
@@ -131,7 +131,6 @@ begin
   else
     StatusBar.Panels[2].Text := Format('RfcInstance: 0x%08x', [RfcInstanceAdr]);
 end;
-
 
 function TRfcForm.GetJSONObject: TJSONBuilder;
 var
@@ -148,7 +147,7 @@ begin
     jObj.Init;
     jObj.Add('Name', ParameterList.Cells[1, i + 1]);
     jObj.Add('Val', ParameterList.Cells[2, i + 1]);
-    jArr.AddElement(jObj.jobj);
+    jArr.AddElement(jObj.jObj);
   end;
   result.Add('Params', jArr);
 end;
@@ -177,7 +176,7 @@ end;
 procedure TRfcForm.FunctionSelectBoxDropDown(Sender: TObject);
 begin
   inherited;
-  MapParser.MapItemList.LoadToList(PREFIX, FunctionSelectBox.Items);
+  MapParser.MapItemList.LoadToList(PREFIX, FunctionSelectBox.Items, progCfg.SectionsCfg);
 
 end;
 

@@ -2,22 +2,22 @@ object OpenConnectionDlg: TOpenConnectionDlg
   Left = 227
   Top = 108
   Caption = 'Dialog'
-  ClientHeight = 397
-  ClientWidth = 478
+  ClientHeight = 485
+  ClientWidth = 476
   Color = clBtnFace
   ParentFont = True
   OldCreateOrder = True
-  Position = poScreenCenter
+  Position = poMainFormCenter
   OnCreate = FormCreate
   OnShow = FormShow
   DesignSize = (
-    478
-    397)
+    476
+    485)
   PixelsPerInch = 96
   TextHeight = 13
   object OKBtn: TButton
-    Left = 289
-    Top = 357
+    Left = 287
+    Top = 445
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -26,10 +26,12 @@ object OpenConnectionDlg: TOpenConnectionDlg
     ModalResult = 1
     TabOrder = 0
     OnClick = OKBtnClick
+    ExplicitLeft = 289
+    ExplicitTop = 357
   end
   object CancelBtn: TButton
-    Left = 385
-    Top = 357
+    Left = 383
+    Top = 445
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -37,12 +39,14 @@ object OpenConnectionDlg: TOpenConnectionDlg
     Caption = 'Cancel'
     ModalResult = 2
     TabOrder = 1
+    ExplicitLeft = 385
+    ExplicitTop = 357
   end
   object TabControl: TTabControl
     Left = 0
     Top = 0
-    Width = 478
-    Height = 344
+    Width = 476
+    Height = 432
     Align = alTop
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 2
@@ -52,14 +56,17 @@ object OpenConnectionDlg: TOpenConnectionDlg
     TabIndex = 0
     OnChange = TabControlChange
     OnChanging = TabControlChanging
+    ExplicitWidth = 478
+    ExplicitHeight = 344
     object Panel1: TPanel
       Left = 4
       Top = 24
-      Width = 470
+      Width = 468
       Height = 25
       Align = alTop
       ParentBackground = False
       TabOrder = 0
+      ExplicitWidth = 470
       object LibDescrLabel: TLabel
         Left = 5
         Top = 2

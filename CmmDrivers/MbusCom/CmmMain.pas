@@ -24,6 +24,7 @@ implementation
 // -------------------- Export ---------------------------------------------
 var
   GlobLibProperty: AnsiString;
+  LibParams: AnsiString;
 
 function LibIdentify: PGUID; stdcall;
 begin
@@ -46,23 +47,6 @@ begin
   GlobGetMemFunc := GetMemFunc;
 end;
 
-const
-  ToSetParamStr: AnsiString = 'DIVIDE_LEN;DRIVER_MODE;RS485_WAIT;CLR_RDCNT;';
-  ToGetParamStr
-    : AnsiString = 'REPEAT_CNT;FRAME_CNT;WAIT_CNT;RECIVE_TIME;SEND_TIME;DIVIDE_LEN;DRIVER_MODE;RS485_WAIT;CLR_RDCNT;';
-
-function GetDrvParamList(ToSet: boolean): PAnsiChar; stdcall;
-begin
-  if ToSet then
-    Result := PAnsiChar(ToSetParamStr)
-  else
-    Result := PAnsiChar(ToGetParamStr)
-end;
-
-// ConnectStr:
-// MCOM;nr_rs;nr_dev;rs_speed;[ASCII|RTU];[N|E|O]
-// MCOM;1;7;115200;RTU;N
-
 function AddDev(ConnectStr: PAnsiChar): TAccId; stdcall;
 begin
   Result := GlobDevList.AddDevice(ConnectStr);
@@ -73,16 +57,50 @@ begin
   Result := GlobDevList.DelDevice(Id);
 end;
 
-function GetDrvStatus(Id: TAccId; ParamName: PAnsiChar; ParamValue: PAnsiChar; MaxRpl: integer): TStatus; stdcall;
+// return information about current state
+// JSON format
+function GetDrvInfo(Id: TAccId): PAnsiChar; stdcall;
 var
   Dev: TDevItem;
+  s: AnsiString;
+  n: integer;
 begin
-  Dev := GlobDevList.FindId(Id);
-  if Dev <> nil then
-    Result := Dev.GetDrvStatus(ParamName, ParamValue, MaxRpl)
-  else
-    Result := stBadId;
+  Result := nil;
+  if assigned(GlobGetMemFunc) then
+  begin
+    Dev := GlobDevList.FindId(Id);
+    if Dev <> nil then
+    begin
+      s := AnsiString(Dev.GetDrvInfo);
+      n := length(s);
+      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n));
+      move(s[1], Result^, n);
+    end;
+  end;
 end;
+
+// function return text as JSON
+// caller should releas the memory
+function GetDrvParams(Id: TAccId): PAnsiChar; stdcall;
+var
+  Dev: TDevItem;
+  s: AnsiString;
+  n: integer;
+begin
+  Result := nil;
+  if assigned(GlobGetMemFunc) then
+  begin
+    Dev := GlobDevList.FindId(Id);
+    if Dev <> nil then
+    begin
+      s := AnsiString(Dev.GetDrvParams);
+      n := length(s);
+      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n));
+      move(s[1], Result^, n);
+    end;
+  end;
+end;
+
 
 function SetDrvParam(Id: TAccId; ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus; stdcall;
 var
@@ -588,9 +606,23 @@ begin
 
 end;
 
+procedure BuildLibParams;
+var
+  lpb: TLibPropertyBuilder;
+begin
+  lpb := TModbusLibPropertyBuilder.Create;
+  try
+    LibParams := AnsiString(lpb.Build);
+  finally
+    lpb.Free;
+  end;
+
+end;
+
 initialization
 
 IsMultiThread := True; // Make memory manager thread safe
 BuildLibProperty;
+BuildLibParams;
 
 end.

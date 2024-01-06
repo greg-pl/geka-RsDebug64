@@ -28,6 +28,116 @@ type
   TOnVisChange = procedure(Sender: TObject; AVisible: boolean) of object;
   TExtG2Memo = class;
 
+  TExtG2Memo = class(TPanel) // TCustomPanel)
+  private
+    LPanel: TPanel;
+    REdit: TRichEdit;
+    LogBtn: TSpeedButton;
+    ScrollBtn: TSpeedButton;
+    AddTimeBtn: TSpeedButton;
+    LogTimer: TTimer;
+    FWideCharPipeIn: THandle;
+    FAnsiPipeIn: THandle;
+    ColorScheme: TColorScheme;
+    FTerminalKeyPressEvent: TKeyPressEvent;
+
+    ApendToLine: boolean; // w MEMO twórz now¹ liniê
+    WasSlash: boolean; // by³ slash
+
+    BtnTop: integer;
+    BtnList: TobjectList;
+    FOnVisChange: TOnVisChange;
+    LogFileBin: File of byte;
+    WideCharPipeRider: TThread; // TPipeRider;
+    AnsiCharPipeRider: TThread; // TPipeRider;
+
+    FAutoShow: boolean;
+    FFlat: boolean;
+    FDetectSlash: boolean;
+    procedure OnHideProc(Sender: TObject);
+    procedure OnClearProc(Sender: TObject);
+    procedure OnLogChange(Sender: TObject);
+    procedure OnScrollChange(Sender: TObject);
+
+    procedure OnEditFontProc(Sender: TObject);
+    procedure OnFontApplyProc(Sender: TObject; Wnd: HWND);
+    procedure DelFromMemo;
+    procedure wmVisChanged(var Message: TMessage); message wm_VisChanged;
+    procedure wmDataToStrm(var Message: TMessage); message wm_DataToStrm;
+
+    procedure REditCopyProc(Sender: TObject);
+    procedure REditSelectAllProc(Sender: TObject);
+    procedure FSetOnLogging(ALogging: boolean);
+    function GetLogName(nr: integer): string;
+    procedure StartLogFile;
+    procedure StopLogFile;
+    procedure AddToLog(s: string; AddEOL: boolean);
+    procedure TimeToLog;
+    procedure LogTimerProc(Sender: TObject);
+    procedure FSetFlat(AFlat: boolean);
+    procedure REditOnKeyPressProc(Sender: TObject; var Key: Char);
+
+    function FGetAddTimeToLog: boolean;
+    procedure FSetAddTimeToLog(q: boolean);
+    function FGetScrollToEnd: boolean;
+    procedure FSetScrollToEnd(q: boolean);
+  private
+    // Loger
+    FLogWork: boolean;
+    FLogging: boolean;
+    FLogFileName: string;
+    FWasEOL: boolean;
+    FMaxLogFileSize: integer;
+    FLogHistoryDeep: integer;
+    LogFile: TextFile;
+  protected
+    FReady: boolean;
+    procedure VisibleChanging; override;
+    function GetToolBoxFontColor: TColor;
+    procedure SetToolBoxFontColor(NewColor: TColor);
+    procedure WndProc(var Message: TMessage); override;
+    procedure SetParent(AParent: TWinControl); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function AddBtn(capt: string; AHint: string; OnClickProc: TNotifyEvent): TSpeedButton;
+    procedure DoScrollToEnd;
+    procedure SetCharSet;
+    procedure ScrollToTop;
+    procedure ADL(s: string; newLine: boolean);
+    procedure AddStrings(SL: TStrings);
+    procedure AddInfoTxt(Prio: TMsgPriority; txt: string; newLine: boolean);
+    procedure Print(s: string);
+    procedure PrintToPipe(s: string);
+    procedure PrintHd(s: string);
+    property PipeInHandle: THandle read FWideCharPipeIn;
+    property AnsiPipeInHandle: THandle read FAnsiPipeIn;
+
+    procedure Clear;
+    procedure SetColorScheme(aColorScheme: TColorScheme);
+    property ToolboxFontColor: TColor read GetToolBoxFontColor write SetToolBoxFontColor;
+
+  published
+    property OnVisChange: TOnVisChange read FOnVisChange write FOnVisChange;
+    property LogFileName: string read FLogFileName write FLogFileName;
+    property Logging: boolean read FLogging write FSetOnLogging;
+    property MaxLogFileSize: integer read FMaxLogFileSize write FMaxLogFileSize;
+    property LogHistoryDeep: integer read FLogHistoryDeep write FLogHistoryDeep;
+    property AutoShow: boolean read FAutoShow write FAutoShow;
+    property Flat: boolean read FFlat write FSetFlat;
+    property TerminalKeyPressEvent: TKeyPressEvent read FTerminalKeyPressEvent write FTerminalKeyPressEvent;
+    property DetectSlash: boolean read FDetectSlash write FDetectSlash;
+    property AddTimeToLog: boolean read FGetAddTimeToLog write FSetAddTimeToLog;
+    property ScrollToEnd: boolean read FGetScrollToEnd write FSetScrollToEnd;
+
+  end;
+
+implementation
+
+uses
+  Math;
+
+type
   TCircularBuffer = class(TObject)
   private
     MemBuf: array of byte;
@@ -45,108 +155,18 @@ type
 
   TPipeRider = class(TThread)
   private
-    FOwner: TExtG2Memo;
+    FIsAnsiChar: boolean;
+    FOwnerHandle: THandle;
     PipeOut: THandle; // handle do odczytu rurki
     PipeIn: THandle; // handle do zapisu otwartej rurki
     function ReadPipe: boolean;
   public
-    constructor Create(AOwner: TExtG2Memo);
+    CircularBuffer: TCircularBuffer;
+    constructor Create(isAnsiChar: boolean);
     destructor Destroy; override;
     procedure Execute; override;
+    procedure setHandle(aHandle: THandle);
   end;
-
-  TExtG2Memo = class(TPanel) // TCustomPanel)
-  private
-    LPanel: TPanel;
-    REdit: TRichEdit;
-    LogBtn: TSpeedButton;
-    ScrollBtn: TSpeedButton;
-    LogTimer: TTimer;
-    FPipeIn: THandle;
-    ColorScheme: TColorScheme;
-    FTerminalKeyPressEvent: TKeyPressEvent;
-
-    ApendToLine: boolean; // w MEMO twórz now¹ liniê
-    WasSlash: boolean; // by³ slash
-
-    BtnTop: integer;
-    BtnList: TobjectList;
-    FOnVisChange: TOnVisChange;
-    FLogFileName: string;
-    FLogging: boolean;
-    FLogWork: boolean;
-    FMaxLogFileSize: integer;
-    FLogHistoryDeep: integer;
-    LogFile: TextFile;
-    LogFileBin: File of byte;
-    PipeRider: TPipeRider;
-    FAutoShow: boolean;
-    FFlat: boolean;
-    FDetectSlash: boolean;
-    procedure OnHideProc(Sender: TObject);
-    procedure OnClearProc(Sender: TObject);
-    procedure OnLogChange(Sender: TObject);
-    procedure OnScrollChange(Sender: TObject);
-
-    procedure OnEditFontProc(Sender: TObject);
-    procedure OnFontApplyProc(Sender: TObject; Wnd: HWND);
-    procedure DelFromMemo;
-    procedure wmVisChanged(var Message: TMessage); message wm_VisChanged;
-    procedure wmDataToStrm(var Message: TMessage); message wm_DataToStrm;
-    procedure REditCopyProc(Sender: TObject);
-    procedure REditSelectAllProc(Sender: TObject);
-    procedure FSetOnLogging(ALogging: boolean);
-    function GetLogName(nr: integer): string;
-    procedure StartLogFile;
-    procedure StopLogFile;
-    procedure AddToLog(s: string; AddEOL: boolean);
-    procedure TimeToLog;
-    procedure LogTimerProc(Sender: TObject);
-    procedure FSetFlat(AFlat: boolean);
-    procedure REditOnKeyPressProc(Sender: TObject; var Key: Char);
-
-  protected
-    CircularBuffer: TCircularBuffer;
-    FReady: boolean;
-    procedure VisibleChanging; override;
-    function GetToolBoxFontColor: TColor;
-    procedure SetToolBoxFontColor(NewColor: TColor);
-    procedure WndProc(var Message: TMessage); override;
-    procedure SetParent(AParent: TWinControl); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    function AddBtn(capt: string; AHint: string; OnClickProc: TNotifyEvent): TSpeedButton;
-    procedure ScrollToEnd;
-    procedure SetCharSet;
-    procedure ScrollToTop;
-    procedure ADL(s: string);
-    procedure AddStrings(SL: TStrings);
-    procedure AddInfoTxt(Prio: TMsgPriority; txt: string);
-    procedure Print(s: string);
-    procedure PrintToPipe(s: string);
-    procedure PrintHd(s: string);
-    property PipeInHandle: THandle read FPipeIn;
-    procedure Clear;
-    procedure SetColorScheme(aColorScheme: TColorScheme);
-    property ToolboxFontColor: TColor read GetToolBoxFontColor write SetToolBoxFontColor;
-
-  published
-    property OnVisChange: TOnVisChange read FOnVisChange write FOnVisChange;
-    property LogFileName: string read FLogFileName write FLogFileName;
-    property Logging: boolean read FLogging write FSetOnLogging;
-    property MaxLogFileSize: integer read FMaxLogFileSize write FMaxLogFileSize;
-    property LogHistoryDeep: integer read FLogHistoryDeep write FLogHistoryDeep;
-    property AutoShow: boolean read FAutoShow write FAutoShow;
-    property Flat: boolean read FFlat write FSetFlat;
-    property TerminalKeyPressEvent: TKeyPressEvent read FTerminalKeyPressEvent write FTerminalKeyPressEvent;
-    property DetectSlash: boolean read FDetectSlash write FDetectSlash;
-  end;
-
-implementation
-
-uses
-  Math;
 
 constructor TCircularBuffer.Create(Size: integer);
 begin
@@ -245,12 +265,14 @@ begin
   end;
 end;
 
-constructor TPipeRider.Create(AOwner: TExtG2Memo);
+constructor TPipeRider.Create(isAnsiChar: boolean);
 var
   SecurityAttributes: TSecurityAttributes;
 begin
   inherited Create(true);
-  FOwner := AOwner;
+  NameThreadForDebugging('ExtG2MemoUnit-TPipeRider');
+  FIsAnsiChar := isAnsiChar;
+  FOwnerHandle := INVALID_HANDLE_VALUE;
   FillChar(SecurityAttributes, SizeOf(SecurityAttributes), 0);
   with SecurityAttributes do
   begin
@@ -258,27 +280,47 @@ begin
     bInheritHandle := true;
   end;
   CreatePipe(PipeOut, PipeIn, @SecurityAttributes, 100000);
-  FOwner.FPipeIn := PipeIn;
+  CircularBuffer := TCircularBuffer.Create(32 * 2048);
   Resume;
 end;
 
 destructor TPipeRider.Destroy;
 begin
+  CircularBuffer.Free;
   CloseHandle(PipeIn);
   inherited;
+end;
+
+procedure TPipeRider.setHandle(aHandle: THandle);
+begin
+  FOwnerHandle := aHandle;
 end;
 
 function TPipeRider.ReadPipe: boolean;
 var
   BytesRead: Cardinal;
-  Buf: array [0 .. $FF] of Char;
+  Buf: array [0 .. $FF] of AnsiChar;
+  BufWide: array [0 .. $FF] of Char;
+  i: integer;
+
 begin
   Result := false;
   if ReadFile(PipeOut, Buf[0], SizeOf(Buf), BytesRead, nil) then
   begin
     if BytesRead > 0 then
     begin
-      FOwner.CircularBuffer.PushBuf(Buf, BytesRead);
+      if not(FIsAnsiChar) then
+      begin
+        CircularBuffer.PushBuf(Buf, BytesRead);
+      end
+      else
+      begin
+        for i := 0 to BytesRead - 1 do
+        begin
+          BufWide[i] := Char(Buf[i]);
+        end;
+        CircularBuffer.PushBuf(BufWide, 2 * BytesRead);
+      end;
     end;
     Result := (BytesRead <> 0);
   end;
@@ -290,8 +332,8 @@ begin
   begin
     if ReadPipe then
     begin
-      if FOwner.FReady then
-        PostMessage(FOwner.Handle, wm_DataToStrm, 0, 0);
+      if FOwnerHandle <> INVALID_HANDLE_VALUE then
+        PostMessage(FOwnerHandle, wm_DataToStrm, integer(self), 0);
     end
     else
       sleep(200);
@@ -299,27 +341,30 @@ begin
   CloseHandle(PipeOut);
 end;
 
+// -------------------------------------------------------------------------------
+
 constructor TExtG2Memo.Create(AOwner: TComponent);
 var
   Menu: TPopUpMenu;
   MItem: TMenuItem;
 begin
   inherited Create(AOwner);
+
   FReady := false;
   FTerminalKeyPressEvent := nil;
   FDetectSlash := true;
-  CircularBuffer := TCircularBuffer.Create(32 * 2048);
 
   BevelInner := bvRaised;
   BevelOuter := bvNone;
   FLogging := false;
   WasSlash := false;
 
-  FLogFileName := ChangeFileExt(ParamStr(0), '.log');
+  FLogFileName := '';
   BtnTop := 4;
   FMaxLogFileSize := 500000;
   FLogHistoryDeep := 3;
   BtnList := TobjectList.Create;
+
   LPanel := TPanel.Create(self);
   LPanel.Parent := self;
   LPanel.Align := alLeft;
@@ -328,7 +373,13 @@ begin
   LPanel.BevelOuter := bvNone;
   LPanel.Caption := '';
   AddBtn('C', 'Clear', OnClearProc);
-  LogBtn := AddBtn('L', 'Save memo to log file', OnLogChange);
+
+  AddTimeBtn := AddBtn('T', 'Add time', nil);
+  AddTimeBtn.AllowAllUp := true;
+  AddTimeBtn.GroupIndex := 3;
+  AddTimeBtn.Down := true;
+
+  LogBtn := AddBtn('L', 'Log to file', OnLogChange);
   LogBtn.AllowAllUp := true;
   LogBtn.GroupIndex := 1;
 
@@ -383,20 +434,44 @@ begin
 
   LogTimer := TTimer.Create(self);
   LogTimer.Enabled := true;
-  LogTimer.Interval := 5000;
+  LogTimer.Interval := 1000;
   LogTimer.OnTimer := LogTimerProc;
 
-  PipeRider := TPipeRider.Create(self);
+  WideCharPipeRider := TPipeRider.Create(false);
+  FWideCharPipeIn := (WideCharPipeRider as TPipeRider).PipeIn;
+  AnsiCharPipeRider := TPipeRider.Create(true);
+  FAnsiPipeIn := (AnsiCharPipeRider as TPipeRider).PipeIn;
+
   ColorScheme := ColorSchemeWhite;
 end;
 
 destructor TExtG2Memo.Destroy;
 begin
   StopLogFile;
-  PipeRider.Free;
-  CircularBuffer.Free;
+  WideCharPipeRider.Free;
+  AnsiCharPipeRider.Free;
   BtnList.Free;
   inherited;
+end;
+
+function TExtG2Memo.FGetAddTimeToLog: boolean;
+begin
+  Result := AddTimeBtn.Down;
+end;
+
+procedure TExtG2Memo.FSetAddTimeToLog(q: boolean);
+begin
+  AddTimeBtn.Down := q;
+end;
+
+function TExtG2Memo.FGetScrollToEnd: boolean;
+begin
+  Result := ScrollBtn.Down;
+end;
+
+procedure TExtG2Memo.FSetScrollToEnd(q: boolean);
+begin
+  ScrollBtn.Down := q;
 end;
 
 procedure TExtG2Memo.WndProc(var Message: TMessage);
@@ -422,6 +497,16 @@ end;
 procedure TExtG2Memo.SetParent(AParent: TWinControl);
 begin
   inherited;
+  if AParent <> nil then
+  begin
+    (WideCharPipeRider as TPipeRider).setHandle(Handle);
+    (AnsiCharPipeRider as TPipeRider).setHandle(Handle);
+  end
+  else
+  begin
+    (WideCharPipeRider as TPipeRider).setHandle(INVALID_HANDLE_VALUE);
+    (AnsiCharPipeRider as TPipeRider).setHandle(INVALID_HANDLE_VALUE);
+  end;
 end;
 
 function TExtG2Memo.AddBtn(capt: string; AHint: string; OnClickProc: TNotifyEvent): TSpeedButton;
@@ -496,15 +581,18 @@ procedure TExtG2Memo.wmDataToStrm(var Message: TMessage);
 var
   s: string;
   Rd: integer;
-begin
-  try
+  PipeRider: TPipeRider;
 
+begin
+  PipeRider := TPipeRider(Message.WParam);
+  try
     repeat
       SetLength(s, 200);
-      Rd := CircularBuffer.GetBuf(s[1], length(s));    // Rd- size in bytes
+      Rd := PipeRider.CircularBuffer.GetBuf(s[1], length(s) * SizeOf(Char));
+      // Rd- size in bytes
       if Rd > 0 then
       begin
-        SetLength(s, Rd div SizeOf(Char));  // SizeOf(Char) =? 2 -> WideChar
+        SetLength(s, Rd div SizeOf(Char)); // SizeOf(Char) =? 2 -> WideChar
         Print(s);
       end;
     until Rd <= 0;
@@ -516,7 +604,7 @@ begin
     OutputDebugString(PAnsiChar(BinToHexString(PAnsiChar(s), Min(length(s), 100))));
 {$ENDIF}
     try
-      CircularBuffer.Clear;
+      PipeRider.CircularBuffer.Clear;
     except
     end;
   end;
@@ -533,15 +621,33 @@ begin
 end;
 
 procedure TExtG2Memo.OnLogChange(Sender: TObject);
+var
+  Dlg: TOpenDialog;
 begin
-  FSetOnLogging((Sender as TSpeedButton).Down);
+  if (Sender as TSpeedButton).Down then
+  begin
+    Dlg := TOpenDialog.Create(Parent);
+    try
+      Dlg.Filter := 'Log files|*.log|All files|*.*';
+      Dlg.DefaultExt := 'log';
+      Dlg.FileName := FLogFileName;
+      if Dlg.Execute then
+      begin
+        FLogFileName := Dlg.FileName;
+        FSetOnLogging(true);
+      end;
+    finally
+      Dlg.Free;
+    end;
+  end
+  else
+    FSetOnLogging(false);
 end;
 
 procedure TExtG2Memo.OnScrollChange(Sender: TObject);
 begin
-  ScrollToEnd;
+  DoScrollToEnd;
 end;
-
 
 procedure TExtG2Memo.REditCopyProc(Sender: TObject);
 begin
@@ -611,7 +717,7 @@ begin
   SendMessage(REdit.Handle, EM_SETLANGOPTIONS, 0, 0); // IMF_UIFONTS);
 end;
 
-procedure TExtG2Memo.ScrollToEnd;
+procedure TExtG2Memo.DoScrollToEnd;
 begin
   if FReady and ScrollBtn.Down then
   begin
@@ -641,7 +747,8 @@ end;
 
 procedure TExtG2Memo.Clear;
 begin
-  CircularBuffer.Clear;
+  (WideCharPipeRider as TPipeRider).CircularBuffer.Clear;
+  (AnsiCharPipeRider as TPipeRider).CircularBuffer.Clear;
   REdit.Clear;
 end;
 
@@ -663,21 +770,23 @@ begin
   end;
 end;
 
-procedure TExtG2Memo.ADL(s: string);
+procedure TExtG2Memo.ADL(s: string; newLine: boolean);
 begin
   DelFromMemo;
   if ApendToLine and (REdit.Lines.Count <> 0) then
   begin
     REdit.Lines.Strings[REdit.Lines.Count - 1] := REdit.Lines.Strings[REdit.Lines.Count - 1] + s;
-    AddToLog(s, false);
+    AddToLog(s, newLine);
   end
   else
   begin
+    if AddTimeBtn.Down then
+      s := FormatDateTime('hh:nn:ss,zzz', Now) + ' ' + s;
     REdit.Lines.Add(s);
-    AddToLog(s, true);
+    AddToLog(s, newLine);
   end;
-  ApendToLine := false;
-  ScrollToEnd;
+  ApendToLine := not newLine;
+  DoScrollToEnd;
 end;
 
 procedure TExtG2Memo.AddStrings(SL: TStrings);
@@ -686,12 +795,12 @@ var
 begin
   for i := 0 to SL.Count - 1 do
   begin
-    ADL(SL.Strings[i]);
+    ADL(SL.Strings[i], true);
   end;
-  ScrollToEnd;
+  DoScrollToEnd;
 end;
 
-procedure TExtG2Memo.AddInfoTxt(Prio: TMsgPriority; txt: string);
+procedure TExtG2Memo.AddInfoTxt(Prio: TMsgPriority; txt: string; newLine: boolean);
 var
   i: integer;
 begin
@@ -720,16 +829,16 @@ begin
     if ord(txt[i]) < $20 then
       txt[i] := '.';
   end;
-  ADL(txt);
+  ADL(txt, newLine);
 end;
 
 procedure TExtG2Memo.PrintToPipe(s: string);
 var
   M: Cardinal;
 begin
-  if (FPipeIn <> INVALID_HANDLE_VALUE) and (length(s) > 0) then
+  if (FWideCharPipeIn <> INVALID_HANDLE_VALUE) and (length(s) > 0) then
   begin
-    Windows.WriteFile(FPipeIn, s[1], length(s), M, nil);
+    Windows.WriteFile(FWideCharPipeIn, s[1], length(s) * SizeOf(Char), M, nil);
   end;
 end;
 
@@ -758,7 +867,7 @@ begin
           case s[i] of
             'n':
               begin
-                AddInfoTxt(Prio, s1);
+                AddInfoTxt(Prio, s1, true);
                 s1 := '';
                 Prio := prNODEF;
               end;
@@ -785,7 +894,7 @@ begin
               ;
             #10:
               begin
-                AddInfoTxt(Prio, s1);
+                AddInfoTxt(Prio, s1, true);
                 s1 := '';
                 Prio := prNODEF;
               end;
@@ -807,7 +916,7 @@ begin
             ;
           #10:
             begin
-              AddInfoTxt(Prio, s1);
+              AddInfoTxt(Prio, s1, true);
               s1 := '';
               Prio := prNODEF;
             end;
@@ -821,13 +930,13 @@ begin
     end;
     if s1 <> '' then
     begin
-      AddInfoTxt(Prio, s1);
+      AddInfoTxt(Prio, s1, false);
       ApendToLine := true;
     end;
   finally
     DelFromMemo;
     REdit.Lines.EndUpdate;
-    ScrollToEnd;
+    DoScrollToEnd;
   end;
 
 end;
@@ -849,7 +958,7 @@ begin
           ;
         #10:
           begin
-            AddInfoTxt(prNODEF, s1);
+            AddInfoTxt(prNODEF, s1, true);
             s1 := '';
           end;
       else
@@ -859,14 +968,14 @@ begin
     end;
     if s1 <> '' then
     begin
-      AddInfoTxt(prNODEF, s1);
+      AddInfoTxt(prNODEF, s1, false);
       ApendToLine := true;
     end;
 
   finally
     REdit.Lines.EndUpdate;
     DelFromMemo;
-    ScrollToEnd;
+    DoScrollToEnd;
   end;
 end;
 
@@ -889,10 +998,14 @@ var
 begin
   if FLogWork then
   begin
+    if AddTimeBtn.Down and FWasEOL then
+      TimeToLog;
+    FWasEOL := false;
     if AddEOL then
-      Writeln(LogFile);
-
-    TimeToLog;
+    begin
+      s := s + #13 + #10;
+      FWasEOL := true;
+    end;
     Write(LogFile, s);
 
     FSize := FileSize(LogFileBin);
@@ -930,8 +1043,7 @@ begin
       begin
         Append(LogFile);
         Writeln(LogFile);
-        Writeln(LogFile);
-        write(LogFile, '-------------------------------------------------------');
+        Writeln(LogFile, '-------------------------------------------------------');
       end
       else
       begin
@@ -941,7 +1053,7 @@ begin
       AssignFile(LogFileBin, FLogFileName);
       Reset(LogFileBin);
       FLogWork := true;
-      ADL('*** Start logging to file: ' + FLogFileName);
+      ADL('*** Start logging to file: ' + FLogFileName, true);
     end;
   except
   end;

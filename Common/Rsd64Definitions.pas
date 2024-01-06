@@ -8,6 +8,7 @@ uses
   System.Contnrs,
   System.Generics.Collections,
   System.JSON,
+  JSONUtils,
   math,
   SttObjectDefUnit;
 
@@ -44,6 +45,7 @@ const
   TERMINAL_ZERO = 0;
 
 const
+  // Connection
   CONNECTION_PARAMS_NAME = 'ConnectionParams';
   CONNECTION_DRIVER_NAME = 'DriverName';
 
@@ -160,14 +162,7 @@ begin
   end;
   tmpObj.AddPair(TJSONPair.Create('SubGroups', jsonSubArray));
 
-  jsonArray := TJSONArray.Create();
-  for i := 0 to Params.ConnectionParams.Count - 1 do
-  begin
-    jsonArray.AddElement(Params.ConnectionParams[i].getJSonObject);
-  end;
-
-  jsonPair := TJSONPair.Create('ConectionParams', jsonArray);
-  tmpObj.AddPair(jsonPair);
+  tmpObj.AddPair(TJSONPair.Create('ConectionParams', Params.ConnectionParams.getJSonObject));
 
   Result := tmpObj.ToString;
 end;
@@ -197,14 +192,17 @@ function TLibPropertyBuilder.LoadFromTxt(txt: string): boolean;
     nm: string;
     sttObj: TSttObjectJson;
     jobj: TJsonObject;
+    jLoader: TJsonLoader;
   begin
     for i := 0 to arr.Count - 1 do
     begin
-      jobj := arr.items[i] as TJsonObject;
-      nm := jobj.GetValue('SttType').Value;
-      sttObj := TSttObjectJson.CreateObject(nm);
-      sttObj.LoadFromJSonObj(jobj);
-      Params.ConnectionParams.Add(sttObj);
+      jLoader.Init(arr.items[i]);
+      if jLoader.Load('SttType', nm) then
+      begin
+        sttObj := TSttObjectJson.CreateObject(nm);
+        sttObj.LoadFromJSonObj(jLoader);
+        Params.ConnectionParams.Add(sttObj);
+      end;
     end;
   end;
 
@@ -254,40 +252,34 @@ end;
 
 function ExtractConnInfoStr(ConnectJson: string; var ConnInfoStr: string): boolean;
 var
-  jVal: TJSONValue;
-  jobj: TJsonObject;
-  paramObj: TJsonObject;
-  item: TJSONPair;
+  jLoader: TJsonLoader;
+  jParamLoader: TJsonLoader;
+  tmp: string;
 begin
   Result := false;
   try
-    jVal := TJsonObject.ParseJSONValue(ConnectJson);
-    if Assigned(jVal) then
+    if jLoader.Init(TJsonObject.ParseJSONValue(ConnectJson)) then
     begin
-      jobj := jVal as TJsonObject;
-      paramObj := jobj.Get(CONNECTION_PARAMS_NAME).JSonValue as TJsonObject;
-      if Assigned(paramObj) then
+      if jLoader.Load(CONNECTION_DRIVER_NAME, ConnInfoStr) then
       begin
-        item := paramObj.Get(UARTPARAM_COMNR);
-        if Assigned(item) then
+        ConnInfoStr := ConnInfoStr + ' [ ';
+        if jParamLoader.Init(jLoader, CONNECTION_PARAMS_NAME) then
         begin
-          ConnInfoStr := item.JSonValue.Value;
-          Result := true;
-        end
-        else
-        begin
-          item := paramObj.Get(IPPARAM_IP);
-          if Assigned(item) then
+          if jParamLoader.Load(UARTPARAM_COMNR, tmp) then
           begin
-            ConnInfoStr := item.JSonValue.Value;
+            ConnInfoStr := ConnInfoStr + tmp;
             Result := true;
-            item := paramObj.Get(IPPARAM_PORT);
-            if Assigned(item) then
-              ConnInfoStr := ConnInfoStr + ':' + item.JSonValue.Value;
+          end
+          else if jParamLoader.Load(IPPARAM_IP, tmp) then
+          begin
+            ConnInfoStr := ConnInfoStr + tmp;
+            if jParamLoader.Load(IPPARAM_PORT, tmp) then
+              ConnInfoStr := ConnInfoStr + ':' + tmp;
+            Result := true;
           end;
         end;
+        ConnInfoStr := ConnInfoStr + ' ]';
       end;
-
     end;
   except
 

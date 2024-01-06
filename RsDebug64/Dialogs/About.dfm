@@ -13,6 +13,7 @@ object AboutForm: TAboutForm
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = True
+  Position = poMainFormCenter
   OnActivate = FormActivate
   OnMouseMove = FormMouseMove
   PixelsPerInch = 96

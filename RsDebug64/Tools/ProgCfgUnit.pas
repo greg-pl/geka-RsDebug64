@@ -9,6 +9,7 @@ uses
   GkStrUtils,
   System.JSON,
   JSonUtils,
+  Registry,
   ToolsUnit;
 
 const
@@ -32,6 +33,9 @@ const
 
   INI_PARAM_DEV_STR = '_PrmDevStr_';
 
+  JSON_WIN_TYPE = 'WinType';
+  JSON_WIN_TITLE = 'Title';
+
 type
 
   TDotIniFile = class(TMemIniFile)
@@ -43,39 +47,51 @@ type
     procedure WriteTStrings(const Section, Name: string; Value: TStrings);
   end;
 
+  TClosedWin = class(TObject)
+    Name: string;
+    WinType: string;
+    jObj: TJSONObject;
+    function LoadFromJson(jLoader: TJSonLoader): boolean;
+  end;
+
+  TClosedWinList = class(TObjectList)
+    function FGetItem(Index: integer): TClosedWin;
+    property Items[Index: integer]: TClosedWin read FGetItem;
+    procedure LoadFromJson(jArr: TJSONArray);
+    function GetJSONObject: TJSONValue;
+    procedure AddMenuItems(ParentItem: TMenuItem; Proc: TNotifyEvent);
+  end;
+
   TReopenItem = class(TObject)
     FileName: String;
-    FileItem: TMenuItem;
   end;
 
   TReopenList = class(TObjectList)
+  public const
+    TAG_START = 210000;
+    MAX_FILES = 100;
+
   private
-    FSectionName: string;
-    FIndex: integer;
-    FParentItem: TMenuItem;
-    FOnClickProc: TNotifyEvent;
     ReOpenDeep: integer;
     function GetItem(Index: integer): TReopenItem;
-    procedure AddToMenu;
-  protected
-    procedure LoadFromIni(IniFile: TDotIniFile);
-    procedure SaveToIni(IniFile: TDotIniFile);
-    function GetJSONObject: TJSONValue;
-    procedure LoadFromJObj(jArr: TJSONArray);
-    function FindItem(AItem: TMenuItem): boolean;
-    function AddFile(Fname: string; UpdateMenu: boolean): TReopenItem; overload;
   public
-    constructor Create(ASectionName: string; AReOpenDeep: integer); reintroduce;
+    constructor Create(AReOpenDeep: integer); reintroduce;
     property Items[Index: integer]: TReopenItem read GetItem;
-    function AddFile(Fname: string): TReopenItem; overload;
-    procedure Konfig(AIndex: integer; AMenuItem: TMenuItem; AOnClickProc: TNotifyEvent);
+    function AddFile(Fname: string): TReopenItem;
+    procedure AddToMenuItem(AIndex: integer; AParentItem: TMenuItem; AOnClickProc: TNotifyEvent);
     function GetFileName(FItem: TMenuItem): string;
     function GetLastFilename: string;
     procedure GetList(SL: TStrings);
+    // registry
+    procedure SaveToReg(Reg: TRegistry; keyName: string);
+    procedure LoadFromReg(Reg: TRegistry; keyName: string);
+    // JSON
+    function GetJSONObject: TJSONValue;
+    procedure LoadFromJObj(jArr: TJSONArray);
   end;
 
   TGetJsonObject = function: TJSONBuilder of object;
-  TReadJsonObject = procedure(jLoader: TJSONLoader) of object;
+  TReadJsonObject = procedure(jLoader: TJSonLoader) of object;
 
   PAdrCpx = ^TAdrCpx;
 
@@ -87,39 +103,65 @@ type
 
   TWinTab = (wtOFF, wtTOP, wtBOTTOM);
 
+  TSelSectionMode = (secALL, secShowSelected, secHideSelected);
+
+  TSectionsCfg = record
+    SelSections: TStringList;
+    SelSectionMode: TSelSectionMode;
+    procedure Init;
+    procedure Done;
+    procedure CopyFrom(Src: TSectionsCfg);
+    procedure JSONLoad(jLoader: TJSonLoader);
+    procedure JSONAdd(jBuild: TJSONBuilder);
+    function getJsonValue: TJSONValue;
+  end;
+
   TProgCfg = class(TObject)
   private
     FOnWriteJsonCfg: TGetJsonObject;
     FOnReadJsonCfg: TReadJsonObject;
 
-    FIniFilename: string;
+    FWorkSpaceFilename: string;
+
+    procedure SaveToReg;
+    procedure LoadFromReg;
+
   public
-    ReOpenBaseList: TReopenList;
+    ReOpenMapfileList: TReopenList;
+    ReOpenWorkspaceList: TReopenList;
+
     WorkingMap: string;
-    SelectAsmVar: boolean;
-    SelectC_Var: boolean;
-    SelectSysVar: boolean;
     AutoSaveCfg: TYesNoAsk;
     AutoRefreshMap: TYesNoAsk;
-    SelSectionMode: integer;
-    SelSections: TStringList;
+    SectionsCfg: TSectionsCfg;
     ScalMemCnt: integer;
     MaxVarSize: integer;
     DevString: String;
     WinTab: TWinTab;
     ByteOrder: TByteOrder;
     ptrSize: TPtrSize;
+    ShowUnknownMapLine: boolean;
+    LoadMapFileOnStartUp: boolean;
+    ObjDumpPath: string; // path to objdump.exe from GNU compiler
+
+    ClosedWinList: TClosedWinList;
 
     constructor Create;
     destructor Destroy; override;
-    procedure LoadMainCfg;
-    procedure SaveMainCfg;
+    procedure OpenWorkSpaceFromWorkingDir;
+    procedure OpenWorkspace(FileName: string);
+    procedure SaveWorkspace;
+    procedure SaveWorkspaceAs(FileName: string);
+    function GetWorkingPath: string;
+    function GetWorkSpacefile: string;
 
     property OnWriteJsonCfg: TGetJsonObject read FOnWriteJsonCfg write FOnWriteJsonCfg;
     property OnReadJsonCfg: TReadJsonObject read FOnReadJsonCfg write FOnReadJsonCfg;
-
-    property MainIniFName: string read FIniFilename;
   end;
+
+const
+
+  REG_KEY = '\SOFTWARE\GEKA\RSDEBUG_2';
 
 var
   ProgCfg: TProgCfg;
@@ -189,11 +231,131 @@ begin
   WriteString(Section, name, s);
 end;
 
+// --------------------- TShowVarCfg ----------------------------------------
+
+procedure TSectionsCfg.Init;
+begin
+  SelSections := TStringList.Create;;
+end;
+
+procedure TSectionsCfg.Done;
+begin
+  SelSections.Free;
+end;
+
+procedure TSectionsCfg.CopyFrom(Src: TSectionsCfg);
+begin
+  SelSectionMode := Src.SelSectionMode;
+  SelSections.Clear;
+  SelSections.AddStrings(Src.SelSections);
+end;
+
+procedure TSectionsCfg.JSONAdd(jBuild: TJSONBuilder);
+var
+  jBuild2: TJSONBuilder;
+begin
+  jBuild2.Init;
+  jBuild2.Add('SectionsMode', ord(SelSectionMode));
+  jBuild2.Add('Sections', SelSections);
+  jBuild.Add('ShowVarCfg', jBuild2);
+end;
+
+procedure TSectionsCfg.JSONLoad(jLoader: TJSonLoader);
+var
+  jLoader2: TJSonLoader;
+begin
+  if jLoader2.Init(jLoader, 'ShowVarCfg') then
+  begin
+    SelSectionMode := TSelSectionMode(jLoader2.LoadDef('SectionsMode', ord(SelSectionMode)));
+    jLoader2.Load('Sections', SelSections);
+  end;
+end;
+
+function TSectionsCfg.getJsonValue: TJSONValue;
+var
+  jBuild: TJSONBuilder;
+begin
+  jBuild.Init;
+  JSONAdd(jBuild);
+  Result := jBuild.jObj;
+end;
+
+// --------------------- TClosedWin ----------------------------------------
+
+function TClosedWin.LoadFromJson(jLoader: TJSonLoader): boolean;
+begin
+  jObj := jLoader.jObj;
+  Result := jLoader.Load(JSON_WIN_TITLE, Name) and jLoader.Load(JSON_WIN_TYPE, WinType);
+end;
+
+function TClosedWinList.FGetItem(Index: integer): TClosedWin;
+begin
+  Result := inherited GetItem(Index) as TClosedWin;
+end;
+
+procedure TClosedWinList.LoadFromJson(jArr: TJSONArray);
+var
+  i: integer;
+  jChild: TJSonLoader;
+  Win: TClosedWin;
+begin
+  Clear;
+  if Assigned(jArr) then
+  begin
+    for i := 0 to jArr.Count - 1 do
+    begin
+      if jChild.Init(jArr.Items[i]) then
+      begin
+        Win := TClosedWin.Create;
+        if Win.LoadFromJson(jChild) then
+          Add(Win)
+        else
+          Win.Free;
+      end;
+    end;
+  end;
+end;
+
+function TClosedWinList.GetJSONObject: TJSONValue;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  jArr := TJSONArray.Create;
+  for i := 0 to Count - 1 do
+  begin
+    jArr.AddElement(Items[i].jObj);
+  end;
+  Result := jArr;
+end;
+
+procedure TClosedWinList.AddMenuItems(ParentItem: TMenuItem; Proc: TNotifyEvent);
+var
+  Item: TMenuItem;
+  i: integer;
+begin
+  for i := ParentItem.Count - 1 downto 0 do
+  begin
+    if ParentItem.Items[i].Tag <> 0 then
+    begin
+      ParentItem.Delete(i);
+    end;
+  end;
+
+  for i := 0 to ProgCfg.ClosedWinList.Count - 1 do
+  begin
+    Item := TMenuItem.Create(Application.Mainform);
+    Item.Caption := (ProgCfg.ClosedWinList.Items[i] as TClosedWin).Name;
+    Item.Tag := 10 + i;
+    Item.OnClick := Proc;
+    ParentItem.Add(Item);
+  end;
+end;
+
 // --------------------- TReopenItem ----------------------------------------
-constructor TReopenList.Create(ASectionName: string; AReOpenDeep: integer);
+constructor TReopenList.Create(AReOpenDeep: integer);
 begin
   inherited Create;
-  FSectionName := ASectionName;
   ReOpenDeep := AReOpenDeep;
 end;
 
@@ -202,7 +364,7 @@ begin
   Result := (inherited GetItem(Index)) as TReopenItem;
 end;
 
-function TReopenList.AddFile(Fname: string; UpdateMenu: boolean): TReopenItem;
+function TReopenList.AddFile(Fname: string): TReopenItem;
 var
   i: integer;
 begin
@@ -219,51 +381,7 @@ begin
   begin
     Result := TReopenItem.Create;
     Result.FileName := Fname;
-    Result.FileItem := nil;
     Insert(0, Result);
-  end;
-  if UpdateMenu then
-    AddToMenu;
-end;
-
-function TReopenList.AddFile(Fname: string): TReopenItem;
-begin
-  Result := AddFile(Fname, True);
-end;
-
-procedure TReopenList.LoadFromIni(IniFile: TDotIniFile);
-var
-  i, n: integer;
-  M: string;
-begin
-  i := 0;
-  while True do
-  begin
-    M := IniFile.ReadString(FSectionName, Format('N%u', [i]), '');
-    if M = '' then
-      break;
-    inc(i);
-  end;
-  n := i;
-  for i := n - 1 downto 0 do
-  begin
-    M := IniFile.ReadString(FSectionName, Format('N%u', [i]), '');
-    AddFile(M, false);
-  end;
-  AddToMenu;
-end;
-
-procedure TReopenList.SaveToIni(IniFile: TDotIniFile);
-var
-  i: integer;
-  n: integer;
-begin
-  n := Count;
-  if n > ReOpenDeep then
-    n := ReOpenDeep;
-  for i := 0 to n - 1 do
-  begin
-    IniFile.WriteString(FSectionName, Format('N%u', [i]), Items[i].FileName);
   end;
 end;
 
@@ -291,73 +409,99 @@ begin
   begin
     for i := 0 to jArr.Count - 1 do
     begin
-      AddFile(jArr.Items[i].Value, false);
+      AddFile(jArr.Items[i].Value);
     end;
   end;
 end;
 
-function TReopenList.FindItem(AItem: TMenuItem): boolean;
+procedure TReopenList.SaveToReg(Reg: TRegistry; keyName: string);
 var
   i: integer;
+  n: integer;
+  SL: TStringList;
 begin
-  Result := false;
-  for i := 0 to Count - 1 do
+  if Reg.OpenKey(keyName, True) then
   begin
-    Result := Result or (Items[i].FileItem = AItem);
-  end;
-end;
-
-procedure TReopenList.Konfig(AIndex: integer; AMenuItem: TMenuItem; AOnClickProc: TNotifyEvent);
-begin
-  FIndex := AIndex;
-  FParentItem := AMenuItem;
-  FOnClickProc := AOnClickProc;
-  AddToMenu;
-end;
-
-procedure TReopenList.AddToMenu;
-var
-  i, n: integer;
-  MItem: TMenuItem;
-  Index: integer;
-begin
-  if Assigned(FParentItem) then
-  begin
-    for i := FParentItem.Count - 1 downto 0 do
-    begin
-      if FindItem(FParentItem.Items[i]) then
-        FParentItem.Delete(i);
+    SL := TStringList.Create;
+    try
+      Reg.GetValueNames(SL);
+      for i := 0 to SL.Count - 1 do
+      begin
+        Reg.DeleteValue(SL.Strings[i]);
+      end;
+    finally
+      SL.Free;
     end;
 
-    Index := FIndex;
     n := Count;
     if n > ReOpenDeep then
       n := ReOpenDeep;
     for i := 0 to n - 1 do
     begin
+      Reg.WriteString('Item' + IntToStr(i), Items[i].FileName);
+    end;
+  end;
+end;
+
+procedure TReopenList.LoadFromReg(Reg: TRegistry; keyName: string);
+var
+  i: integer;
+  nm: string;
+begin
+  Clear;
+  if Reg.OpenKeyReadOnly(keyName) then
+  begin
+    i := 0;
+    while True do
+    begin
+      nm := 'Item' + IntToStr(i);
+      if not(Reg.ValueExists(nm)) then
+        break;
+      AddFile(Reg.ReadString(nm));
+      inc(i);
+    end;
+  end;
+end;
+
+procedure TReopenList.AddToMenuItem(AIndex: integer; AParentItem: TMenuItem; AOnClickProc: TNotifyEvent);
+var
+  i, n: integer;
+  MItem: TMenuItem;
+  Index: integer;
+begin
+  if Assigned(AParentItem) then
+  begin
+    for i := AParentItem.Count - 1 downto 0 do
+    begin
+      if (AParentItem.Items[i].Tag >= TAG_START) and (AParentItem.Items[i].Tag < TAG_START + MAX_FILES) then
+        AParentItem.Delete(i);
+    end;
+
+    AParentItem.Enabled := (Count > 0);
+
+    n := Count;
+    if n > ReOpenDeep then
+      n := ReOpenDeep;
+    for i := n - 1 downto 0 do
+    begin
       MItem := TMenuItem.Create(Application.Mainform);
-      Items[i].FileItem := MItem;
       MItem.Caption := IntToStr(i + 1) + '. ' + Items[i].FileName;
-      MItem.OnClick := FOnClickProc;
-      MItem.Tag := cardinal(Self);
-      FParentItem.Insert(Index, MItem);
-      Index := FParentItem.IndexOf(MItem) + 1;
+      MItem.OnClick := AOnClickProc;
+      MItem.Tag := TAG_START + i;
+      AParentItem.Insert(AIndex, MItem);
+      // AIndex := AParentItem.IndexOf(MItem) + 1;
     end;
   end;
 end;
 
 function TReopenList.GetFileName(FItem: TMenuItem): string;
 var
-  i: integer;
+  idx: integer;
 begin
   Result := '';
-  for i := 0 to Count - 1 do
-  begin
-    if (Items[i].FileItem = FItem) then
-    begin
-      Result := Items[i].FileName;
-    end;
-  end;
+  idx := FItem.Tag - TAG_START;
+  if (idx >= 0) and (idx < Count) then
+    Result := Items[idx].FileName;
 end;
 
 function TReopenList.GetLastFilename: string;
@@ -384,33 +528,96 @@ end;
 constructor TProgCfg.Create;
 begin
   inherited;
-  ReOpenBaseList := TReopenList.Create('REOPEN_CFG', 5);
-  SelSections := TStringList.Create;
-  FIniFilename := IncludeTrailingPathDelimiter(GetCurrentDir) +
-    ChangeFileExt(ExtractFileName(Application.ExeName), '.ini');
+  ClosedWinList := TClosedWinList.Create;
+  ReOpenMapfileList := TReopenList.Create(10);
+  ReOpenWorkspaceList := TReopenList.Create(10);
+  FWorkSpaceFilename := IncludeTrailingPathDelimiter(GetCurrentDir) +
+    ChangeFileExt(ExtractFileName(Application.ExeName), '.rsd');
+  SectionsCfg.Init;
+  LoadFromReg;
 
 end;
 
 destructor TProgCfg.Destroy;
 begin
-  SelSections.Free;
-  ReOpenBaseList.Free;
+  SaveToReg;
+  ReOpenMapfileList.Free;
+  ReOpenWorkspaceList.Free;
+  SectionsCfg.Done;
+  ClosedWinList.Free;
   inherited;
 end;
 
-procedure TProgCfg.LoadMainCfg;
+function TProgCfg.GetWorkingPath: string;
+begin
+  Result := IncludeTrailingPathDelimiter(ExtractFilePath(FWorkSpaceFilename));
+end;
+
+function TProgCfg.GetWorkSpacefile: string;
+begin
+  Result := FWorkSpaceFilename;
+end;
+
+procedure TProgCfg.LoadFromReg;
+var
+  Reg: TRegistry;
+begin
+  Reg := TRegistry.Create;
+  try
+    if Reg.OpenKey(REG_KEY, True) then
+    begin
+      if ObjDumpPath = '' then
+        if Reg.ValueExists('ObjDumpPath') then
+          ObjDumpPath := Reg.ReadString('ObjDumpPath');
+
+      if Reg.ValueExists('WorkSpaceFilename') then
+        FWorkSpaceFilename := Reg.ReadString('WorkSpaceFilename');
+
+      ReOpenWorkspaceList.LoadFromReg(Reg, 'ReOpenWorkspaceList');
+    end;
+  finally
+    Reg.Free;
+  end;
+end;
+
+procedure TProgCfg.SaveToReg;
+var
+  Reg: TRegistry;
+begin
+  Reg := TRegistry.Create;
+  try
+    if Reg.OpenKey(REG_KEY, True) then
+    begin
+      Reg.WriteString('ObjDumpPath', ObjDumpPath);
+      Reg.WriteString('WorkSpaceFilename', FWorkSpaceFilename);
+
+      ReOpenWorkspaceList.SaveToReg(Reg, 'ReOpenWorkspaceList');
+    end;
+  finally
+    Reg.Free;
+  end;
+end;
+
+procedure TProgCfg.OpenWorkSpaceFromWorkingDir;
+begin
+  OpenWorkspace(FWorkSpaceFilename);
+end;
+
+procedure TProgCfg.OpenWorkspace(FileName: string);
 var
   jVal: TJSONValue;
   txt: string;
   MS: TMemoryStream;
-  jLoader: TJSONLoader;
-  jLoader2: TJSONLoader;
+  jLoader: TJSonLoader;
+  jLoader2: TJSonLoader;
 begin
+  FWorkSpaceFilename := FileName;
+  ReOpenWorkspaceList.AddFile(FWorkSpaceFilename);
 
   txt := '';
   MS := TMemoryStream.Create;
   try
-    MS.LoadFromFile(ChangeFileExt(MainIniFName, '.json'));
+    MS.LoadFromFile(FileName);
     if MS.Size > 0 then
     begin
       setLength(txt, MS.Size div 2);
@@ -430,20 +637,15 @@ begin
         jLoader2.Load('MapFile', WorkingMap);
         jVal := jLoader2.GetObject('DevString');
         if Assigned(jVal) then
-           DevString := jVal.ToString;
+          DevString := jVal.ToString;
 
-        jLoader2.Load('AsmVariable', SelectAsmVar);
-        jLoader2.Load('CVariable', SelectC_Var);
-        jLoader2.Load('SysVariable', SelectSysVar);
         jLoader2.Load('AutoSave', AutoSaveCfg);
         jLoader2.Load('AutoRefresh', AutoRefreshMap);
-        jLoader2.Load('SectionsMode', SelSectionMode);
-        jLoader2.Load('Sections', SelSections);
-
 
         jLoader2.Load('MergeMemory', ScalMemCnt);
         jLoader2.Load('MaxVarSize', MaxVarSize);
-
+        jLoader2.Load('ObjDumpPath', ObjDumpPath);
+        jLoader2.Load('LoadMapFileOnStartUp', LoadMapFileOnStartUp);
         try
           WinTab := TWinTab(jLoader2.LoadDef('WinTabPos', ord(WinTab)));
         except
@@ -453,12 +655,16 @@ begin
         ByteOrder := TByteOrder(jLoader2.LoadDef('ByteOrder', ord(ByteOrder)));
       end;
 
+      SectionsCfg.JSONLoad(jLoader);
+
+      ReOpenMapfileList.LoadFromJObj(jLoader.getArray('ReOpenMapFileList'));
+      ClosedWinList.LoadFromJson(jLoader.getArray('ClosedWin'));
+
       if Assigned(FOnReadJsonCfg) then
       begin
-        if jLoader2.Init(jLoader,'DeskTop') then
+        if jLoader2.Init(jLoader, 'DeskTop') then
           FOnReadJsonCfg(jLoader2);
       end;
-      ReOpenBaseList.LoadFromJObj(jLoader.getArray('ReOpenList'));
 
     except
 
@@ -467,7 +673,12 @@ begin
 
 end;
 
-procedure TProgCfg.SaveMainCfg;
+procedure TProgCfg.SaveWorkspace;
+begin
+  SaveWorkspaceAs(FWorkSpaceFilename);
+end;
+
+procedure TProgCfg.SaveWorkspaceAs(FileName: string);
 var
   jVal: TJSONValue;
   jBuild: TJSONBuilder;
@@ -475,41 +686,42 @@ var
   txt: string;
   MS: TMemoryStream;
 begin
-
   jBuild.Init;
-
   jBuild2.Init;
-
   jVal := TJSONObject.ParseJSONValue(DevString);
 
   jBuild2.Add('DevString', jVal);
   jBuild2.Add('MapFile', WorkingMap);
-  jBuild2.Add('CVariable', SelectC_Var);
-  jBuild2.Add('AsmVariable', SelectAsmVar);
-  jBuild2.Add('SysVariable', SelectSysVar);
   jBuild2.Add('AutoSave', ord(AutoSaveCfg));
   jBuild2.Add('AutoRefresh', ord(AutoRefreshMap));
-  jBuild2.Add('SectionsMode', SelSectionMode);
 
-  jBuild2.Add('Sections', SelSections);
   jBuild2.Add('ByteOrder', ord(ByteOrder));
   jBuild2.Add('MergeMemory', ScalMemCnt);
   jBuild2.Add('MaxVarSize', MaxVarSize);
   jBuild2.Add('WinTabPos', ord(WinTab));
-
+  jBuild2.Add('ShowUnknownMapLine', ShowUnknownMapLine);
+  jBuild2.Add('ObjDumpPath', ObjDumpPath);
+  jBuild2.Add('LoadMapFileOnStartUp', LoadMapFileOnStartUp);
 
   jBuild.Add('MainCfg', jBuild2);
+  SectionsCfg.JSONAdd(jBuild);
 
   if Assigned(FOnWriteJsonCfg) then
-    jBuild.Add('DeskTop', FOnWriteJsonCfg.jobj);
+    jBuild.Add('DeskTop', FOnWriteJsonCfg.jObj);
 
-  jBuild.Add('ReOpenList', ReOpenBaseList.GetJSONObject);
+  jBuild.Add('ReOpenMapFileList', ReOpenMapfileList.GetJSONObject);
+  jBuild.Add('ClosedWin', ClosedWinList.GetJSONObject);
 
-  txt := jBuild.jobj.ToString;
+  // jBuild.Add('ReOpenWorkspaceList', ReOpenWorkspaceList.GetJSONObject);
+
+  txt := jBuild.jObj.ToString;
   MS := TMemoryStream.Create;
   try
     MS.write(txt[1], length(txt) * sizeof(char));
-    MS.SaveToFile(ChangeFileExt(MainIniFName, '.json'));
+    MS.SaveToFile(FileName);
+    MS.SaveToFile(ChangeFileExt(FileName, '.json')); // TODO delete
+    ReOpenWorkspaceList.AddFile(FWorkSpaceFilename);
+    FWorkSpaceFilename := FileName;
   finally
     MS.Free;
   end;

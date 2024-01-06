@@ -85,8 +85,10 @@ type
     mEventDefFName: string;
     EventDefList: TEventDefList;
     procedure ReadEvents;
+  protected
+    function GetDefaultCaption: string; override;
   public
-    constructor CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent);
+    constructor CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent; TemplateWin: TChildForm);
     destructor Destroy; override;
 
     function GetJSONObject: TJSONBuilder; override;
@@ -205,7 +207,7 @@ begin
 end;
 
 // --------------------------------------------------------
-constructor TRz40EventsForm.CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent);
+constructor TRz40EventsForm.CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent; TemplateWin: TChildForm);
 begin
   inherited;
   EventDefList := TEventDefList.Create;
@@ -217,6 +219,10 @@ begin
   EventDefList.Free;
 end;
 
+function TRz40EventsForm.GetDefaultCaption: string;
+begin
+  Result := 'RZ40Events';
+end;
 
 function TRz40EventsForm.GetJSONObject: TJSONBuilder;
 begin
@@ -365,7 +371,7 @@ end;
 procedure TRz40EventsForm.actReadEventsUpdate(Sender: TObject);
 begin
   inherited;
-  (Sender as TAction).Enabled := Dev.Connected;
+  (Sender as TAction).Enabled := isDevConnected;
 end;
 
 procedure TRz40EventsForm.RepeatReadTimerTimer(Sender: TObject);

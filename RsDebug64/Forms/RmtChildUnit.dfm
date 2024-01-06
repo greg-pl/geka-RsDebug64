@@ -58,8 +58,13 @@ object ChildForm: TChildForm
       Top = 0
       Action = ShowParamAct
     end
-    object ToolButton3: TToolButton
+    object ToolButton13: TToolButton
       Left = 46
+      Top = 0
+      Action = CloseWinNoAddAct
+    end
+    object ToolButton3: TToolButton
+      Left = 69
       Top = 0
       Width = 12
       Caption = 'ToolButton3'
@@ -93,12 +98,18 @@ object ChildForm: TChildForm
       ShortCut = 122
       OnExecute = ShowParamActExecute
     end
+    object CloseWinNoAddAct: TAction
+      Caption = 'Close without adding to Closedlist'
+      Hint = 'Close without adding to Closedlist'
+      ImageIndex = 0
+      OnExecute = CloseWinNoAddActExecute
+    end
   end
   object TreeImages: TImageList
-    Left = 64
+    Left = 104
     Top = 80
     Bitmap = {
-      494C0101040009001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101040009002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -373,7 +384,7 @@ object ChildForm: TChildForm
     Left = 24
     Top = 80
     Bitmap = {
-      494C01010E0013001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010E0013002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000004000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

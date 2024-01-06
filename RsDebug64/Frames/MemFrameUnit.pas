@@ -6,8 +6,11 @@ uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, Math,
   Grids, ComCtrls, TeEngine, Series, StdCtrls, Spin, CheckLst, TeeProcs, IniFiles,
   Chart, ExtCtrls, Menus, Buttons,
+  ArrowCha,
+  VclTee.TeeGDIPlus,
+
+  ToolsUnit,
   CommonDef,
-  ArrowCha, VclTee.TeeGDIPlus,
   System.JSON,
   JSonUtils;
 
@@ -15,9 +18,27 @@ const
   MAX_MEM_BOX = 3;
 
 type
-  TToBin = function(MemName: string; Mem: pbyte; Size: integer; TypeSign: char; Val: OleVariant): integer of object;
-  TToValue = function(MemName: string; Buf: pbyte; TypeSign: char; var Val: OleVariant): integer of object;
   TOntxtToInt = function(Txt: string): integer of object;
+
+  TChangeByteBuffer = class(TByteBuffer)
+  private
+    procedure SetChangeTab(n: integer; cnt: integer; st: TCellState);
+  public
+    BufCopy: array of byte;
+    MemState: array of TCellState;
+    procedure SetLen(len: integer); override;
+    function GetState(n: integer; Size: byte): TCellState;
+    procedure SetNewData;
+    procedure ClrData;
+    procedure Fill(Val: byte);
+
+    procedure SetByte(n: integer; B: byte); override;
+    procedure SetWord(n: integer; V: Word); override;
+    procedure SetDWord(n: integer; V: cardinal); override;
+
+    procedure SetError(n: integer; cnt: integer);
+
+  end;
 
   TMemFrame = class(TFrame)
     ShowTypePageCtrl: TPageControl;
@@ -25,13 +46,11 @@ type
     WordSheet: TTabSheet;
     FloatSheet: TTabSheet;
     DWordSheet: TTabSheet;
-    DspProgSheet: TTabSheet;
     F1_15Sheet: TTabSheet;
     ByteGrid: TStringGrid;
     WordGRid: TStringGrid;
     DWordGrid: TStringGrid;
     FloatGrid: TStringGrid;
-    DspProgGrid: TStringGrid;
     F1_15Grid: TStringGrid;
     ChartSheet: TTabSheet;
     Panel1: TPanel;
@@ -48,16 +67,9 @@ type
     DrawCharBtn: TButton;
     PointsBox: TCheckBox;
     RZ30MemBox: TCheckBox;
-    WekSheet: TTabSheet;
-    Panel3: TPanel;
-    Label2: TLabel;
-    WekCntEdit: TSpinEdit;
-    WekListBox: TListBox;
     WekListMenu: TPopupMenu;
     Zmiekolor1: TMenuItem;
     Zmienazw1: TMenuItem;
-    WekChart: TChart;
-    WekSeries: TArrowSeries;
     Panel4: TPanel;
     MainChart: TChart;
     Panel5: TPanel;
@@ -67,8 +79,6 @@ type
     MaxYEdit: TLabeledEdit;
     AutoXYBox: TCheckBox;
     DataTypeBox: TRadioGroup;
-    DFloatSheet: TTabSheet;
-    DFloatGrid: TStringGrid;
     AllOnItem: TMenuItem;
     AllOffItem: TMenuItem;
     MeasurePanel: TPanel;
@@ -98,7 +108,6 @@ type
     procedure DWordGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
     procedure DWordSheetShow(Sender: TObject);
     procedure FloatSheetShow(Sender: TObject);
-    procedure DspProgSheetShow(Sender: TObject);
     procedure FloatGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
     procedure F1_15SheetShow(Sender: TObject);
     procedure F1_15GridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
@@ -110,15 +119,8 @@ type
     procedure PointsBoxClick(Sender: TObject);
     procedure RZ30MemBoxClick(Sender: TObject);
     procedure ChartSheetShow(Sender: TObject);
-    procedure WekCntEditChange(Sender: TObject);
-    procedure WekSheetShow(Sender: TObject);
-
-    procedure Zmienazw1Click(Sender: TObject);
-    procedure Zmiekolor1Click(Sender: TObject);
     procedure AutoXYBoxClick(Sender: TObject);
     procedure GridGetEditText(Sender: TObject; ACol, ARow: integer; var Value: String);
-    procedure DFloatSheetShow(Sender: TObject);
-    procedure DFloatGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
     procedure AllOnItemClick(Sender: TObject);
     procedure AllOffItemClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
@@ -129,44 +131,28 @@ type
     procedure WordColCntEditChange(Sender: TObject);
     procedure ByteColCntEditChange(Sender: TObject);
   private
-    FMemBufSize: cardinal;
     FSrcAdr: cardinal;
-    SecoundTime: Boolean;
     EditCellMem: string;
-    FOnToBin: TToBin;
-    FOnToValue: TToValue;
     FRegisterSize: integer;
     LasPosPoint: TPoint;
+    ChartMinMaxTab: array [0 .. MAX_MEM_BOX - 1] of TRect;
 
     procedure FSetSize(ASize: cardinal);
+    function FGetSize: cardinal;
     procedure FSetSrcAdr(ASrcAdr: cardinal);
 
-    function GetState(n: integer; Size: byte): TCellState;
     procedure FSetChartSerCount(AChartSerCount: integer);
     function FGetChartSerCount: integer;
-    procedure FSetWekSerCount(cnt: integer);
     procedure FillMeasureGridValues;
     procedure FillMeasureGridNames;
 
-    procedure SetWord(n: integer; V: Word);
-    procedure SetDWord(n: integer; V: cardinal);
-    procedure SetSingle(n: integer; V: Single);
-    function GetSingle(n: integer): Single;
-    function GetDouble(n: integer): Double;
-    procedure SetDSingle(n: integer; V: Single);
-    function GetDSingle(n: integer): Single;
     function GetMulti(var n: cardinal): Double;
     function FirstColTxt(w: cardinal): string;
     function LiczFirstRow(w: real): integer;
-    procedure DrawWekChart;
 
     function HexToInt(s: string; var Ok: Boolean): cardinal;
     function FloatToF1_15(w: real): Word;
     function F1_15ToFloat(w: Word): real;
-    function GetDWord(n: integer): cardinal;
-    function GetWord(n: integer): Word;
-    function GetByte(n: integer): byte;
-    procedure SetByte(n: integer; B: byte);
     function FGetActivPage: integer;
     procedure FSetActivPage(APageNr: integer);
     procedure FSetRegisterSize(ARegisterSize: integer);
@@ -174,26 +160,25 @@ type
     procedure SetMinMaxBox(const R: TRect);
     procedure ShowMinMaxBox(const R: TRect);
     procedure MakeMinMaxBoxHints;
+
   protected
     function GetSeria(n: integer): string;
     function LiczFirstCol(w: integer): cardinal;
-    function GetWektor(n: integer): string;
     procedure AddSeria(s: string);
-    procedure AddWektor(s: string);
     property ChartSerCount: integer read FGetChartSerCount write FSetChartSerCount;
   public
-    MemState: array of TCellState;
-    MemBuf: array of byte;
-    MemBufCopy: array of byte;
+    MemBuf: TChangeByteBuffer;
+
     MemTypeStr: String;
 
-    CharMinMaxTab: array [0 .. MAX_MEM_BOX - 1] of TRect;
 
-    property OnToBin: TToBin read FOnToBin write FOnToBin;
-    property OnToValue: TToValue read FOnToValue write FOnToValue;
+    procedure Init;
+    procedure Done;
+    procedure setByteOrder(ord : TByteOrder);
+
 
     property SrcAdr: cardinal read FSrcAdr write FSetSrcAdr;
-    property MemSize: cardinal read FMemBufSize write FSetSize;
+    property MemSize: cardinal read FGetSize write FSetSize;
     procedure PaintActivPage;
     procedure SetNewData;
     procedure ClrData;
@@ -203,8 +188,6 @@ type
     property ActivPage: integer read FGetActivPage write FSetActivPage;
     property RegisterSize: integer read FRegisterSize write FSetRegisterSize;
 
-    procedure SaveToIni(Ini: TMemIniFile; SName: string);
-    procedure LoadFromIni(Ini: TMemIniFile; SName: string);
 
     function GetJSONObject: TJSONBuilder;
     procedure LoadfromJson(jParent: TJSONLoader);
@@ -220,8 +203,130 @@ uses
 
 {$R *.dfm}
 
+procedure TChangeByteBuffer.SetLen(len: integer);
+begin
+  inherited;
+  setlength(BufCopy, len);
+  setlength(MemState, len);
+end;
+
+function TChangeByteBuffer.GetState(n: integer; Size: byte): TCellState;
+var
+  i: integer;
+begin
+  Result := csEmpty;
+  for i := 0 to Size - 1 do
+  begin
+    if n + i < length(MemState) then
+      if MemState[n + i] > Result then
+        Result := MemState[n + i];
+  end;
+end;
+
+procedure TChangeByteBuffer.SetNewData;
+var
+  i: integer;
+begin
+  for i := 0 to length(MemState) - 1 do
+  begin
+    if Buf[i] = BufCopy[i] then
+      MemState[i] := csFull
+    else
+      MemState[i] := csChg;
+    BufCopy[i] := Buf[i];
+  end;
+end;
+
+procedure TChangeByteBuffer.ClrData;
+var
+  i: integer;
+begin
+  for i := 0 to len - 1 do
+  begin
+    MemState[i] := csEmpty;
+  end;
+end;
+
+procedure TChangeByteBuffer.Fill(Val: byte);
+var
+  i: integer;
+begin
+  for i := 0 to length(MemState) - 1 do
+  begin
+    if Buf[i] <> Val then
+    begin
+      MemState[i] := csModify;
+      Buf[i] := Val;
+    end
+    else
+      MemState[i] := csFull;
+  end;
+end;
+
+procedure TChangeByteBuffer.SetByte(n: integer; B: byte);
+begin
+  if GetByte(n) <> B then
+  begin
+    SetChangeTab(n, 1, csModify);
+    inherited;
+  end;
+end;
+
+procedure TChangeByteBuffer.SetWord(n: integer; V: Word);
+begin
+  if GetWord(n) <> V then
+  begin
+    SetChangeTab(n, 2, csModify);
+    inherited;
+  end;
+end;
+
+procedure TChangeByteBuffer.SetDWord(n: integer; V: cardinal);
+begin
+  if GetDWord(n) <> V then
+  begin
+    SetChangeTab(n, 4, csModify);
+    inherited;
+  end;
+
+end;
+
+procedure TChangeByteBuffer.SetChangeTab(n: integer; cnt: integer; st: TCellState);
+var
+  i: integer;
+begin
+  for i := 0 to cnt - 1 do
+  begin
+    if n + i > len then
+      break;
+    MemState[n + i] := st;
+  end;
+end;
+
+procedure TChangeByteBuffer.SetError(n: integer; cnt: integer);
+begin
+  SetChangeTab(n, cnt, csBad);
+end;
+
+// ---------------------------------------------------------------------------------------
 const
   DIRST_COL_WIDTH = 78;
+
+procedure TMemFrame.Init;
+begin
+  MemBuf := TChangeByteBuffer.Create;
+  RegisterSize := 1;
+end;
+
+procedure TMemFrame.Done;
+begin
+  MemBuf.Free;
+end;
+
+procedure TMemFrame.setByteOrder(ord : TByteOrder);
+begin
+  MemBuf.ByteOrder := ord;
+end;
 
 function TMemFrame.FGetActivPage: integer;
 begin
@@ -260,166 +365,29 @@ begin
   Result := cardinal(n);
 end;
 
-function TMemFrame.GetByte(n: integer): byte;
-var
-  Val: OleVariant;
-begin
-  if FOnToValue(MemTypeStr, @MemBuf[n], 'B', Val) = 0 then
-  begin
-    Result := Val;
-  end
-  else
-    raise exception.Create('Bl¹d konwersji do liczby');
-end;
-
-procedure TMemFrame.SetByte(n: integer; B: byte);
-begin
-  FOnToBin(MemTypeStr, @MemBuf[n], 1, 'B', B);
-end;
-
-function TMemFrame.GetWord(n: integer): Word;
-var
-  Val: OleVariant;
-begin
-  if FOnToValue(MemTypeStr, @MemBuf[n], 'W', Val) = 0 then
-  begin
-    Result := Val;
-  end
-  else
-    raise exception.Create('Bl¹d konwersji do liczby');
-end;
-
-procedure TMemFrame.SetWord(n: integer; V: Word);
-begin
-  FOnToBin(MemTypeStr, @MemBuf[n], 2, 'W', V);
-end;
-
-function TMemFrame.GetDWord(n: integer): cardinal;
-var
-  Val: OleVariant;
-begin
-  if FOnToValue(MemTypeStr, @MemBuf[n], 'D', Val) = 0 then
-  begin
-    Result := Val;
-  end
-  else
-    raise exception.Create('Bl¹d konwersji do liczby');
-end;
-
-procedure TMemFrame.SetDWord(n: integer; V: cardinal);
-begin
-  FOnToBin(MemTypeStr, @MemBuf[n], 4, 'D', V);
-end;
-
-procedure TMemFrame.SetDSingle(n: integer; V: Single);
-begin
-  FOnToBin(MemTypeStr, @MemBuf[n], 4, 'G', V);
-end;
-
-function TMemFrame.GetDSingle(n: integer): Single;
-var
-  Val: OleVariant;
-begin
-  if FOnToValue(MemTypeStr, @MemBuf[n], 'G', Val) = 0 then
-  begin
-    Result := Val;
-  end
-  else
-    raise exception.Create('Bl¹d konwersji do liczby');
-end;
-
-procedure TMemFrame.SetSingle(n: integer; V: Single);
-begin
-  FOnToBin(MemTypeStr, @MemBuf[n], 4, 'F', V);
-end;
-
-function TMemFrame.GetSingle(n: integer): Single;
-var
-  Val: OleVariant;
-begin
-  if FOnToValue(MemTypeStr, @MemBuf[n], 'F', Val) = 0 then
-  begin
-    Result := Val;
-  end
-  else
-    raise exception.Create('Bl¹d konwersji do liczby');
-end;
-
-function TMemFrame.GetDouble(n: integer): Double;
-var
-  Val: OleVariant;
-begin
-  if FOnToValue(MemTypeStr, @MemBuf[n], 'E', Val) = 0 then
-  begin
-    Result := Val;
-  end
-  else
-    raise exception.Create('Bl¹d konwersji do liczby');
-end;
-
 function TMemFrame.GetMulti(var n: cardinal): Double;
 begin
   Result := 0;
   if RZ30MemBox.Checked then
   begin
-    Result := SmallInt(GetWord(n));
+    Result := SmallInt(MemBuf.GetWord(n));
     inc(n, 2);
   end
   else
   begin
     case DataTypeBox.ItemIndex of
       0:
-        begin
-          case DataSizeBox.ItemIndex of
-            0:
-              begin
-                Result := ShortInt(MemBuf[n]);
-                inc(n, 1);
-              end;
-            1:
-              begin
-                Result := SmallInt(GetWord(n));
-                inc(n, 2);
-              end;
-            2:
-              begin
-                Result := integer(GetDWord(n));
-                inc(n, 4);
-              end;
-          else
-            inc(n, 2);
-          end;
-        end;
+        Result := MemBuf.GetSignedVal(TDataSize(DataSizeBox.ItemIndex), n);
       1:
-        begin
-          case DataSizeBox.ItemIndex of
-            0:
-              begin
-                Result := MemBuf[n];
-                inc(n, 1);
-              end;
-            1:
-              begin
-                Result := GetWord(n);
-                inc(n, 2);
-              end;
-            2:
-              begin
-                Result := GetDWord(n);
-                inc(n, 4);
-              end;
-          else
-            inc(n, 2);
-          end;
-        end;
+        Result := MemBuf.GetUnSignedVal(TDataSize(DataSizeBox.ItemIndex), n);
       2:
         begin // Float
-          Result := GetSingle(n);
+          Result := MemBuf.GetSingle(n);
           inc(n, 4);
         end;
       3:
         begin // Double
-          Result := GetDouble(n);
+          Result := MemBuf.GetDouble(n);
           inc(n, 8);
 
         end;
@@ -427,30 +395,16 @@ begin
   end;
 end;
 
-function TMemFrame.GetState(n: integer; Size: byte): TCellState;
-var
-  i: integer;
+function TMemFrame.FGetSize: cardinal;
 begin
-  Result := csEmpty;
-  for i := 0 to Size - 1 do
-  begin
-    if n + i < length(MemState) then
-      if MemState[n + i] > Result then
-        Result := MemState[n + i];
-  end;
+  Result := MemBuf.len;
 end;
 
 procedure TMemFrame.FSetSize(ASize: cardinal);
 begin
   if RegisterSize = 0 then
     RegisterSize := 1;
-  if FMemBufSize <> ASize then
-  begin
-    FMemBufSize := ASize;
-    SetLength(MemState, FMemBufSize);
-    SetLength(MemBuf, FMemBufSize);
-    SetLength(MemBufCopy, FMemBufSize);
-  end;
+  MemBuf.SetLen(ASize);
   PaintActivPage;
 end;
 
@@ -472,45 +426,20 @@ begin
 end;
 
 procedure TMemFrame.SetNewData;
-var
-  i: integer;
 begin
-  for i := 0 to length(MemState) - 1 do
-  begin
-    if MemBuf[i] = MemBufCopy[i] then
-      MemState[i] := csFull
-    else
-      MemState[i] := csChg;
-    MemBufCopy[i] := MemBuf[i];
-  end;
+  MemBuf.SetNewData;
   PaintActivPage;
 end;
 
 procedure TMemFrame.ClrData;
-var
-  i: integer;
 begin
-  for i := 0 to length(MemState) - 1 do
-  begin
-    MemState[i] := csEmpty;
-  end;
+  MemBuf.ClrData;
   PaintActivPage;
 end;
 
 procedure TMemFrame.Fill(Val: byte);
-var
-  i: integer;
 begin
-  for i := 0 to length(MemState) - 1 do
-  begin
-    if MemBuf[i] <> Val then
-    begin
-      MemState[i] := csModify;
-      MemBuf[i] := Val;
-    end
-    else
-      MemState[i] := csFull;
-  end;
+  MemBuf.Fill(Val);
   PaintActivPage;
 end;
 
@@ -575,7 +504,7 @@ begin
     if Sender = ByteGrid then
     begin
       n := (ByteGrid.ColCount - 2) * (ARow - 1) + (ACol - 1);
-      CellSt := GetState(n, 1);
+      CellSt := MemBuf.GetState(n, 1);
       if ACol = ByteGrid.ColCount - 1 then // kolumna ASCII
       begin
         if CellSt <> csEmpty then
@@ -585,17 +514,17 @@ begin
     else if Sender = F1_15Grid then
     begin
       n := 2 * (16 * (ARow - 1) + (ACol - 1));
-      CellSt := GetState(n, 2);
+      CellSt := MemBuf.GetState(n, 2);
     end
     else if Sender = WordGRid then
     begin
       n := 2 * ((WordGRid.ColCount - 1) * (ARow - 1) + (ACol - 1));
-      CellSt := GetState(n, 2);
+      CellSt := MemBuf.GetState(n, 2);
     end
-    else if (Sender = DWordGrid) or (Sender = FloatGrid) or (Sender = DFloatGrid) or (Sender = DspProgGrid) then
+    else if (Sender = DWordGrid) or (Sender = FloatGrid) then
     begin
       n := 4 * (8 * (ARow - 1) + (ACol - 1));
-      CellSt := GetState(n, 4);
+      CellSt := MemBuf.GetState(n, 4);
     end;
 
     case CellSt of
@@ -695,7 +624,7 @@ var
   NN: integer;
 begin
   NN := ByteColCntEdit.Value;
-  ByteGrid.RowCount := 1 + (FMemBufSize + NN - 1) div NN;
+  ByteGrid.RowCount := 1 + (MemSize + NN - 1) div NN;
   ByteGrid.ColCount := NN + 2;
   ByteGrid.Cells[0, 0] := MemTypeStr;
   ByteGrid.ColWidths[0] := DIRST_COL_WIDTH;
@@ -709,72 +638,61 @@ begin
   end;
   ByteGrid.Cells[NN + 1, 0] := 'ASCII';
 
-  if Assigned(FOnToValue) then
+  Y := 0;
+  if MemSize > 0 then
   begin
-    Y := 0;
-    if FMemBufSize > 0 then
+    for i := 0 to MemSize - 1 do
     begin
-      for i := 0 to FMemBufSize - 1 do
+      X := i mod NN;
+      Y := i div NN;
+      if X = 0 then
       begin
-        X := i mod NN;
-        Y := i div NN;
-        if X = 0 then
-        begin
-          ByteGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-          s1 := '';
-        end;
-        a := GetByte(i);
-        ByteGrid.Cells[X + 1, Y + 1] := IntToHex(a, 2);
-        if a < $20 then
-          s1 := s1 + '.'
-        else
-          s1 := s1 + char(a);
-        if X = NN - 1 then
-        begin
-          ByteGrid.Cells[NN + 1, Y + 1] := s1;
-        end;
+        ByteGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
+        s1 := '';
       end;
-      ByteGrid.Cells[NN + 1, Y + 1] := s1;
+      a := MemBuf.GetByte(i);
+      ByteGrid.Cells[X + 1, Y + 1] := IntToHex(a, 2);
+      if a < $20 then
+        s1 := s1 + '.'
+      else
+        s1 := s1 + char(a);
+      if X = NN - 1 then
+      begin
+        ByteGrid.Cells[NN + 1, Y + 1] := s1;
+      end;
     end;
-    ByteGrid.Refresh;
+    ByteGrid.Cells[NN + 1, Y + 1] := s1;
   end;
+  ByteGrid.Refresh;
 end;
 
 procedure TMemFrame.ByteGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  k: TCellState;
   s: string;
   Ok: Boolean;
   V: integer;
   n: integer;
 begin
-  if Assigned(FOnToBin) then
+  n := (ByteGrid.ColCount - 2) * (ARow - 1) + (ACol - 1);
+  V := HexToInt(Value, Ok);
+  if Ok and (V < $100) then
   begin
-    V := HexToInt(Value, Ok);
-    n := (ByteGrid.ColCount - 2) * (ARow - 1) + (ACol - 1);
-    if (V < $100) and Ok then
-    begin
-      k := MemState[n];
-      if GetByte(n) <> V then
-      begin
-        SetByte(n, V);
-        k := csModify;
-      end;
-      if not(ByteGrid.EditorMode) then
-        ByteGrid.Cells[ACol, ARow] := IntToHex(V, 2);
-      s := ByteGrid.Cells[ByteGrid.ColCount - 1, ARow];
-      if V < $20 then
-        V := ord('.');
-      s[ACol] := chr(V);
-      ByteGrid.Cells[ByteGrid.ColCount - 1, ARow] := s;
-    end
-    else
-      k := csBad;
-    MemState[n] := k;
-    if (length(Value) = 2) and ByteGrid.EditorMode then
-      ByteGrid.EditorMode := false;
-    ByteGrid.Refresh;
-  end;
+    MemBuf.SetByte(n, V);
+
+    if not(ByteGrid.EditorMode) then
+      ByteGrid.Cells[ACol, ARow] := IntToHex(V, 2);
+    s := ByteGrid.Cells[ByteGrid.ColCount - 1, ARow];
+    if V < $20 then
+      V := ord('.');
+    s[ACol] := chr(V);
+    ByteGrid.Cells[ByteGrid.ColCount - 1, ARow] := s;
+  end
+  else
+    MemBuf.SetError(n, 1);
+
+  if (length(Value) = 2) and ByteGrid.EditorMode then
+    ByteGrid.EditorMode := false;
+  ByteGrid.Refresh;
 end;
 
 procedure TMemFrame.ByteGridSelectCell(Sender: TObject; ACol, ARow: integer; var CanSelect: Boolean);
@@ -792,14 +710,13 @@ procedure TMemFrame.WordSheetShow(Sender: TObject);
 var
   i: cardinal;
   X, Y: integer;
-  Val: OleVariant;
   a: Word;
   NN: integer;
   NN2: integer;
 begin
   NN := WordColCntEdit.Value;
   NN2 := 2 * NN;
-  WordGRid.RowCount := 1 + (FMemBufSize + NN2 - 1) div NN2;
+  WordGRid.RowCount := 1 + (MemSize + NN2 - 1) div NN2;
   WordGRid.ColCount := 1 + NN;
 
   WordGRid.Cells[0, 0] := MemTypeStr;
@@ -808,52 +725,38 @@ begin
   begin
     WordGRid.Cells[i + 1, 0] := ' +' + IntToHex(LiczFirstRow(i * 2), 2);
   end;
-  if Assigned(FOnToValue) then
+  i := 0;
+  while i < MemSize do
   begin
-    i := 0;
-    while i < FMemBufSize do
-    begin
-      X := (i mod NN2) div 2;
-      Y := i div NN2;
-      if X = 0 then
-        WordGRid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-      if FOnToValue(MemTypeStr, @MemBuf[i], 'W', Val) = 0 then
-      begin
-        a := Val;
-        WordGRid.Cells[X + 1, Y + 1] := IntToHex(a, 4)
-      end;
-      inc(i, 2);
-    end;
+    X := (i mod NN2) div 2;
+    Y := i div NN2;
+    if X = 0 then
+      WordGRid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
+    a := MemBuf.GetWord(i);
+    WordGRid.Cells[X + 1, Y + 1] := IntToHex(a, 4);
+    inc(i, 2);
   end;
   WordGRid.Refresh;
 end;
 
 procedure TMemFrame.WordGRidSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  k: TCellState;
   Ok: Boolean;
   V: integer;
   n: integer;
 begin
-  V := HexToInt(Value, Ok);
   n := 2 * ((WordGRid.ColCount - 1) * (ARow - 1) + (ACol - 1));
 
-  if (V < $10000) then
+  V := HexToInt(Value, Ok);
+  if Ok and (V < $10000) then
   begin
-    if GetWord(n) <> V then
-    begin
-      SetWord(n, V);
-      k := csModify;
-    end
-    else
-      k := GetState(n, 2);
+    MemBuf.SetWord(n, V);
+
     if not(WordGRid.EditorMode) then
       WordGRid.Cells[ACol, ARow] := IntToHex(V, 4);
   end
   else
-    k := csBad;
-  MemState[n] := k;
-  MemState[n + 1] := k;
+    MemBuf.SetError(n, 2);
 
   if (length(Value) = 4) and WordGRid.EditorMode then
     WordGRid.EditorMode := false
@@ -865,32 +768,28 @@ var
   i: cardinal;
   X, Y: integer;
 begin
-  DWordGrid.RowCount := 1 + (FMemBufSize + 31) div 32;
+  DWordGrid.RowCount := 1 + (MemSize + 31) div 32;
   DWordGrid.Cells[0, 0] := MemTypeStr;
   DWordGrid.ColWidths[0] := DIRST_COL_WIDTH;
   for i := 0 to 7 do
   begin
     DWordGrid.Cells[i + 1, 0] := '     +' + IntToHex(LiczFirstRow(i * 4), 2);
   end;
-  if Assigned(FOnToValue) then
+  i := 0;
+  while i < MemSize do
   begin
-    i := 0;
-    while i < FMemBufSize do
-    begin
-      X := (i mod 32) div 4;
-      Y := i div 32;
-      if X = 0 then
-        DWordGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-      DWordGrid.Cells[X + 1, Y + 1] := IntToHex(GetDWord(i), 8);
-      i := i + 4;
-    end;
+    X := (i mod 32) div 4;
+    Y := i div 32;
+    if X = 0 then
+      DWordGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
+    DWordGrid.Cells[X + 1, Y + 1] := IntToHex(MemBuf.GetDWord(i), 8);
+    i := i + 4;
   end;
   DWordGrid.Refresh;
 end;
 
 procedure TMemFrame.DWordGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  k: TCellState;
   Ok: Boolean;
   V: cardinal;
   n: integer;
@@ -900,17 +799,12 @@ begin
   Ok := true;
   if Ok then
   begin
-    SetDWord(n, V);
+    MemBuf.SetDWord(n, V);
     if not(DWordGrid.EditorMode) then
       DWordGrid.Cells[ACol, ARow] := IntToHex(V, 8);
-    k := csModify;
   end
   else
-    k := csBad;
-  MemState[n] := k;
-  MemState[n + 1] := k;
-  MemState[n + 2] := k;
-  MemState[n + 3] := k;
+    MemBuf.SetError(n, 4);
 
   if (length(Value) = 8) and DWordGrid.EditorMode then
     DWordGrid.EditorMode := false
@@ -923,36 +817,32 @@ var
   X, Y: integer;
   s: string;
 begin
-  FloatGrid.RowCount := 1 + (FMemBufSize + 31) div 32;
+  FloatGrid.RowCount := 1 + (MemSize + 31) div 32;
   FloatGrid.Cells[0, 0] := MemTypeStr;
   FloatGrid.ColWidths[0] := DIRST_COL_WIDTH;
   for i := 0 to 7 do
     FloatGrid.Cells[i + 1, 0] := '     +' + IntToHex(LiczFirstRow(4 * i), 2);
 
-  if Assigned(FOnToValue) then
+  i := 0;
+  while i < MemSize do
   begin
-    i := 0;
-    while i < FMemBufSize do
-    begin
-      X := (i mod 32) div 4;
-      Y := i div 32;
-      if X = 0 then
-        FloatGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-      try
-        s := Format('%.5f', [GetSingle(i)]);
-      except
-        s := '';
-      end;
-      FloatGrid.Cells[X + 1, Y + 1] := s;
-      i := i + 4;
+    X := (i mod 32) div 4;
+    Y := i div 32;
+    if X = 0 then
+      FloatGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
+    try
+      s := Format('%.5f', [MemBuf.GetSingle(i)]);
+    except
+      s := '';
     end;
+    FloatGrid.Cells[X + 1, Y + 1] := s;
+    i := i + 4;
   end;
   FloatGrid.Refresh;
 end;
 
 procedure TMemFrame.FloatGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  k: TCellState;
   Ok: Boolean;
   V: Single;
   n: integer;
@@ -968,117 +858,12 @@ begin
 
   if Ok then
   begin
-    SetSingle(n, V);
+    MemBuf.SetSingle(n, V);
     if not(FloatGrid.EditorMode) then
       FloatGrid.Cells[ACol, ARow] := Format('%.5f', [V]);
-    k := csModify;
   end
   else
-    k := csBad;
-  MemState[n] := k;
-  MemState[n + 1] := k;
-  MemState[n + 2] := k;
-  MemState[n + 3] := k;
-end;
-
-// ------------------ DFLOAT GRID ------------------------------------------
-procedure TMemFrame.DFloatSheetShow(Sender: TObject);
-var
-  i: cardinal;
-  X, Y: integer;
-  s: string;
-begin
-  DFloatGrid.RowCount := 1 + (FMemBufSize + 31) div 32;
-  DFloatGrid.Cells[0, 0] := MemTypeStr;
-  DFloatGrid.ColWidths[0] := DIRST_COL_WIDTH;
-  for i := 0 to 7 do
-    DFloatGrid.Cells[i + 1, 0] := '     +' + IntToHex(LiczFirstRow(4 * i), 2);
-
-  if Assigned(FOnToValue) then
-  begin
-    i := 0;
-    while i < FMemBufSize do
-    begin
-      X := (i mod 32) div 4;
-      Y := i div 32;
-      if X = 0 then
-        DFloatGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-      try
-        s := FloatToStrF(GetDSingle(i), ffGeneral, 3, 8);
-      except
-        s := '';
-      end;
-      DFloatGrid.Cells[X + 1, Y + 1] := s;
-      i := i + 4;
-    end;
-  end;
-  DFloatGrid.Refresh;
-end;
-
-procedure TMemFrame.DFloatGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
-var
-  k: TCellState;
-  Ok: Boolean;
-  V: Single;
-  n: integer;
-begin
-  try
-    V := StrToFloat(Value);
-    Ok := true;
-  except
-    Ok := false;
-    V := 0;
-  end;
-  n := 4 * (8 * (ARow - 1) + (ACol - 1));
-
-  if Ok then
-  begin
-    SetDSingle(n, V);
-    if not(DFloatGrid.EditorMode) then
-      DFloatGrid.Cells[ACol, ARow] := FloatToStrF(V, ffGeneral, 3, 8);
-    k := csModify;
-  end
-  else
-    k := csBad;
-  MemState[n] := k;
-  MemState[n + 1] := k;
-  MemState[n + 2] := k;
-  MemState[n + 3] := k;
-end;
-
-// ------------------ DSPPROF GRID ------------------------------------------
-procedure TMemFrame.DspProgSheetShow(Sender: TObject);
-var
-  i: cardinal;
-  X, Y: integer;
-  w, w1: cardinal;
-  b1, b2, b3: byte;
-begin
-  DspProgGrid.RowCount := 1 + (FMemBufSize + 31) div 32;
-  DspProgGrid.Cells[0, 0] := MemTypeStr;
-  DspProgGrid.ColWidths[0] := DIRST_COL_WIDTH;
-  for i := 0 to 7 do
-    DspProgGrid.Cells[i + 1, 0] := ' +' + IntToHex(LiczFirstRow(4 * i), 2);
-
-  if Assigned(FOnToValue) then
-  begin
-    i := 0;
-    while i < FMemBufSize do
-    begin
-      X := (i mod 32) div 4;
-      Y := i div 32;
-      if X = 0 then
-        DspProgGrid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-      w := GetDWord(i);
-      b1 := (w shr 24) and $FF;
-      b2 := (w shr 8) and $FF;
-      b3 := w and $FF;
-      w1 := b1 or (b2 shl 8) or (b3 shl 16);
-      DspProgGrid.Cells[X + 1, Y + 1] := IntToHex(w1, 6);
-      i := i + 4;
-    end;
-  end;
-  DspProgGrid.Refresh;
+    MemBuf.SetError(n, 4);
 end;
 
 
@@ -1089,7 +874,7 @@ var
   i: cardinal;
   X, Y: integer;
 begin
-  F1_15Grid.RowCount := 1 + (FMemBufSize + 31) div 32;
+  F1_15Grid.RowCount := 1 + (MemSize + 31) div 32;
   F1_15Grid.Cells[0, 0] := MemTypeStr;
   F1_15Grid.ColWidths[0] := DIRST_COL_WIDTH;
   for i := 0 to 15 do
@@ -1097,25 +882,21 @@ begin
     F1_15Grid.Cells[i + 1, 0] := ' +' + IntToHex(LiczFirstRow(2 * i), 2);
   end;
 
-  if Assigned(FOnToValue) then
+  i := 0;
+  while i < MemSize do
   begin
-    i := 0;
-    while i < FMemBufSize do
-    begin
-      X := (i mod 32) div 2;
-      Y := i div 32;
-      if X = 0 then
-        F1_15Grid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
-      F1_15Grid.Cells[X + 1, Y + 1] := Format('%.5f', [F1_15ToFloat(GetWord(i))]);
-      i := i + 2;
-    end;
+    X := (i mod 32) div 2;
+    Y := i div 32;
+    if X = 0 then
+      F1_15Grid.Rows[Y + 1].CommaText := FirstColTxt(FSrcAdr + LiczFirstCol(i));
+    F1_15Grid.Cells[X + 1, Y + 1] := Format('%.5f', [F1_15ToFloat(MemBuf.GetWord(i))]);
+    i := i + 2;
   end;
   F1_15Grid.Refresh;
 end;
 
 procedure TMemFrame.F1_15GridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  k: TCellState;
   Ok: Boolean;
   V: Single;
   w: Word;
@@ -1133,17 +914,14 @@ begin
 
   if Ok then
   begin
-    SetWord(n, w);
+    MemBuf.SetWord(n, w);
     if not(F1_15Grid.EditorMode) then
     begin
       F1_15Grid.Cells[ACol, ARow] := Format('%.5f', [F1_15ToFloat(w)]);
     end;
-    k := csModify;
   end
   else
-    k := csBad;
-  MemState[n] := k;
-  MemState[n + 1] := k;
+    MemBuf.SetError(n, 2);
 end;
 
 // ------------------ CHART ------------------------------------------
@@ -1307,7 +1085,7 @@ begin
     begin
       i := 0;
       repeat
-        w := GetWord(wsk);
+        w := MemBuf.GetWord(wsk);
         if (w and $0001) = 0 then
           inc(wsk, 2);
         inc(i);
@@ -1318,7 +1096,7 @@ begin
       0:
         begin // abcabcabc
           i := 0;
-          while wsk < FMemBufSize do
+          while wsk < MemSize do
           begin
             LSer := SeriesListBox.Items.Objects[i mod n] as TLineSeries;
             f := GetMulti(wsk);
@@ -1328,9 +1106,9 @@ begin
         end;
       1:
         begin // aaabbbccc
-          cnt := (FMemBufSize div n) div 2;
+          cnt := (MemSize div n) div 2;
           i := 0;
-          while wsk < FMemBufSize do
+          while wsk < MemSize do
           begin
             f := GetMulti(wsk);
             k := i div cnt;
@@ -1456,7 +1234,7 @@ begin
   Nr := (Sender as TButton).Tag - 1;
   if (Nr >= 0) and (Nr < MAX_MEM_BOX) then
   begin
-    ReadMinMaxBox(CharMinMaxTab[Nr]);
+    ReadMinMaxBox(ChartMinMaxTab[Nr]);
     MakeMinMaxBoxHints;
   end;
 end;
@@ -1468,8 +1246,8 @@ begin
   Nr := (Sender as TButton).Tag - 1;
   if (Nr >= 0) and (Nr < MAX_MEM_BOX) then
   begin
-    ShowMinMaxBox(CharMinMaxTab[Nr]);
-    SetMinMaxBox(CharMinMaxTab[Nr]);
+    ShowMinMaxBox(ChartMinMaxTab[Nr]);
+    SetMinMaxBox(ChartMinMaxTab[Nr]);
   end;
 end;
 
@@ -1517,7 +1295,7 @@ procedure TMemFrame.FillMeasureGridValues;
     Avr := 0;
     RMS := 0;
     n := Sr.Count;
-    SetLength(Buf, n);
+    setlength(Buf, n);
     for i := 0 to n - 1 do
     begin
       Buf[i] := Sr.YValue[i];
@@ -1676,201 +1454,15 @@ begin
   LasPosPoint := Point(X, Y);
 end;
 
-// ------------------ WEKCHART ------------------------------------------
-procedure TMemFrame.WekSheetShow(Sender: TObject);
-begin
-  DrawWekChart;
-  if not(SecoundTime) then
-  begin
-    WekChart.TopAxis.Visible := true;
-    WekChart.TopAxis.Automatic := false;
-    WekChart.TopAxis.Minimum := -1.2;
-    WekChart.TopAxis.Maximum := 1.2;
-
-    WekChart.LeftAxis.Automatic := false;
-    WekChart.LeftAxis.Minimum := -1.2;
-    WekChart.LeftAxis.Maximum := 1.2;
-    SecoundTime := true;
-  end;
-end;
-
-procedure TMemFrame.DrawWekChart;
-var
-  i: integer;
-  x1, y1: Double;
-begin
-  if FMemBufSize < cardinal(WekListBox.Count) * 2 then
-    FSetSize(WekListBox.Count * 2);
-
-  WekSeries.Clear;
-  if Assigned(FOnToValue) then
-  begin
-    for i := 0 to WekListBox.Count - 1 do
-    begin
-      x1 := F1_15ToFloat(GetWord(4 * i + 0));
-      y1 := F1_15ToFloat(GetWord(4 * i + 2));
-      WekSeries.AddArrow(0, 0, x1, y1, WekListBox.Items[i], cardinal(WekListBox.Items.Objects[i]))
-    end;
-  end;
-end;
-
-procedure TMemFrame.AddWektor(s: string);
-var
-  SL: TStringList;
-  n: integer;
-begin
-  SL := TStringList.Create;
-  SL.Delimiter := '|';
-  SL.DelimitedText := s;
-  if SL.Count >= 2 then
-  begin
-    n := StrToInt(SL.Strings[1]);
-    WekListBox.AddItem(SL.Strings[0], Pointer(n));
-  end;
-  SL.Free;
-  WekCntEdit.Value := WekListBox.Count;
-end;
-
-function TMemFrame.GetWektor(n: integer): string;
-var
-  SL: TStringList;
-begin
-  SL := TStringList.Create;
-  SL.Delimiter := '|';
-  SL.Add(WekListBox.Items[n]);
-  SL.Add(IntToStr(cardinal(WekListBox.Items.Objects[n])));
-  Result := SL.DelimitedText;
-  SL.Free;
-end;
-
-procedure TMemFrame.FSetWekSerCount(cnt: integer);
-var
-  s: string;
-begin
-  while WekListBox.Count < cnt do
-  begin
-    s := Format('Wektor_%u', [WekListBox.Count]);
-    WekListBox.AddItem(s, Pointer(clBlack));
-  end;
-  while WekListBox.Count > cnt do
-  begin
-    WekListBox.Items.Delete(WekListBox.Count - 1);
-  end;
-  DrawWekChart;
-end;
-
-procedure TMemFrame.WekCntEditChange(Sender: TObject);
-begin
-  FSetWekSerCount(WekCntEdit.Value);
-end;
-
-procedure TMemFrame.Zmienazw1Click(Sender: TObject);
-var
-  s: string;
-begin
-  s := WekListBox.Items.Strings[WekListBox.ItemIndex];
-  if InputQuery('Zmiana nazwy', 'Podaj now¹ nazwê', s) then
-  begin
-    WekListBox.Items.Strings[WekListBox.ItemIndex] := s;
-  end;
-  DrawWekChart;
-end;
-
-procedure TMemFrame.Zmiekolor1Click(Sender: TObject);
-var
-  Color: TColor;
-begin
-  Color := TColor(WekListBox.Items.Objects[WekListBox.ItemIndex]);
-  ColorDialog1.Color := Color;
-  if ColorDialog1.Execute then
-    WekListBox.Items.Objects[WekListBox.ItemIndex] := Pointer(ColorDialog1.Color);
-  DrawWekChart;
-end;
-
-procedure TMemFrame.SaveToIni(Ini: TMemIniFile; SName: string);
-var
-  i: integer;
-  n: string;
-  SL: TStringList;
-begin
-  // zak³adka CHART
-  Ini.WriteInteger(SName, 'Chart_Cnt', SerCntEdit.Value);
-  Ini.WriteInteger(SName, 'Grid_word_Col_Cnt', WordColCntEdit.Value);
-  Ini.WriteInteger(SName, 'Grid_Byte_Col_Cnt', ByteColCntEdit.Value);
-
-  FSetChartSerCount(SerCntEdit.Value);
-  for i := 0 to SerCntEdit.Value - 1 do
-  begin
-    n := Format('Chart_Item%u_Name', [i]);
-    Ini.WriteString(SName, n, SeriesListBox.Items.Strings[i]);
-    n := Format('Chart_Item%u_Color', [i]);
-    Ini.WriteInteger(SName, n, (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor);
-  end;
-  Ini.WriteBool(SName, 'Chart_Auto', AutoXYBox.Checked);
-  Ini.WriteString(SName, 'Chart_MinX', MinXEdit.Text);
-  Ini.WriteString(SName, 'Chart_MaxX', MaxXEdit.Text);
-  Ini.WriteString(SName, 'Chart_MinY', MinYEdit.Text);
-  Ini.WriteString(SName, 'Chart_MaxY', MaxYEdit.Text);
-  Ini.WriteInteger(SName, 'Chart_DataType', DataTypeBox.ItemIndex);
-  Ini.WriteInteger(SName, 'Chart_SereiesType', SerieTypeBox.ItemIndex);
-  Ini.WriteInteger(SName, 'Chart_DataSize', DataSizeBox.ItemIndex);
-  Ini.WriteBool(SName, 'Chart_RZ30Data', RZ30MemBox.Checked);
-  Ini.WriteBool(SName, 'Chart_Points', PointsBox.Checked);
-  SL := TStringList.Create;
-  try
-    SL.Assign(MeasureGrid.Cols[1]);
-    SL.Delete(0);
-    SL.Delimiter := ';';
-    SL.QuoteChar := '"';
-    Ini.WriteString(SName, 'MeasGrid_SortedNames', SL.DelimitedText);
-    SL.Clear;
-    for i := 1 to MeasureGrid.ColCount - 1 do
-    begin
-      SL.Add(IntToStr(MeasureGrid.ColWidths[i]));
-    end;
-    Ini.WriteString(SName, 'MeasGrid_ColWidth', SL.DelimitedText);
-
-    SL.Clear;
-    SL.Add(IntToStr(LasPosPoint.X));
-    SL.Add(IntToStr(LasPosPoint.Y));
-    SL.Add(IntToStr(MeasurePanel.Width));
-    SL.Add(IntToStr(MeasurePanel.Height));
-    Ini.WriteString(SName, 'MeasGrid_Pos', SL.DelimitedText);
-    for i := 0 to MAX_MEM_BOX - 1 do
-    begin
-      SL.Clear;
-      SL.Add(IntToStr(CharMinMaxTab[i].Left));
-      SL.Add(IntToStr(CharMinMaxTab[i].Top));
-      SL.Add(IntToStr(CharMinMaxTab[i].Right));
-      SL.Add(IntToStr(CharMinMaxTab[i].Bottom));
-      Ini.WriteString(SName, Format('MemBox%u', [i]), SL.DelimitedText);
-    end;
-  finally
-    SL.Free;
-  end;
-
-  // zak³adka WEKTORY
-  Ini.WriteInteger(SName, 'Wek_Cnt', WekCntEdit.Value);
-  FSetWekSerCount(WekCntEdit.Value);
-  for i := 0 to WekCntEdit.Value - 1 do
-  begin
-    n := Format('Wek_Item%u_Name', [i]);
-    Ini.WriteString(SName, n, WekListBox.Items.Strings[i]);
-    n := Format('Wek_Item%u_Color', [i]);
-    Ini.WriteInteger(SName, n, integer(WekListBox.Items.Objects[i]));
-  end;
-
-end;
+// -----------------------------------------------------------------------------
 
 function TMemFrame.GetJSONObject: TJSONBuilder;
 var
   i: integer;
-  n: string;
-  SL: TStringList;
   jBuild: TJSONBuilder;
   jBuild2: TJSONBuilder;
   jArr: TJSONArray;
-  IntArr: TIntDynArr;
+  IntArr: TIntArr;
 begin
   Result.Init;
 
@@ -1913,7 +1505,7 @@ begin
   for i := 0 to MAX_MEM_BOX - 1 do
   begin
     jBuild2.Init;
-    jBuild2.Add(CharMinMaxTab[i]);
+    jBuild2.Add(ChartMinMaxTab[i]);
     jArr.AddElement(jBuild2.jobj);
   end;
   jBuild.Add('CharRanges', jArr);
@@ -1923,28 +1515,13 @@ begin
   jBuild2.Add('W', MeasurePanel.Width);
   jBuild2.Add('H', MeasurePanel.Height);
 
-  SetLength(IntArr, MeasureGrid.ColCount - 1);
+  setlength(IntArr, MeasureGrid.ColCount - 1);
   for i := 0 to MeasureGrid.ColCount - 2 do
     IntArr[i] := MeasureGrid.ColWidths[i + 1];
   jBuild2.Add('ColWidth', IntArr);
 
   jBuild.Add('MeasGrid', jBuild2.jobj);
   Result.Add('Chart', jBuild.jobj);
-
-  // zak³adka WEKTORY
-  jBuild.Init;
-  jArr := TJSONArray.Create;
-
-  FSetWekSerCount(WekCntEdit.Value);
-  for i := 0 to WekCntEdit.Value - 1 do
-  begin
-    jBuild2.Init;
-    jBuild2.Add('Name', WekListBox.Items.Strings[i]);
-    jBuild2.Add('Color', integer(WekListBox.Items.Objects[i]));
-    jArr.AddElement(jBuild2.jobj);
-  end;
-  jBuild.Add('Signals', jArr);
-  Result.Add('Vector', jBuild.jobj);
 end;
 
 procedure TMemFrame.LoadfromJson(jParent: TJSONLoader);
@@ -1952,7 +1529,7 @@ var
   n, i: integer;
   s: string;
   jArr: TJSONArray;
-  IntArr: TIntDynArr;
+  IntArr: TIntArr;
   C: integer;
   jLoader: TJSONLoader;
   jLoader2: TJSONLoader;
@@ -2018,7 +1595,7 @@ begin
       for i := 0 to n - 1 do
       begin
         jLoader2.Init(jArr.Items[i]);
-        jLoader2.Load(CharMinMaxTab[i]);
+        jLoader2.Load(ChartMinMaxTab[i]);
       end;
     end;
 
@@ -2033,135 +1610,6 @@ begin
     end;
   end;
 
-  // zak³adka WEKTORY
-  if jLoader.Init(jParent.GetObject('Vector')) then
-  begin
-    jArr := jLoader.getArray('Signals');
-
-    FSetWekSerCount(jArr.Count);
-    for i := 0 to jArr.Count - 1 do
-    begin
-      jLoader2.Init(jArr.Items[i]);
-
-      s := WekListBox.Items.Strings[i];
-      jLoader2.Load('Name', s);
-      WekListBox.Items.Strings[i] := s;
-
-      C := integer(WekListBox.Items.Objects[i]);
-      jLoader2.Load('Color', C);
-      WekListBox.Items.Objects[i] := Pointer(C);
-    end;
-  end;
-end;
-
-procedure TMemFrame.LoadFromIni(Ini: TMemIniFile; SName: string);
-var
-  i: integer;
-  n: string;
-  s: string;
-  C: integer;
-  SL: TStringList;
-  PT: TPoint;
-begin
-  // zak³adka Chart
-  SL := TStringList.Create;
-  try
-    SL.Delimiter := ';';
-    SL.QuoteChar := '"';
-
-    LasPosPoint.X := -1;
-    SerCntEdit.Value := Ini.ReadInteger(SName, 'Chart_Cnt', 4);
-    WordColCntEdit.Value := Ini.ReadInteger(SName, 'Grid_word_Col_Cnt', 16);
-    ByteColCntEdit.Value := Ini.ReadInteger(SName, 'Grid_Byte_Col_Cnt', 16);
-
-    FSetChartSerCount(SerCntEdit.Value);
-
-    for i := 0 to SerCntEdit.Value - 1 do
-    begin
-      n := Format('Chart_Item%u_Name', [i]);
-      s := Format('Sig_%u', [i]);
-      s := Ini.ReadString(SName, n, s);
-      (SeriesListBox.Items.Objects[i] as TLineSeries).Title := s;
-      SeriesListBox.Items.Strings[i] := s;
-
-      n := Format('Chart_Item%u_Color', [i]);
-      C := (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor;
-      C := Ini.ReadInteger(SName, n, C);
-      (SeriesListBox.Items.Objects[i] as TLineSeries).SeriesColor := C;
-    end;
-    AutoXYBox.Checked := Ini.ReadBool(SName, 'Chart_Auto', AutoXYBox.Checked);
-    MinXEdit.Text := Ini.ReadString(SName, 'Chart_MinX', MinXEdit.Text);
-    MaxXEdit.Text := Ini.ReadString(SName, 'Chart_MaxX', MaxXEdit.Text);
-    MinYEdit.Text := Ini.ReadString(SName, 'Chart_MinY', MinYEdit.Text);
-    MaxYEdit.Text := Ini.ReadString(SName, 'Chart_MaxY', MaxYEdit.Text);
-
-    for i := 0 to MAX_MEM_BOX - 1 do
-    begin
-      s := Ini.ReadString(SName, Format('MemBox%u', [i]), '');
-      if s <> '' then
-      begin
-        SL.DelimitedText := s;
-        if SL.Count >= 4 then
-        begin
-          CharMinMaxTab[i].Left := StrToInt(SL.Strings[0]);
-          CharMinMaxTab[i].Top := StrToInt(SL.Strings[1]);
-          CharMinMaxTab[i].Right := StrToInt(SL.Strings[2]);
-          CharMinMaxTab[i].Bottom := StrToInt(SL.Strings[3]);
-        end;
-      end;
-    end;
-    MakeMinMaxBoxHints;
-
-    DataTypeBox.ItemIndex := Ini.ReadInteger(SName, 'Chart_DataType', DataTypeBox.ItemIndex);
-    SerieTypeBox.ItemIndex := Ini.ReadInteger(SName, 'Chart_SereiesType', SerieTypeBox.ItemIndex);
-    DataSizeBox.ItemIndex := Ini.ReadInteger(SName, 'Chart_DataSize', DataSizeBox.ItemIndex);
-    RZ30MemBox.Checked := Ini.ReadBool(SName, 'Chart_RZ30Data', RZ30MemBox.Checked);
-    PointsBox.Checked := Ini.ReadBool(SName, 'Chart_Points', PointsBox.Checked);
-
-    SL.DelimitedText := Ini.ReadString(SName, 'MeasGrid_SortedNames', '');
-    SL.Insert(0, 'Nazwa');
-    if MeasureGrid.RowCount < SL.Count then
-      MeasureGrid.RowCount := SL.Count;
-    MeasureGrid.Cols[1].Assign(SL);
-
-    SL.DelimitedText := Ini.ReadString(SName, 'MeasGrid_ColWidth', '');
-    if MeasureGrid.ColCount < SL.Count + 1 then
-      MeasureGrid.ColCount := SL.Count + 1;
-    for i := 0 to SL.Count - 1 do
-    begin
-      MeasureGrid.ColWidths[i + 1] := StrToInt(SL.Strings[i]);
-    end;
-
-    SL.DelimitedText := Ini.ReadString(SName, 'MeasGrid_Pos', '');
-    if SL.Count >= 4 then
-    begin
-      PT.X := StrToInt(SL.Strings[0]);
-      PT.Y := StrToInt(SL.Strings[1]);
-      MeasurePanel.Width := StrToInt(SL.Strings[2]);
-      MeasurePanel.Height := StrToInt(SL.Strings[3]);
-      LasPosPoint := PT;
-    end;
-
-    // zak³adka WEKTORY
-    WekCntEdit.Value := Ini.ReadInteger(SName, 'Wek_Cnt', 4);
-    FSetWekSerCount(WekCntEdit.Value);
-
-    for i := 0 to WekCntEdit.Value - 1 do
-    begin
-      n := Format('Wek_Item%u_Name', [i]);
-      s := WekListBox.Items.Strings[i];
-      s := Ini.ReadString(SName, n, s);
-      WekListBox.Items.Strings[i] := s;
-
-      n := Format('Wek_Item%u_Color', [i]);
-      C := integer(WekListBox.Items.Objects[i]);
-      C := Ini.ReadInteger(SName, n, C);
-      WekListBox.Items.Objects[i] := Pointer(C);
-    end;
-    DrawWekChart;
-  finally
-    SL.Free;
-  end;
 end;
 
 procedure TMemFrame.MakeMinMaxBoxHints;
@@ -2171,13 +1619,13 @@ procedure TMemFrame.MakeMinMaxBoxHints;
   end;
 
 begin
-  SaveM1Btn.Hint := BuildHint(CharMinMaxTab[0]);
+  SaveM1Btn.Hint := BuildHint(ChartMinMaxTab[0]);
   RestoreM1Btn.Hint := SaveM1Btn.Hint;
 
-  SaveM2Btn.Hint := BuildHint(CharMinMaxTab[1]);
+  SaveM2Btn.Hint := BuildHint(ChartMinMaxTab[1]);
   RestoreM2Btn.Hint := SaveM2Btn.Hint;
 
-  SaveM3Btn.Hint := BuildHint(CharMinMaxTab[2]);
+  SaveM3Btn.Hint := BuildHint(ChartMinMaxTab[2]);
   RestoreM3Btn.Hint := SaveM3Btn.Hint;
 end;
 
@@ -2219,16 +1667,6 @@ begin
         n := 8;
       end;
     4:
-      begin
-        Gr := DFloatGrid;
-        n := 8;
-      end;
-    5:
-      begin
-        Gr := DspProgGrid;
-        n := 8;
-      end;
-    6:
       begin
         Gr := F1_15Grid;
         n := 16;

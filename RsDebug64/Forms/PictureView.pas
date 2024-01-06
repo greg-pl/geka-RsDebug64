@@ -112,7 +112,7 @@ type
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jParent: TJSONLoader); override;
 
-    procedure ReloadMapParser; override;
+    procedure ReloadVarList; override;
     function GetDefaultCaption: string; override;
   end;
 
@@ -147,7 +147,7 @@ end;
 procedure TPictureViewForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 function TPictureViewForm.GetZoom: double;
@@ -346,10 +346,10 @@ begin
   DrukImage.Proportional := (Sender as TCheckBox).Checked;
 end;
 
-procedure TPictureViewForm.ReloadMapParser;
+procedure TPictureViewForm.ReloadVarList;
 begin
   inherited;
-  MapParser.MapItemList.LoadToList(VarListBox.Items);
+  MapParser.MapItemList.LoadToList(VarListBox.Items,Progcfg.SectionsCfg);
 end;
 
 function TPictureViewForm.GetDefaultCaption: string;
@@ -385,7 +385,7 @@ end;
 
 procedure TPictureViewForm.LoadfromJson(jParent: TJSONLoader);
 var
-  colors: TIntDynArr;
+  colors: TIntArr;
 begin
   inherited;
   AdresBox.Items.CommaText := '0,4000,8000,800000';

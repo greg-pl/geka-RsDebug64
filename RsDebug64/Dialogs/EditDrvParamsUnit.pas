@@ -58,6 +58,7 @@ begin
     k:=1;
     for i:=0 to SL.Count-1 do
     begin
+{
       if MainWinInterf.GetDev.GetDrvStatus(SL.Strings[i],ParValue)=stOk then
       begin
         ParamGrid.Cells[0,k]:=IntToStr(k);
@@ -65,6 +66,7 @@ begin
         ParamGrid.Cells[2,k]:=ParValue;
         inc(k);
       end;
+}
     end;
   finally
     Sl.Free;
@@ -107,6 +109,7 @@ begin
   SecName := MainWinInterf.FindIniDrvPrmSection(MainWinInterf.GetDev.getDriverShortName);
   if SecName='' then
     SecName := MainWinInterf.FindIniDrvPrmSection('');
+{
   Ini := TIniFile.Create(ProgCfg.MainIniFName);
   try
     Ini.WriteString(SecName,INI_PARAM_DEV_STR,MainWinInterf.GetDev.getDriverShortName);
@@ -121,6 +124,7 @@ begin
     Ini.UpdateFile;
     Ini.Free;
   end;
+}
 end;
 
 end.

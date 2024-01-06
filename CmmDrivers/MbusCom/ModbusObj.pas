@@ -9,6 +9,8 @@ uses
   System.JSON,
   ComUnit,
   LibUtils,
+  JsonUtils,
+  SttObjectDefUnit,
   Rsd64Definitions;
 
 const
@@ -164,7 +166,9 @@ type
     procedure BreakPulse;
     property DevNr: integer read FDevNr;
     function SetBreakFlag(Val: boolean): TStatus;
-    function GetDrvStatus(ParamName: PAnsiChar; ParamValue: PAnsiChar; MaxRpl: integer): TStatus;
+
+    function GetDrvInfo: String;
+    function GetDrvParams: String;
     function SetDrvParam(ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus;
 
     procedure RegisterCallBackFun(ACallBackFunc: TCallBackFunc; CmmId: integer);
@@ -298,12 +302,12 @@ var
   rdcnt: integer;
   st: TStatus;
   BytesWritten: cardinal;
-  idx: integer;
+  // idx: integer;
   i: integer;
 begin
   Logger(1, '\wTerminalThread Start' + #10);
   setLength(Buffer, 512);
-  idx := 0;
+  // idx := 0;
   while not(Terminated) do
   begin
     if FRunFlag and (FOutPipe <> INVALID_HANDLE_VALUE) then
@@ -327,7 +331,7 @@ begin
     begin
       WaitForSingleObject(FEventHandle, 1000);
       // Logger(1, Format('\iTerminalThread wait %d', [idx]) + #10);
-      inc(idx);
+      // inc(idx);
     end;
   end;
   Logger(1, '\wTerminalThread Exit' + #10);
@@ -1153,37 +1157,61 @@ begin
   Result := stOK;
 end;
 
-function TDevItem.GetDrvStatus(ParamName: PAnsiChar; ParamValue: PAnsiChar; MaxRpl: integer): TStatus;
+function TDevItem.GetDrvInfo: String;
 var
   s: String;
+  ParamName: String;
+  jBuild: TJSONBuilder;
 begin
-  s := '';
-  if ParamName = 'REPEAT_CNT' then
-    s := IntToStr(FrameRepCnt)
-  else if ParamName = 'FRAME_CNT' then
-    s := IntToStr(FrameCnt)
-  else if ParamName = 'WAIT_CNT' then
-    s := IntToStr(WaitCnt)
-  else if ParamName = 'RECIVE_TIME' then
-    s := IntToStr(SumRecTime)
-  else if ParamName = 'SEND_TIME' then
-    s := IntToStr(SumSendTime)
-  else if ParamName = 'DIVIDE_LEN' then
-    s := IntToStr(CountDivide)
-  else if ParamName = 'DRIVER_MODE' then
-    s := IntToStr(ord(DriverMode))
-  else if ParamName = 'RS485_WAIT' then
-    s := IntToStr(byte(Rs485Wait))
-  else if ParamName = 'CLR_RDCNT' then
-    s := IntToStr(byte(FClr_ToRdCnt));
+  jBuild.Init;
+  jBuild.Add('REPEAT_CNT', FrameRepCnt);
+  jBuild.Add('FRAME_CNT', FrameCnt);
 
-  if s <> '' then
-  begin
-    System.AnsiStrings.StrPLCopy(ParamValue, AnsiString(s), MaxRpl);
-    Result := stOK;
-  end
-  else
-    Result := stBadArguments;
+  jBuild.Add('WAIT_CNT', WaitCnt);
+  jBuild.Add('RECIVE_TIME', SumRecTime);
+  jBuild.Add('SEND_TIME', SumSendTime);
+  jBuild.Add('FRAME_CNT', FrameCnt);
+  jBuild.Add('FRAME_CNT', FrameCnt);
+  jBuild.Add('FRAME_CNT', FrameCnt);
+  jBuild.Add('FRAME_CNT', FrameCnt);
+  jBuild.Add('FRAME_CNT', FrameCnt);
+  jBuild.Add('FRAME_CNT', FrameCnt);
+
+  Result := jBuild.jobj.ToString;
+
+  {
+    else if ParamName = 'WAIT_CNT' then
+    s := IntToStr(WaitCnt)
+    else if ParamName = 'RECIVE_TIME' then
+    s := IntToStr(SumRecTime)
+    else if ParamName = 'SEND_TIME' then
+    s := IntToStr(SumSendTime)
+    else if ParamName = 'DIVIDE_LEN' then
+    s := IntToStr(CountDivide)
+    else if ParamName = 'DRIVER_MODE' then
+    s := IntToStr(ord(DriverMode))
+    else if ParamName = 'RS485_WAIT' then
+    s := IntToStr(byte(Rs485Wait))
+    else if ParamName = 'CLR_RDCNT' then
+    s := IntToStr(byte(FClr_ToRdCnt));
+  }
+end;
+
+function TDevItem.GetDrvParams: String;
+var
+  p: TSttObjectListJson;
+begin
+  p := TSttObjectListJson.Create;
+  try
+    P.Add(TSttIntObjectJson.Create('DIVIDE_LEN', 'Port number', 40, 240, 128));
+    P.Add(TSttSelectObjectJson.Create('DRIVER_MODE', 'Driwer work mode', ['STD','SLOW','FAST'],'STD'));
+
+
+    Result := P.getJSonObject.ToString
+  finally
+    p.Free;
+  end;
+
 end;
 
 function TDevItem.SetDrvParam(ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus;
@@ -2148,8 +2176,8 @@ var
   p: PSEAskFrameOpenFile;
   L: integer;
 begin
-  setLength(q, L);
   L := 2 + (2 + 4 + 2 + System.AnsiStrings.strlen(FileName) + 1);
+  setLength(q, L);
   q[0] := FDevNr;
   q[1] := crdGetGuidEx;
   p := PSEAskFrameOpenFile(@q[2]);
@@ -2484,15 +2512,14 @@ begin
   inc(FCurrId);
 end;
 
-// MCOM;nr_rs;nr_dev;rs_speed;[ASCII|RTU];[N|E|O]
-// MCOM;1;7;115200;RTU;N
+// ConnectStr - JSON format
 
 function TDevList.AddDevice(ConnectStr: PAnsiChar): TAccId;
-  function GetJsonVal(jObj: TJsonObject; Name: string; var valStr: string): boolean;
+  function GetJsonVal(jobj: TJsonObject; Name: string; var valStr: string): boolean;
   var
     jPair: TJSonPair;
   begin
-    jPair := jObj.Get(Name);
+    jPair := jobj.Get(Name);
     Result := Assigned(jPair);
     if Result then
       valStr := jPair.JsonValue.Value;
@@ -2507,9 +2534,8 @@ var
   OpenParams: TDevItem.TOpenParams;
 
   DevItem: TDevItem;
-  SL: TStringList;
   jVal: TJSONValue;
-  jObj: TJsonObject;
+  jobj: TJsonObject;
   jObj2: TJsonObject;
   tmpStr: string;
   q: boolean;
@@ -2517,13 +2543,13 @@ begin
   Result := -1;
   try
     jVal := TJsonObject.ParseJSONValue(String(ConnectStr));
-    jObj := jVal as TJsonObject;
+    jobj := jVal as TJsonObject;
     OpenParams.InitDefault;
 
     q := false;
-    if Assigned(jObj) then
+    if Assigned(jobj) then
     begin
-      jObj2 := jObj.Get(CONNECTION_PARAMS_NAME).JsonValue as TJsonObject;
+      jObj2 := jobj.Get(CONNECTION_PARAMS_NAME).JsonValue as TJsonObject;
       if Assigned(jObj2) then
       begin
         if GetJsonVal(jObj2, UARTPARAM_COMNR, tmpStr) then

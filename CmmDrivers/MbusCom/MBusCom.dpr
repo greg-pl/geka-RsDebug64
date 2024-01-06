@@ -22,7 +22,8 @@ uses
   ComUnit in 'ComUnit.pas',
   LibUtils in 'LibUtils.pas',
   SttObjectDefUnit in '..\..\JSonSTT\SttObjectDefUnit.pas',
-  CrcUnit in '..\..\Common\CrcUnit.pas';
+  CrcUnit in '..\..\Common\CrcUnit.pas',
+  JSonUtils in '..\..\Common\JSonUtils.pas';
 
 {$R *.res}
 

@@ -101,8 +101,6 @@ implementation
 {$R *.dfm}
 
 Const
-  smfH8_RESET = 0;
-  smfDSP_RESET = 6;
   BinaryMemName: array [TBinaryMemType] of string = ('BIN_INP', 'COILS');
 
 function GetMemType(s: string): TBinaryMemType;
@@ -438,7 +436,7 @@ end;
 procedure TBinaryMemForm.FormActivate(Sender: TObject);
 begin
   inherited;
-  ReloadMapParser;
+  ReloadVarList;
 end;
 
 procedure TBinaryMemForm.SettingChg;

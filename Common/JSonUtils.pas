@@ -4,16 +4,25 @@ interface
 
 uses
   Winapi.Windows,
+{$IFDEF UsingVCL}
   Vcl.Controls,
   Vcl.ExtCtrls,
   Vcl.Samples.Spin,
   Vcl.ComCtrls,
-  Messages, SysUtils, IniFiles, Menus, Forms, Classes,
-  graphics, Contnrs, math, StdCtrls,
+  Vcl.ActnList,
+  Menus, Forms,
+  graphics,
+  StdCtrls,
+
+{$ENDIF}
+  Messages, SysUtils, IniFiles, Classes,
+  Contnrs, math,
   System.JSON;
 
 type
-  TIntDynArr = array of integer;
+  TIntArr = array of integer;
+  TStringArr = array of string;
+
   TFloatDynArr = array of double;
   TYesNoAsk = (crNO, crYES, crASK);
 
@@ -27,18 +36,21 @@ type
     procedure Init;
     procedure Add(valName: string; aVal: boolean); overload;
     procedure Add(valName: string; aVal: integer); overload;
+    procedure Add(valName: string; aVal: double); overload;
     procedure Add(valName: string; aVal: string); overload;
     procedure Add(valName: string; aVal: TStrings); overload;
-    procedure Add(valName: string; aVal: TIntDynArr); overload;
+    procedure Add(valName: string; aVal: TStringArr); overload;
+
+    procedure Add(valName: string; aVal: TIntArr); overload;
     procedure Add(valName: string; aVal: TJSONValue); overload;
     procedure Add(valName: string; aVal: TJSONBuilder); overload;
-
     procedure Add(aVal: TPoint); overload;
     procedure Add(R: TRect); overload;
+{$IFDEF UsingVCL}
     procedure Add(valName: string; Box: TComboBox); overload;
-
     procedure Add_TLWH(aVal: TWinControl);
     procedure AddColor(valName: string; aVal: TColor);
+{$ENDIF}
   end;
 
   // ---------------------------
@@ -51,36 +63,40 @@ type
 
     function getArray(valName: string): TJSONArray;
     function GetObject(valName: string): TJsonObject;
-    function getDynIntArray(valName: string): TIntDynArr;
+    function getDynIntArray(valName: string): TIntArr;
 
     function Load(valName: string; var vVal: string): boolean; overload;
     function Load(valName: string; var vVal: integer): boolean; overload;
     function Load(valName: string; var vVal: double): boolean; overload;
     function Load(valName: string; var vVal: boolean): boolean; overload;
     function Load(valName: string; var vVal: TYesNoAsk): boolean; overload;
-    function Load(valName: string; var intArr: TIntDynArr): boolean; overload;
+    function Load(valName: string; var intArr: TIntArr): boolean; overload;
     function Load(valName: string; SL: TStrings): boolean; overload;
+    function Load(valName: string; var Arr: TStringArr): boolean; overload;
 
+    function Load(var R: TRect): boolean; overload;
+    function Load(var P: TPoint): boolean; overload;
+
+    function LoadDef(valName: string; vDefault: string = ''): string; overload;
+    function LoadDef(valName: string; vDefault: integer): integer; overload;
+    function LoadDef(valName: string; vDefault: boolean): boolean; overload;
+    function LoadDef(valName: string; vDefault: double): double; overload;
+
+{$IFDEF UsingVCL}
     function Load(valName: string; CheckBox: TCheckBox): boolean; overload;
+    function Load(valName: string; Action: TAction): boolean; overload;
     function Load(valName: string; SpinEdit: TSpinEdit): boolean; overload;
 
     function Load(valName: string; Edit: TLabeledEdit): boolean; overload;
     function Load(valName: string; Group: TRadioGroup): boolean; overload;
     function Load(valName: string; Box: TComboBox): boolean; overload;
 
-    function Load(var R: TRect): boolean; overload;
-    function Load(var P: TPoint): boolean; overload;
-
     function Load_WH(ctrl: TControl): boolean;
     function Load_TLWH(ctrl: TControl): boolean;
     function LoadBtnDown(valName: string; btn: TToolButton): boolean;
     function LoadColor(valName: string; var Color: TColor): boolean;
-
-    function LoadDef(valName: string; vDefault: string = ''): string; overload;
-    function LoadDef(valName: string; vDefault: integer): integer; overload;
-    function LoadDef(valName: string; vDefault: boolean): boolean; overload;
     function LoadColorDef(valName: string; vDefault: TColor): TColor; overload;
-
+{$ENDIF}
   end;
 
 implementation
@@ -143,6 +159,11 @@ begin
   jobj.AddPair(TJSONPair.Create(valName, TJSONNumber.Create(aVal)));
 end;
 
+procedure TJSONBuilder.Add(valName: string; aVal: double);
+begin
+  jobj.AddPair(TJSONPair.Create(valName, TJSONNumber.Create(aVal)));
+end;
+
 procedure TJSONBuilder.Add(valName: string; aVal: string);
 begin
   jobj.AddPair(valName, TJSONStringEx.Create(aVal));
@@ -161,7 +182,20 @@ begin
   jobj.AddPair(TJSONPair.Create(valName, jArr));
 end;
 
-procedure TJSONBuilder.Add(valName: string; aVal: TIntDynArr);
+procedure TJSONBuilder.Add(valName: string; aVal: TStringArr);
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  jArr := TJSONArray.Create();
+  for i := 0 to length(aVal) - 1 do
+  begin
+    jArr.Add(aVal[i]);
+  end;
+  jobj.AddPair(TJSONPair.Create(valName, jArr));
+end;
+
+procedure TJSONBuilder.Add(valName: string; aVal: TIntArr);
 var
   jArr: TJSONArray;
   i: integer;
@@ -188,20 +222,22 @@ begin
   Add('Y', aVal.Y);
 end;
 
-procedure TJSONBuilder.Add_TLWH(aVal: TWinControl);
-begin
-  Add('Top', aVal.Top);
-  Add('Left', aVal.Left);
-  Add('Width', aVal.Width);
-  Add('Height', aVal.Height);
-end;
-
 procedure TJSONBuilder.Add(R: TRect);
 begin
   Add('Top', R.Top);
   Add('Left', R.Left);
   Add('Right', R.Right);
   Add('Bottom', R.Bottom);
+end;
+
+{$IFDEF UsingVCL}
+
+procedure TJSONBuilder.Add_TLWH(aVal: TWinControl);
+begin
+  Add('Top', aVal.Top);
+  Add('Left', aVal.Left);
+  Add('Width', aVal.Width);
+  Add('Height', aVal.Height);
 end;
 
 procedure TJSONBuilder.Add(valName: string; Box: TComboBox);
@@ -216,6 +252,7 @@ procedure TJSONBuilder.AddColor(valName: string; aVal: TColor);
 begin
   jobj.AddPair(valName, '0x' + IntToHex(aVal, 8));
 end;
+{$ENDIF}
 
 procedure JSonAddPair(Obj: TJsonObject; valName: string; aVal: string);
 begin
@@ -263,7 +300,7 @@ begin
     Result := jVal as TJsonObject;
 end;
 
-function TJSONLoader.getDynIntArray(valName: string): TIntDynArr;
+function TJSONLoader.getDynIntArray(valName: string): TIntArr;
 var
   jArr: TJSONArray;
   i: integer;
@@ -331,6 +368,76 @@ begin
     vVal := TYesNoAsk(v);
 end;
 
+function TJSONLoader.Load(valName: string; var intArr: TIntArr): boolean;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  Result := false;
+  setLength(intArr, 0);
+  jArr := jobj.GetValue(valName) as TJSONArray;
+  if Assigned(jArr) then
+  begin
+    Result := true;
+    setLength(intArr, jArr.Count);
+    for i := 0 to jArr.Count - 1 do
+    begin
+      intArr[i] := StrToInt(jArr.Items[i].Value);
+    end;
+  end;
+end;
+
+function TJSONLoader.Load(valName: string; SL: TStrings): boolean;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  Result := false;
+  jArr := jobj.GetValue(valName) as TJSONArray;
+  if Assigned(jArr) then
+  begin
+    Result := true;
+    SL.Clear;
+    for i := 0 to jArr.Count - 1 do
+    begin
+      SL.Add(jArr.Items[i].Value);
+    end;
+  end;
+end;
+
+function TJSONLoader.Load(valName: string; var Arr: TStringArr): boolean;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  Result := false;
+  jArr := jobj.GetValue(valName) as TJSONArray;
+  if Assigned(jArr) then
+  begin
+    Result := true;
+    setLength(Arr, jArr.Count);
+    for i := 0 to jArr.Count - 1 do
+    begin
+      Arr[i] := jArr.Items[i].Value;
+    end;
+  end;
+end;
+
+function TJSONLoader.Load(var R: TRect): boolean;
+begin
+  Result := Load('Top', R.Top);
+  Result := Result and Load('Left', R.Left);
+  Result := Result and Load('Right', R.Right);
+  Result := Result and Load('Bottom', R.Bottom);
+end;
+
+function TJSONLoader.Load(var P: TPoint): boolean;
+begin
+  Result := Load('X', P.X) and Load('Y', P.Y);
+end;
+
+{$IFDEF UsingVCL}
+
 function TJSONLoader.Load(valName: string; CheckBox: TCheckBox): boolean;
 var
   q: boolean;
@@ -338,6 +445,15 @@ begin
   Result := Load(valName, q);
   if Result then
     CheckBox.Checked := q;
+end;
+
+function TJSONLoader.Load(valName: string; Action: TAction): boolean;
+var
+  q: boolean;
+begin
+  Result := Load(valName, q);
+  if Result then
+    Action.Checked := q;
 end;
 
 function TJSONLoader.Load(valName: string; SpinEdit: TSpinEdit): boolean;
@@ -392,56 +508,6 @@ begin
     Group.ItemIndex := v;
 end;
 
-function TJSONLoader.Load(var R: TRect): boolean;
-begin
-  Result := Load('Top', R.Top);
-  Result := Result and Load('Left', R.Left);
-  Result := Result and Load('Right', R.Right);
-  Result := Result and Load('Bottom', R.Bottom);
-end;
-
-function TJSONLoader.Load(var P: TPoint): boolean;
-begin
-  Result := Load('X', P.X) and Load('Y', P.Y);
-end;
-
-function TJSONLoader.Load(valName: string; var intArr: TIntDynArr): boolean;
-var
-  jArr: TJSONArray;
-  i: integer;
-begin
-  Result := false;
-  setLength(intArr, 0);
-  jArr := jobj.GetValue(valName) as TJSONArray;
-  if Assigned(jArr) then
-  begin
-    Result := true;
-    setLength(intArr, jArr.Count);
-    for i := 0 to jArr.Count - 1 do
-    begin
-      intArr[i] := StrToInt(jArr.Items[i].Value);
-    end;
-  end;
-end;
-
-function TJSONLoader.Load(valName: string; SL: TStrings): boolean;
-var
-  jArr: TJSONArray;
-  i: integer;
-begin
-  Result := false;
-  jArr := jobj.GetValue(valName) as TJSONArray;
-  if Assigned(jArr) then
-  begin
-    Result := true;
-    SL.Clear;
-    for i := 0 to jArr.Count - 1 do
-    begin
-      SL.Add(jArr.Items[i].Value);
-    end;
-  end;
-end;
-
 function TJSONLoader.Load_WH(ctrl: TControl): boolean;
 var
   w, h: integer;
@@ -490,6 +556,14 @@ begin
   end
 end;
 
+function TJSONLoader.LoadColorDef(valName: string; vDefault: TColor): TColor;
+begin
+  Result := vDefault;
+  LoadColor(valName, Result);
+end;
+
+{$ENDIF}
+
 function TJSONLoader.LoadDef(valName: string; vDefault: string): string;
 begin
   Result := vDefault;
@@ -508,10 +582,10 @@ begin
   Load(valName, Result);
 end;
 
-function TJSONLoader.LoadColorDef(valName: string; vDefault: TColor): TColor;
+function TJSONLoader.LoadDef(valName: string; vDefault: double): double;
 begin
   Result := vDefault;
-  LoadColor(valName, Result);
+  Load(valName, Result);
 end;
 
 end.

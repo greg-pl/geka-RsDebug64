@@ -5,6 +5,7 @@ inherited PictureViewForm: TPictureViewForm
   ClientHeight = 379
   ClientWidth = 737
   OldCreateOrder = True
+  OnCreate = FormCreate
   ExplicitWidth = 753
   ExplicitHeight = 418
   PixelsPerInch = 96
@@ -297,8 +298,6 @@ inherited PictureViewForm: TPictureViewForm
     Height = 247
     Align = alClient
     TabOrder = 3
-    ExplicitWidth = 419
-    ExplicitHeight = 169
     object DrukImage: TImage
       Left = 0
       Top = 0
@@ -318,7 +317,7 @@ inherited PictureViewForm: TPictureViewForm
     Left = 456
     Top = 360
     Bitmap = {
-      494C010104000900240010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010104000900380010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -593,7 +592,7 @@ inherited PictureViewForm: TPictureViewForm
     Left = 416
     Top = 360
     Bitmap = {
-      494C010111001300140010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010111001300280010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1262,7 +1261,7 @@ inherited PictureViewForm: TPictureViewForm
   end
   object ActionList1: TActionList
     Images = ToolBarImgList
-    Left = 512
+    Left = 568
     Top = 137
     object ReadAct: TAction
       Caption = 'Read'
@@ -1303,6 +1302,7 @@ inherited PictureViewForm: TPictureViewForm
     end
     object OpenInPaintAct: TAction
       Caption = 'Otw'#243'rz w Paint'
+      Hint = 'Open in Paint'
       ImageIndex = 16
       ShortCut = 120
       OnExecute = OpenInPaintActExecute
