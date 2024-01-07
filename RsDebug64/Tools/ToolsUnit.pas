@@ -12,11 +12,14 @@ type
   TDataSize = (sz8BIT, sz16BIT, sz32BIT);
 
   TByteBuffer = class(TObject)
+  private
+    FSize : integer;
   public
     Buf: array of byte;
     ByteOrder: TByteOrder;
-    procedure SetLen(len: integer); virtual;
-    function len: integer;
+
+    procedure SetSize(size: integer); virtual;
+    property Size: integer read FSize;
 
     function GetByte(n: integer): byte;
     function GetWord(n: integer): Word;
@@ -72,15 +75,12 @@ function GetTempFile(const Extension: string): string;
 
 implementation
 
-procedure TByteBuffer.SetLen(len: integer);
+procedure TByteBuffer.SetSize(size: integer);
 begin
-  SetLength(Buf, len);
+  FSize := size;
+  SetLength(Buf, size);
 end;
 
-function TByteBuffer.len: integer;
-begin
-  Result := Length(Buf);
-end;
 
 function TByteBuffer.GetByte(n: integer): byte;
 begin
@@ -277,7 +277,7 @@ begin
   Strm := TmemoryStream.Create;
   try
     Strm.LoadFromFile(FName);
-    SetLength(Buf, Strm.Size);
+    SetSize(Strm.Size);
     Strm.Read(Buf[0], Strm.Size);
     Result := true;
   finally

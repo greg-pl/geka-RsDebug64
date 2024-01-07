@@ -30,6 +30,9 @@ const
 
   wm_WriteMem1 = wm_WindowCmm + 10;
   wm_WriteMem2 = wm_WindowCmm + 11;
+  wm_WriteMem3 = wm_WindowCmm + 12;
+
+  wm_AllDone   = wm_WindowCmm + 20;
 
   INI_PARAM_DEV_STR = '_PrmDevStr_';
 
@@ -142,6 +145,7 @@ type
     ptrSize: TPtrSize;
     ShowUnknownMapLine: boolean;
     LoadMapFileOnStartUp: boolean;
+    ShowMessageAboutSpeed: boolean;
     ObjDumpPath: string; // path to objdump.exe from GNU compiler
 
     ClosedWinList: TClosedWinList;
@@ -646,6 +650,7 @@ begin
         jLoader2.Load('MaxVarSize', MaxVarSize);
         jLoader2.Load('ObjDumpPath', ObjDumpPath);
         jLoader2.Load('LoadMapFileOnStartUp', LoadMapFileOnStartUp);
+        jLoader2.Load('ShowMessageAboutSpeed', ShowMessageAboutSpeed);
         try
           WinTab := TWinTab(jLoader2.LoadDef('WinTabPos', ord(WinTab)));
         except
@@ -702,6 +707,7 @@ begin
   jBuild2.Add('ShowUnknownMapLine', ShowUnknownMapLine);
   jBuild2.Add('ObjDumpPath', ObjDumpPath);
   jBuild2.Add('LoadMapFileOnStartUp', LoadMapFileOnStartUp);
+  jBuild2.Add('ShowMessageAboutSpeed', ShowMessageAboutSpeed);
 
   jBuild.Add('MainCfg', jBuild2);
   SectionsCfg.JSONAdd(jBuild);

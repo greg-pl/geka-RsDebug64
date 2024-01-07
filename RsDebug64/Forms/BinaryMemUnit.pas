@@ -12,6 +12,7 @@ uses
   RsdDll,
   Grids,
   CommonDef,
+  CommThreadUnit,
   Rsd64Definitions,
   AnalogFrameUnit, System.Actions, System.ImageList,
   System.JSON,
@@ -81,8 +82,13 @@ type
   private
     MemType: TBinaryMemType;
     function ReadMem: TStatus;
+    procedure wmReadMem1(var Msg: TMessage); message wm_ReadMem1;
+
     function WriteMem: TStatus;
-    function GetPhAdr(Adr: cardinal): cardinal;
+    procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
+
+    procedure wmWriteMem2(var Msg: TMessage); message wm_WriteMem2;
+
     function ReadPtrValue(A: cardinal): cardinal;
     procedure GetFromText(var Adr: cardinal; var ShowAdr: cardinal; var Size: cardinal; var RegSize: cardinal);
   public
@@ -99,6 +105,8 @@ type
 implementation
 
 {$R *.dfm}
+
+uses MemFrameUnit;
 
 Const
   BinaryMemName: array [TBinaryMemType] of string = ('BIN_INP', 'COILS');
@@ -130,11 +138,6 @@ end;
 type
   PByteAr = ^TByteAr;
   TByteAr = array [0 .. 7] of byte;
-
-function TBinaryMemForm.GetPhAdr(Adr: cardinal): cardinal;
-begin
-  Result := Adr;
-end;
 
 function TBinaryMemForm.ReadPtrValue(A: cardinal): cardinal;
 var
@@ -191,7 +194,6 @@ var
   ShowAdr: cardinal;
   Size: cardinal;
   RegSize: cardinal;
-  TT: cardinal;
 begin
   inherited;
   GetFromText(Adr, ShowAdr, Size, RegSize);
@@ -201,33 +203,38 @@ begin
 
   if Size <> 0 then
   begin
-    // MemFrame.ClrData;
-    TT := GetTickCount;
+    MemFrame.ClrData;
     case MemType of
       bmBINARYINP:
-        Result := Dev.RdInpTable(Handle, MemFrame.MemBuf[0], Adr, Size);
+        CommThread.AddToDoItem(TWorkRdMdbInputTableItem.Create(Handle, wm_ReadMem1, MemFrame.MemBuf[0], Adr, Size));
       bmCOILS:
-        Result := Dev.RdOutTable(Handle, MemFrame.MemBuf[0], Adr, Size);
-    else
-      Result := stNoImpl;
+        CommThread.AddToDoItem(TWorkRdMdbOutputTableItem.Create(Handle, wm_ReadMem1, MemFrame.MemBuf[0], Adr, Size));
     end;
-    TT := GetTickCount - TT;
-    if Result = stOK then
+  end;
+end;
+
+procedure TBinaryMemForm.wmReadMem1(var Msg: TMessage);
+var
+  item: TWorkModbusMultiBoolItem;
+begin
+  item := TCommWorkItem(Msg.WParam) as TWorkModbusMultiBoolItem;
+  if item.Result = stOK then
+  begin
+    if ProgCfg.ShowMessageAboutSpeed then
     begin
-      if TT <> 0 then
-        DoMsg(Format('RdMem v=%.2f[kB/sek]', [(Size / 1024) / (TT / 1000.0)]))
+      if item.WorkTime <> 0 then
+        DoMsg(Format('RdMem v=%.2f[kB/sek]', [(item.FSize / 1024) / (item.WorkTime / 1000.0)]))
       else
         DoMsg('RdMem OK');
-      MemFrame.SetNewData;
-    end
-    else
-    begin
-      DoMsg(Dev.GetErrStr(Result));
-      MemFrame.ClrData;
     end;
+    MemFrame.SetNewData;
   end
   else
-    Result := -1;
+  begin
+    DoMsg(Dev.GetErrStr(item.Result));
+    MemFrame.ClrData;
+  end;
+  item.Free;
 end;
 
 procedure TBinaryMemForm.ReadMemActUpdate(Sender: TObject);
@@ -310,68 +317,77 @@ end;
 
 function TBinaryMemForm.WriteMem: TStatus;
 var
-  i: cardinal;
-  st: TStatus;
   Adr: cardinal;
-  BufAdr: cardinal;
 begin
-  BufAdr := MapParser.StrToAdr(AdresBox.Text);
-  try
-    i := 0;
-    while i < MemFrame.MemSize do
+  Adr := MapParser.StrToAdr(AdresBox.Text);
+  CommThread.AddToDoItem(TWorkWrMultiMdbOutputTableItem.Create(Handle, wm_WriteMem1, MemFrame.MemBuf[0], Adr,
+    MemFrame.MemSize));
+end;
+
+procedure TBinaryMemForm.wmWriteMem1(var Msg: TMessage);
+var
+  item: TWorkWrMultiMdbOutputTableItem;
+begin
+  item := TWorkWrMultiMdbOutputTableItem(Msg.WParam);
+  if item.Result = stOK then
+  begin
+    if ProgCfg.ShowMessageAboutSpeed then
     begin
-      Adr := GetPhAdr(BufAdr) + i;
-      st := Dev.WrOutput(Handle, Adr, MemFrame.MemBuf[i]);
-      if st <> stOK then
-        break;
-      DoMsg(Format('WrOutput, Adr=%u', [Adr]));
-      MemFrame.MemState[i] := csFull;
-      inc(i);
+      if item.WorkTime <> 0 then
+        DoMsg(Format('RdMem v=%.2f[kB/sek]', [(item.FSize / 1024) / (item.WorkTime / 1000.0)]))
+      else
+        DoMsg('RdMem OK');
     end;
-    MemFrame.PaintActivPage;
-  except
-    on E: Exception do
-    begin
-      ShowMessage(E.Message);
-    end;
+    MemFrame.SetNewData;
+  end
+  else
+  begin
+    DoMsg(Dev.GetErrStr(item.Result));
+    MemFrame.ClrData;
   end;
+  item.Free;
 end;
 
 procedure TBinaryMemForm.SaveBufActExecute(Sender: TObject);
 var
   i: cardinal;
-  st: TStatus;
   Adr: cardinal;
   BufAdr: cardinal;
   k: integer;
 begin
   BufAdr := MapParser.StrToAdr(AdresBox.Text);
-  try
-    i := 0;
-    k := 0;
-    while i < MemFrame.MemSize do
+  k := 0;
+  for i := 0 to MemFrame.MemSize - 1 do
+  begin
+    if MemFrame.MemState[i] = csModify then
     begin
-      if MemFrame.MemState[i] = csModify then
-      begin
-        Adr := GetPhAdr(BufAdr) + i;
-        st := Dev.WrOutput(Handle, Adr, MemFrame.MemBuf[i]);
-        if st <> stOK then
-          break;
-        DoMsg(Format('WrOutput, Adr=%u', [Adr]));
-        MemFrame.MemState[i] := csFull;
-        inc(k);
-      end;
-      inc(i);
-    end;
-    MemFrame.PaintActivPage;
-    DoMsg(Format('WrOutput, k=%u  :%s', [k, Dev.GetErrStr(st)]));
-
-  except
-    on E: Exception do
-    begin
-      ShowMessage(E.Message);
+      Adr := BufAdr + i;
+      CommThread.AddToDoItem(TWorkWrMdbOutputTableItem.Create(Handle, wm_WriteMem2, Adr, MemFrame.MemBuf[i]));
+      inc(k);
     end;
   end;
+end;
+
+procedure TBinaryMemForm.wmWriteMem2(var Msg: TMessage);
+var
+  item: TWorkWrMdbOutputTableItem;
+  idx : integer;
+begin
+  item := TWorkWrMdbOutputTableItem(Msg.WParam);
+  Idx := item.FAdr - MapParser.StrToAdr(AdresBox.Text);
+  if item.Result = stOK then
+  begin
+    if ProgCfg.ShowMessageAboutSpeed then
+    begin
+      DoMsg('RdMem OK');
+    end;
+    MemFrame.MemState[idx] := csFull;
+  end
+  else
+  begin
+    DoMsg(Dev.GetErrStr(item.Result));
+  end;
+  item.Free;
 end;
 
 procedure TBinaryMemForm.ComboBoxExit(Sender: TObject);

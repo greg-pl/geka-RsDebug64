@@ -48,6 +48,10 @@ inherited MemForm: TMemForm
         end
       end
       inherited WordSheet: TTabSheet
+        ExplicitLeft = 4
+        ExplicitTop = 4
+        ExplicitWidth = 943
+        ExplicitHeight = 647
         inherited WordGRid: TStringGrid
           PopupMenu = GridPopUp
         end
@@ -59,29 +63,37 @@ inherited MemForm: TMemForm
         end
       end
       inherited DWordSheet: TTabSheet
+        ExplicitLeft = 4
+        ExplicitTop = 4
+        ExplicitWidth = 943
+        ExplicitHeight = 647
         inherited DWordGrid: TStringGrid
           PopupMenu = GridPopUp
         end
       end
       inherited FloatSheet: TTabSheet
+        ExplicitLeft = 4
+        ExplicitTop = 4
+        ExplicitWidth = 943
+        ExplicitHeight = 647
         inherited FloatGrid: TStringGrid
           PopupMenu = GridPopUp
         end
       end
       inherited F1_15Sheet: TTabSheet
+        ExplicitLeft = 4
+        ExplicitTop = 4
+        ExplicitWidth = 943
+        ExplicitHeight = 647
         inherited F1_15Grid: TStringGrid
           PopupMenu = GridPopUp
         end
       end
       inherited ChartSheet: TTabSheet
-        ExplicitWidth = 521
-        ExplicitHeight = 269
         inherited Panel1: TPanel
-          Height = 269
-          ExplicitHeight = 269
           inherited Panel2: TPanel
             inherited Label1: TLabel
-              Width = 67
+              Width = 150
               ExplicitWidth = 67
             end
           end
@@ -92,15 +104,7 @@ inherited MemForm: TMemForm
           end
         end
         inherited Panel4: TPanel
-          Width = 371
-          Height = 269
-          ExplicitWidth = 565
-          ExplicitHeight = 343
           inherited MainChart: TChart
-            Width = 565
-            Height = 310
-            ExplicitWidth = 565
-            ExplicitHeight = 310
             inherited MeasurePanel: TPanel
               Top = 88
               Height = 169
@@ -113,8 +117,6 @@ inherited MemForm: TMemForm
             end
           end
           inherited Panel5: TPanel
-            Width = 565
-            ExplicitWidth = 565
             inherited MinXEdit: TLabeledEdit
               EditLabel.Width = 30
               EditLabel.ExplicitLeft = 63
@@ -369,7 +371,7 @@ inherited MemForm: TMemForm
     Left = 80
     Top = 264
     Bitmap = {
-      494C010104000900380010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101040009003C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -746,7 +748,7 @@ inherited MemForm: TMemForm
     Left = 40
     Top = 264
     Bitmap = {
-      494C0101100013002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010110001300300010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

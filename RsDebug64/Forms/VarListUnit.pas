@@ -12,6 +12,7 @@ uses
   TypeDefUnit,
   EditVarItemUnit,
   ToolsUnit,
+  CommThreadUnit,
   RsdDll, System.Actions, System.ImageList,
   System.JSON,
   JSonUtils,
@@ -19,6 +20,23 @@ uses
 
 type
   TType = (ppByte, ppHex8, ppWord, ppInt16, ppHex16);
+
+  TRdRegion = class(TObject)
+    FRgIdx: integer;
+    FVarCnt: integer;
+    FBuf: array of byte;
+    FAdr: cardinal;
+    WorkItem: TWorkRdMemItem;
+    Constructor Create(RgIdx, VarCnt, Adr, Size: integer);
+    function GetSize: integer;
+  end;
+
+  TRdRegionList = class(TObjectList)
+    function FGetRegion(Index: integer): TRdRegion;
+    property Items[Index: integer]: TRdRegion read FGetRegion;
+    function FindRegion(WorkItem: TWorkRdMemItem): TRdRegion;
+  end;
+
   TViewVarList = class;
 
   TViewVar = class(TObject)
@@ -40,6 +58,8 @@ type
     VarAdres: cardinal;
     TxMode: TShowMode;
     Manual: boolean;
+    RgIdx: integer;
+
     property FillFlag: boolean read FFillFlag write FSetFillFlag;
     property TypName: string read FTypName write FSetTypName;
     property Typ: THType read FTyp;
@@ -48,7 +68,6 @@ type
     Constructor Create(AOwner: TViewVarList);
     function ToText(ByteOrder: TByteOrder): string;
     function LoadFromTxt(ByteOrder: TByteOrder; tx: string): boolean;
-    function WriteToDev(RHan: THandle; dev: TCmmDevice): TStatus;
     procedure TypeDefChg;
     procedure ReloadMapParser(OnMsg: TOnMsg);
 
@@ -65,15 +84,22 @@ type
 
   TViewVarList = class(TObjectList)
   private
+    FOwnHandle: THandle;
+    FOwnerHandle: THandle;
+    RdRegionList: TRdRegionList;
     function GetIName(nr: integer): string;
     function GetItem(Index: integer): TViewVar;
+    procedure wmReadMem1(var Msg: TMessage); message wm_ReadMem1;
+    procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
+    procedure WndProc(var AMessage: TMessage);
   public
-    constructor Create(OwnsObject: boolean);
+    constructor Create(aHandle: THandle);
     destructor Destroy; override;
     property Items[Index: integer]: TViewVar read GetItem;
     procedure TypeDefChg;
     procedure ReloadMapParser(OnMsg: TOnMsg);
-    function ReadVars(RHan: THandle; OnMsg: TOnMsg; dev: TCmmDevice): boolean;
+    procedure ReadVars(CommThread: TCommThread; OnMsg: TOnMsg; dev: TCmmDevice);
+    procedure WriteToDev(CommThread: TCommThread; dev: TCmmDevice; idx: integer);
     function FindVar(Nm: string): TViewVar;
 
     function GetJSONObject: TJSONValue;
@@ -188,11 +214,6 @@ type
     procedure ReloadListActExecute(Sender: TObject);
     procedure AddSectionToListActExecute(Sender: TObject);
     procedure AddSectionToListActUpdate(Sender: TObject);
-    procedure ShowVarGridMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
-      X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
-    procedure VarListViewMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
-      X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
-    procedure VarListViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
   private
     FSortType: integer;
     GridVarList: TViewVarList;
@@ -206,6 +227,9 @@ type
     procedure PrepareFilter;
     function FilterAccept(s: string): boolean;
     procedure ReloadVarListNoMove;
+    procedure wmAllDone(var Msg: TMessage); message wm_AllDone;
+    procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
+
   protected
     procedure CopyFromTemplateWin(TemplateWin: TChildForm); override;
   public
@@ -225,6 +249,7 @@ var
 implementation
 
 uses
+  Main,
   Math, MemFrameUnit;
 
 {$R *.dfm}
@@ -252,6 +277,7 @@ begin
   TxMode := smDEFAULT;
   Rep := 1;
   Manual := false;
+  RgIdx := -1;
 end;
 
 procedure TViewVar.FSetTypName(AName: string);
@@ -347,14 +373,6 @@ begin
       inc(i);
     end;
   end;
-end;
-
-function TViewVar.WriteToDev(RHan: THandle; dev: TCmmDevice): TStatus;
-begin
-  if Length(Mem) > 0 then
-    Result := dev.WriteDevMem(RHan, Mem[0], PhAdres, Length(Mem))
-  else
-    Result := stOK;
 end;
 
 procedure TViewVar.TypeDefChg;
@@ -455,14 +473,63 @@ begin
 end;
 
 // ------------ TViewVarList --------------------------------------------------
-constructor TViewVarList.Create(OwnsObject: boolean);
+
+Constructor TRdRegion.Create(RgIdx, VarCnt, Adr, Size: integer);
 begin
-  inherited Create(OwnsObject);
+  inherited Create;
+  FRgIdx := RgIdx;
+  FVarCnt := VarCnt;
+  SetLength(FBuf, Size);
+  FAdr := Adr;
+  WorkItem := nil;
+end;
+
+function TRdRegion.GetSize: integer;
+begin
+  Result := Length(FBuf);
+end;
+
+function TRdRegionList.FGetRegion(Index: integer): TRdRegion;
+begin
+  Result := inherited GetItem(index) as TRdRegion;
+end;
+
+function TRdRegionList.FindRegion(WorkItem: TWorkRdMemItem): TRdRegion;
+var
+  i: integer;
+begin
+  Result := nil;
+  for i := 0 to Count - 1 do
+  begin
+    if Items[i].WorkItem = WorkItem then
+    begin
+      Result := Items[i];
+      break;
+    end;
+  end;
+end;
+
+// ------------ TViewVarList --------------------------------------------------
+
+constructor TViewVarList.Create(aHandle: THandle);
+begin
+  inherited Create;
+  FOwnerHandle := aHandle;
+  RdRegionList := TRdRegionList.Create;
+  FOwnHandle := Classes.AllocateHWnd(WndProc);
 end;
 
 destructor TViewVarList.Destroy;
 begin
   inherited;
+  RdRegionList.Free;
+  Classes.DeallocateHWnd(FOwnHandle);
+end;
+
+procedure TViewVarList.WndProc(var AMessage: TMessage);
+begin
+  inherited;
+  Dispatch(AMessage);
 end;
 
 function TViewVarList.GetItem(Index: integer): TViewVar;
@@ -501,7 +568,7 @@ begin
     if Items[i].Name = Nm then
     begin
       Result := Items[i];
-      Break;
+      break;
     end
   end;
 end;
@@ -576,15 +643,19 @@ begin
   end;
 end;
 
-function TViewVarList.ReadVars(RHan: THandle; OnMsg: TOnMsg; dev: TCmmDevice): boolean;
+procedure TViewVarList.ReadVars(CommThread: TCommThread; OnMsg: TOnMsg; dev: TCmmDevice);
   procedure ClearFillFlags;
   var
     i: integer;
   begin
     for i := 0 to Count - 1 do
+    begin
       Items[i].FillFlag := false;
+      Items[i].RgIdx := -1;
+    end;
   end;
 
+// find for items with size!=0 and lowest Adr
   function FindMinAdrVar: TViewVar;
   var
     i: integer;
@@ -594,7 +665,7 @@ function TViewVarList.ReadVars(RHan: THandle; OnMsg: TOnMsg; dev: TCmmDevice): b
     AdrMin := 0;
     for i := 0 to Count - 1 do
     begin
-      if not(Items[i].FillFlag) then
+      if (Items[i].RgIdx < 0) and (Items[i].Size > 0) then
       begin
         if (Result = nil) or (Items[i].PhAdres < AdrMin) then
         begin
@@ -610,83 +681,120 @@ const
 var
   i: integer;
   AdrP: cardinal;
-  AdrK: cardinal;
-  LT: TViewVarList;
-  VVar: TViewVar;
-  Size: integer;
-  ScalMem: array of byte;
-  Ofs: integer;
-  st: TStatus;
+  AdrK, Adrk1: cardinal;
+  VarInRegionCnt: integer;
+  vVar: TViewVar;
+  RdRegion: TRdRegion;
+  RgIdx: integer;
 begin
-  LT := TViewVarList.Create(false);
-  try
-    ClearFillFlags;
-    repeat
-      LT.Clear;
-      AdrK := 0;
-      AdrP := 0;
-      repeat
-        VVar := FindMinAdrVar;
-        if VVar <> nil then
-        begin
-          if Length(VVar.Mem) <> 0 then
-          begin
-            if (LT.Count = 0) or (AdrK + ProgCfg.ScalMemCnt > VVar.PhAdres) then
-            begin
-              if (LT.Count = 0) then
-                AdrP := VVar.PhAdres;
-              AdrK := VVar.PhAdres + cardinal(Length(VVar.Mem));
-              if AdrK - AdrP < MAX_RD_ONE_SIZE then
-              begin
-                VVar.FillFlag := true;
-                LT.Add(VVar);
-              end
-              else
-                VVar := nil;
-            end
-            else
-              VVar := nil;
-          end
-          else
-          begin
-            VVar.FillFlag := true;
-          end;
-        end;
-      until VVar = nil;
+  ClearFillFlags;
+  RdRegionList.Clear;
+  RgIdx := 0;
+  while true do
+  begin
 
-      st := stOK;
-      if LT.Count <> 0 then
-      begin
-        Size := AdrK - AdrP;
-        SetLength(ScalMem, Size);
-        {
-          s := Format('Adr=%X Size=%u N=%u',[AdrP,Size,Lt.Count]);
-          for i:=0 to Lt.Count-1 do
-          s := s +', '+ Lt.Items[i].Name;
-          OnMsg(s);
-        }
-        st := dev.ReadDevMem(RHan, ScalMem[0], AdrP, Size);
-        for i := 0 to LT.Count - 1 do
-        begin
-          if st = stOK then
-          begin
-            Ofs := LT.Items[i].PhAdres - AdrP;
-            System.move(ScalMem[Ofs], LT.Items[i].Mem[0], Length(LT.Items[i].Mem));
-          end
-          else
-          begin
-            LT.Items[i].FillFlag := false;
-          end
-        end
-      end;
-    until (LT.Count = 0) or (st <> stOK);
-  finally
-    LT.Free;
+    AdrK := 0;
+    AdrP := 0;
+    VarInRegionCnt := 0;
+    inc(RgIdx);
+    while true do
+    begin
+      vVar := FindMinAdrVar;
+      if not Assigned(vVar) then
+        break; // no more variables
+
+      if (VarInRegionCnt > 0) and (integer(vVar.PhAdres - AdrK) > ProgCfg.ScalMemCnt) then
+        break; // distance too big
+
+      if VarInRegionCnt = 0 then
+        AdrP := vVar.PhAdres;
+
+      Adrk1 := vVar.PhAdres + vVar.Size;
+      if Adrk1 > AdrK then
+        AdrK := Adrk1;
+
+      if (VarInRegionCnt > 0) and (AdrK - AdrP >= MAX_RD_ONE_SIZE) then
+        break; // record too big
+
+      vVar.RgIdx := RgIdx;
+      inc(VarInRegionCnt);
+    end;
+    if VarInRegionCnt = 0 then
+      break;
+
+    RdRegion := TRdRegion.Create(RgIdx, VarInRegionCnt, AdrP, AdrK - AdrP);
+    RdRegionList.Add(RdRegion);
+    // OnMsg(Format('AddRegion Adr=0x%8X size=%u', [RdRegion.FAdr, RdRegion.GetSize]));
   end;
-  Result := st = stOK;
-  // OnMsg(Format('Time=%u [ms]',[TT]));
 
+  for i := 0 to RdRegionList.Count - 1 do
+  begin
+    RdRegion := RdRegionList.Items[i];
+
+    RdRegion.WorkItem := TWorkRdMemItem.Create(FOwnHandle, wm_ReadMem1, RdRegion.FBuf[0], RdRegion.FAdr,
+      RdRegion.GetSize);
+
+    CommThread.AddToDoItem(RdRegion.WorkItem);
+  end;
 end;
+
+procedure TViewVarList.wmReadMem1(var Msg: TMessage);
+var
+  Item: TWorkRdMemItem;
+  RdRegion: TRdRegion;
+  i: integer;
+  Ofs: cardinal;
+begin
+  Item := TWorkRdMemItem(Msg.WParam);
+  RdRegion := RdRegionList.FindRegion(Item);
+  if Assigned(RdRegion) = false then
+    raise Exception.Create('RdRegion not found');
+
+  // MainForm.NL(Format('Read AddRegion Adr=0x%8X size=%u', [RdRegion.FAdr, RdRegion.GetSize]));
+
+  for i := 0 to Count - 1 do
+  begin
+    if Items[i].RgIdx = RdRegion.FRgIdx then
+    begin
+      if Item.Result = stOK then
+      begin
+        Ofs := Items[i].VarAdres - RdRegion.FAdr;
+        System.move(RdRegion.FBuf[Ofs], Items[i].Mem[0], Items[i].Size);
+        Items[i].FillFlag := true;
+      end;
+    end;
+  end;
+  RdRegionList.Delete(RdRegionList.IndexOf(RdRegion));
+  if RdRegionList.Count = 0 then
+    PostMessage(FOwnerHandle, wm_AllDone, 0, 0);
+  Item.Free;
+end;
+
+procedure TViewVarList.WriteToDev(CommThread: TCommThread; dev: TCmmDevice; idx: integer);
+var
+  WorkItem: TWorkWrMemItem;
+begin
+  if (idx < 0) or (idx >= Count) then
+    raise Exception.Create('ViewVarList index error');
+
+  if Items[idx].Size > 0 then
+  begin
+    WorkItem := TWorkWrMemItem.Create(FOwnHandle, wm_WriteMem1, Items[idx].Mem[0], Items[idx].VarAdres,
+      Items[idx].Size);
+    WorkItem.Tmp := idx;
+    CommThread.AddToDoItem(WorkItem);
+  end;
+end;
+
+procedure TViewVarList.wmWriteMem1(var Msg: TMessage);
+var
+  Item: TWorkWrMemItem;
+begin
+  Item := TWorkWrMemItem(Msg.WParam);
+  PostMessage(FOwnerHandle, wm_WriteMem1, Item.Tmp, Item.Result);
+  Item.Free;
+end;
+
 
 
 // ------------ TVarListForm --------------------------------------------------
@@ -694,7 +802,7 @@ end;
 procedure TVarListForm.FormCreate(Sender: TObject);
 begin
   inherited;
-  GridVarList := TViewVarList.Create(true);
+  GridVarList := TViewVarList.Create(Handle);
   FilterList := TStringList.Create;
   LastCharTxMode := smHEX;
   LastIntTxMode := smUNSIGN;
@@ -756,7 +864,6 @@ end;
 
 procedure TVarListForm.LoadfromJson(jParent: TJSONLoader);
 var
-  aArr: TIntArr;
   jParent2: TJSONLoader;
 begin
   inherited;
@@ -885,13 +992,18 @@ begin
       end;
     end;
     if not(Result) then
-      Break;
+      break;
   end;
 end;
 
 procedure TVarListForm.ReloadListActExecute(Sender: TObject);
 begin
   inherited;
+  ReloadVarList;
+end;
+
+procedure TVarListForm.wmAllDone(var Msg: TMessage);
+begin
   ReloadVarList;
 end;
 
@@ -911,7 +1023,7 @@ begin
       if VarListView.Items[i].Data = ptr then
       begin
         VarListView.Items[i].Selected := true;
-        Break;
+        break;
       end;
     end;
   end;
@@ -1201,7 +1313,7 @@ begin
         s := 'Czy chcesz usun¹æ zmienn¹ :' + M.Name + ' ?';
         case MessageDlg(s, mtConfirmation, mbMY, 0) of
           mrNoToAll, mrCancel:
-            Break;
+            break;
           mrYes:
             YesToOne := true;
           mrNo:
@@ -1361,7 +1473,7 @@ end;
 procedure TVarListForm.ReadVarActExecute(Sender: TObject);
 begin
   inherited;
-  BufSt := GridVarList.ReadVars(Handle, DoMsg, dev);
+  GridVarList.ReadVars(CommThread, DoMsg, dev);
   FillShowVarGrid;
 end;
 
@@ -1381,19 +1493,6 @@ begin
     Item.ImageIndex := 1
   else
     Item.ImageIndex := 0;
-end;
-
-procedure TVarListForm.VarListViewMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
-  X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
-begin
-  inherited;
-  DoMsg('VarListViewMouseActivate')
-end;
-
-procedure TVarListForm.VarListViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
-begin
-  inherited;
-  DoMsg('VarListViewMouseUp')
 end;
 
 procedure TVarListForm.FilterEditKeyPress(Sender: TObject; var Key: Char);
@@ -1420,13 +1519,6 @@ begin
   begin
     EditValAct.Execute;
   end;
-end;
-
-procedure TVarListForm.ShowVarGridMouseActivate(Sender: TObject; Button: TMouseButton; Shift: TShiftState;
-  X, Y, HitTest: integer; var MouseActivate: TMouseActivate);
-begin
-  inherited;
-  DoMsg('Moved');
 end;
 
 procedure TVarListForm.ShowVarGridDblClick(Sender: TObject);
@@ -1500,15 +1592,28 @@ begin
         M := GridVarList.Items[i - 1];
         if M.LoadFromTxt(ProgCfg.ByteOrder, s) then
         begin
-          st := M.WriteToDev(Handle, dev);
-          if st <> stOK then
-            DoMsg(dev.GetErrStr(st));
+          GridVarList.WriteToDev(CommThread, dev, n);
         end
         else
           DoMsg('Niezrozumia³a wartoœæ dla zmiennej:' + M.Name);
       end;
       FillShowVarGrid;
     end;
+  end;
+end;
+
+procedure TVarListForm.wmWriteMem1(var Msg: TMessage);
+var
+  Result: integer;
+  idx: integer;
+  vVar: TViewVar;
+begin
+  idx := Msg.WParam;
+  Result := Msg.LParam;
+  if Result <> stOK then
+  begin
+    vVar := GridVarList.Items[idx];
+    DoMsg(Format('Error writing data to variable: %s  (idx=%u)', [vVar.Name, idx]));
   end;
 end;
 
@@ -1615,14 +1720,9 @@ begin
 end;
 
 procedure TVarListForm.AutoReadActUpdate(Sender: TObject);
-var
-  q: boolean;
 begin
   inherited;
-  q := false;
-  if dev <> nil then
-    q := dev.Connected;
-  (Sender as TAction).Enabled := q;
+  (Sender as TAction).Enabled := isConnected;
 end;
 
 procedure TVarListForm.AutoReadActExecute(Sender: TObject);
@@ -1731,7 +1831,7 @@ begin
   end;
   if FName <> '' then
   begin
-    VList := TViewVarList.Create(true);
+    VList := TViewVarList.Create(INVALID_HANDLE_VALUE);
     try
       Ini := TDotIniFile.Create(FName);
       try

@@ -41,6 +41,7 @@ type
     FSize: cardinal;
     FAsPtr: boolean;
     BufferAdr: cardinal; // faktyczny adres pamiêci
+    Tmp: Integer;
 
     constructor Create(H: THandle; Msg: UINT; var Buf; adr, size: cardinal); overload;
     constructor Create(H: THandle; Msg: UINT; asPtr: boolean; var Buf; UniAdr: cardinal; size: cardinal); overload;
@@ -53,6 +54,65 @@ type
   TWorkWrMemItem = class(TWorkRdWrMemItem)
   end;
 
+  // ---------------------------------
+  TWorkWrMdbRegItem = class(TCommWorkItem)
+    FVal: word;
+    FAdr: word;
+    constructor Create(H: THandle; Msg: UINT; adr, val: word);
+  end;
+
+  TWorkRdWrMdbRegItem = class(TCommWorkItem)
+    FRdBuffer: pByte;
+    FRdAdr: word;
+    FRdCnt: word;
+    FWrBuffer: pByte;
+    FWrAdr: word;
+    FWrCnt: word;
+    constructor Create(H: THandle; Msg: UINT; var RdBuf; RdAdr, RdCnt: word; var WrBuf; WrAdr, WrCnt: word);
+  end;
+
+  TWorkModbusMultiItem = class(TCommWorkItem)
+    FBuffer: pByte;
+    FAdr: word;
+    FSize: word;
+    constructor Create(H: THandle; Msg: UINT; var Buf; adr, size: word);
+  end;
+
+  TWorkRdMdbRegItem = class(TWorkModbusMultiItem)
+  end;
+
+  TWorkWrMultiMdbRegItem = class(TWorkModbusMultiItem)
+  end;
+
+  TWorkRdMdbAnalogInputItem = class(TWorkModbusMultiItem)
+  end;
+
+  TWorkModbusMultiBoolItem = class(TCommWorkItem)
+    FBuffer: pBool;
+    FAdr: word;
+    FSize: word;
+    constructor Create(H: THandle; Msg: UINT; var Buf; adr, size: word);
+  end;
+
+
+  TWorkRdMdbInputTableItem = class(TWorkModbusMultiBoolItem)
+
+  end;
+
+  TWorkRdMdbOutputTableItem = class(TWorkModbusMultiBoolItem)
+
+  end;
+
+  TWorkWrMultiMdbOutputTableItem = class(TWorkModbusMultiBoolItem)
+
+  end;
+
+  TWorkWrMdbOutputTableItem = class(TCommWorkItem)
+    FAdr: word;
+    FVal: boolean;
+    constructor Create(H: THandle; Msg: UINT; adr: word; val: boolean);
+  end;
+
   TCommThread = class(TThread)
   private
     FAsyncMutex: THandle;
@@ -61,6 +121,17 @@ type
     function ReadPtr(OwnerH: THandle; ptrAdr: cardinal; var addr: cardinal): TStatus;
     function doReadPtrMem(rd: TWorkRdMemItem): TStatus;
     function doWritePtrMem(wr: TWorkWrMemItem): TStatus;
+    function doRdMdbReg(rd: TWorkRdMdbRegItem): TStatus;
+    function doWrMdbReg(wr: TWorkWrMdbRegItem): TStatus;
+    function doRdWrMdbReg(wr: TWorkRdWrMdbRegItem): TStatus;
+
+    function doRdMdbInputTab(rd: TWorkRdMdbInputTableItem): TStatus;
+    function doRdMdbOutputTab(rd: TWorkRdMdbOutputTableItem): TStatus;
+    function doWrMdbOutputTab(wr: TWorkWrMdbOutputTableItem): TStatus;
+
+    function doWrMultiMdbReg(wr: TWorkWrMultiMdbRegItem): TStatus;
+    function doRdMdbAnalogReg(rd: TWorkRdMdbAnalogInputItem): TStatus;
+
   protected
     procedure Execute; override;
   public
@@ -173,6 +244,7 @@ begin
   FAdr := adr;
   FSize := size;
   FAsPtr := False;
+  Tmp := 0;
 end;
 
 constructor TWorkRdWrMemItem.Create(H: THandle; Msg: UINT; asPtr: boolean; var Buf; UniAdr: cardinal; size: cardinal);
@@ -182,8 +254,52 @@ begin
   FAdr := UniAdr;
   FSize := size;
   FAsPtr := asPtr;
+  Tmp := 0;
 end;
 
+constructor TWorkWrMdbRegItem.Create(H: THandle; Msg: UINT; adr, val: word);
+begin
+  inherited Create(H, Msg);
+  FVal := val;
+  FAdr := adr;
+end;
+
+constructor TWorkRdWrMdbRegItem.Create(H: THandle; Msg: UINT; var RdBuf; RdAdr, RdCnt: word; var WrBuf;
+  WrAdr, WrCnt: word);
+begin
+  inherited Create(H, Msg);
+  FRdBuffer := @RdBuf;
+  FRdAdr := RdAdr;
+  FRdCnt := RdCnt;
+  FWrBuffer := @WrBuf;
+  FWrAdr := WrAdr;
+  FWrCnt := WrCnt;
+end;
+
+constructor TWorkModbusMultiItem.Create(H: THandle; Msg: UINT; var Buf; adr, size: word);
+begin
+  inherited Create(H, Msg);
+  FBuffer := @Buf;
+  FAdr := adr;
+  FSize := size;
+end;
+
+constructor TWorkModbusMultiBoolItem.Create(H: THandle; Msg: UINT; var Buf; adr, size: word);
+begin
+  inherited Create(H, Msg);
+  FBuffer := @Buf;
+  FAdr := adr;
+  FSize := size;
+end;
+
+constructor TWorkWrMdbOutputTableItem.Create(H: THandle; Msg: UINT; adr: word; val: boolean);
+begin
+  inherited Create(H, Msg);
+  FAdr := adr;
+  FVal := val;
+end;
+
+// ------------------------------------------------------------------------------------
 constructor TCommThread.Create;
 begin
   inherited Create(true);
@@ -282,6 +398,47 @@ begin
     Result := stNotOpen;
 end;
 
+function TCommThread.doRdMdbReg(rd: TWorkRdMdbRegItem): TStatus;
+begin
+  Result := FThDev.RdReg(rd.OwnerHandle, rd.FBuffer^, rd.FAdr, rd.FSize);
+end;
+
+function TCommThread.doWrMdbReg(wr: TWorkWrMdbRegItem): TStatus;
+begin
+  Result := FThDev.WrReg(wr.OwnerHandle, wr.FAdr, wr.FVal);
+end;
+
+function TCommThread.doRdWrMdbReg(wr: TWorkRdWrMdbRegItem): TStatus;
+begin
+  Result := FThDev.ReadWriteRegs(wr.OwnerHandle, wr.FRdBuffer^, wr.FRdAdr, wr.FRdCnt, wr.FWrBuffer^, wr.FWrAdr,
+    wr.FWrCnt);
+end;
+
+function TCommThread.doWrMultiMdbReg(wr: TWorkWrMultiMdbRegItem): TStatus;
+begin
+  Result := FThDev.WrMultiReg(wr.OwnerHandle, wr.FBuffer^, wr.FAdr, wr.FSize);
+end;
+
+function TCommThread.doRdMdbAnalogReg(rd: TWorkRdMdbAnalogInputItem): TStatus;
+begin
+  Result := FThDev.RdAnalogInp(rd.OwnerHandle, rd.FBuffer^, rd.FAdr, rd.FSize);
+end;
+
+function TCommThread.doRdMdbInputTab(rd: TWorkRdMdbInputTableItem): TStatus;
+begin
+  Result := FThDev.RdInpTable(rd.OwnerHandle, rd.FBuffer^, rd.FAdr, rd.FSize);
+end;
+
+function TCommThread.doRdMdbOutputTab(rd: TWorkRdMdbOutputTableItem): TStatus;
+begin
+  Result := FThDev.RdOutTable(rd.OwnerHandle, rd.FBuffer^, rd.FAdr, rd.FSize);
+end;
+
+function TCommThread.doWrMdbOutputTab(wr: TWorkWrMdbOutputTableItem): TStatus;
+begin
+  Result := FThDev.WrOutput(wr.OwnerHandle, wr.FAdr, wr.FVal);
+end;
+
 procedure TCommThread.Execute;
 var
   Msg: TMsg;
@@ -317,7 +474,39 @@ begin
               else if item is TWorkWrMemItem then
               begin
                 st := doWritePtrMem(item as TWorkWrMemItem);
+              end
+              else if item is TWorkRdMdbRegItem then
+              begin
+                st := doRdMdbReg(item as TWorkRdMdbRegItem);
+              end
+              else if item is TWorkWrMdbRegItem then
+              begin
+                st := doWrMdbReg(item as TWorkWrMdbRegItem);
+              end
+              else if item is TWorkWrMultiMdbRegItem then
+              begin
+                st := doWrMultiMdbReg(item as TWorkWrMultiMdbRegItem);
+              end
+              else if item is TWorkRdMdbAnalogInputItem then
+              begin
+                st := doRdMdbAnalogReg(item as TWorkRdMdbAnalogInputItem);
+              end
+
+              else if item is TWorkRdMdbInputTableItem then
+              begin
+                st := doRdMdbInputTab(item as TWorkRdMdbInputTableItem);
+              end
+              else if item is TWorkRdMdbOutputTableItem then
+              begin
+                st := doRdMdbOutputTab(item as TWorkRdMdbOutputTableItem);
+              end
+              else if item is TWorkWrMdbOutputTableItem then
+              begin
+                st := doWrMdbOutputTab(item as TWorkWrMdbOutputTableItem);
               end;
+
+
+
               item.WorkTime := GetTickCount - TT;
               item.Result := st;
             end

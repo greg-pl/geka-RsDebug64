@@ -29,6 +29,7 @@ type
     ObjdumpPathEdit: TLabeledEdit;
     SectionsDefFrame: TSectionsDefFrame;
     LoadOnStartUpBox: TCheckBox;
+    ShowSpeedBox: TCheckBox;
     procedure FormActivate(Sender: TObject);
     procedure OkBtnClick(Sender: TObject);
   private
@@ -57,6 +58,7 @@ begin
   SectionsDefFrame.SectionsListMemo.Lines.AddStrings(ProgCfg.SectionsCfg.SelSections);
   SectionsDefFrame.SelSectionModeBox.ItemIndex := ord(ProgCfg.SectionsCfg.SelSectionMode);
   LoadOnStartUpBox.Checked := ProgCfg.LoadMapFileOnStartUp;
+  ShowSpeedBox.Checked := ProgCfg.ShowMessageAboutSpeed;
 
 end;
 
@@ -75,6 +77,7 @@ begin
   ProgCfg.SectionsCfg.SelSections.AddStrings(SectionsDefFrame.SectionsListMemo.Lines);
   ProgCfg.SectionsCfg.SelSectionMode := TSelSectionMode(SectionsDefFrame.SelSectionModeBox.ItemIndex);
   ProgCfg.LoadMapFileOnStartUp := LoadOnStartUpBox.Checked;
+  ProgCfg.ShowMessageAboutSpeed := ShowSpeedBox.Checked;
 
   PostMessage(Application.MainForm.Handle,wm_SettingsChg,0,0);
 end;

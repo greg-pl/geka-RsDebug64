@@ -713,6 +713,7 @@ begin
     if MDIChildren[i] is ChildClass then
     begin
       TemplateWin := MDIChildren[i] as TChildForm;
+      break;
     end;
   end;
   Result := ChildClass.CreateIterf(self, self, TemplateWin);
@@ -751,29 +752,6 @@ end;
 function TMainForm.GetSName(N: integer): string;
 begin
   Result := Format('Win_%u', [N]);
-end;
-
-function TMainForm.CfgProcWriteToJson: TJSONBuilder;
-var
-  jArr: TJSonArray;
-  i: integer;
-begin
-  Result.Init;
-  Result.Add_TLWH(self);
-  Result.Add('MemoHeight', BottomPanel.Height);
-  Result.Add('UpLoadList', UpLoadList.GetJSONObject);
-
-  jArr := TJSonArray.Create;
-  for i := 0 to MDIChildCount - 1 do
-  begin
-    if MDIChildren[i] is TChildForm then
-    begin
-      jArr.AddElement((MDIChildren[i] as TChildForm).GetJSONObject.jObj);
-    end;
-  end;
-  Result.Add('ChildForms', jArr);
-
-  // GlobTypeList.SaveToIni(Ini);
 end;
 
 function getChildClass(WinType: string): TChildFormClass;
@@ -833,6 +811,9 @@ begin
   jLoader.Load_TLWH(self);
   BottomPanel.Height := jLoader.LoadDef('MemoHeight', BottomPanel.Height);
 
+  ExtMemo.AddTimeToLog := jLoader.LoadDef('AddTimeToLog', ExtMemo.AddTimeToLog);
+  ExtMemo.ScrollToEnd := jLoader.LoadDef('ScrollToEnd', ExtMemo.ScrollToEnd);
+
   // Child okienka
   for i := MDIChildCount - 1 downto 0 do
   begin
@@ -868,6 +849,33 @@ begin
 
   Caption := ProgCfg.GetWorkSpacefile;
   InitConnectionDev;
+end;
+
+function TMainForm.CfgProcWriteToJson: TJSONBuilder;
+var
+  jArr: TJSonArray;
+  i: integer;
+begin
+  Result.Init;
+  Result.Add_TLWH(self);
+  Result.Add('MemoHeight', BottomPanel.Height);
+  Result.Add('UpLoadList', UpLoadList.GetJSONObject);
+  Result.Add('AddTimeToLog', ExtMemo.AddTimeToLog);
+  Result.Add('ScrollToEnd', ExtMemo.ScrollToEnd);
+
+  Result.Add('UpLoadList', UpLoadList.GetJSONObject);
+
+  jArr := TJSonArray.Create;
+  for i := 0 to MDIChildCount - 1 do
+  begin
+    if MDIChildren[i] is TChildForm then
+    begin
+      jArr.AddElement((MDIChildren[i] as TChildForm).GetJSONObject.jObj);
+    end;
+  end;
+  Result.Add('ChildForms', jArr);
+
+  // GlobTypeList.SaveToIni(Ini);
 end;
 
 function TMainForm.isDevConnected: boolean;

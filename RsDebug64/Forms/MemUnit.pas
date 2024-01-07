@@ -81,12 +81,9 @@ type
     procedure SaveMemTxtActExecute(Sender: TObject);
     procedure FillxxActExecute(Sender: TObject);
     procedure MemFramePointsBoxClick(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
   private
-    MemBxLeft: integer;
     function ReadMem: TStatus;
     function WriteMem: TStatus;
-    function GetPhAdr(Adr: cardinal): cardinal;
     function ReadPtrValue(A: cardinal): cardinal;
     procedure GetFromText(var Adr: cardinal; var ShowAdr: cardinal; var Size: cardinal; var RegSize: cardinal);
 
@@ -100,7 +97,6 @@ type
     procedure SettingChg; override;
     procedure ReloadVarList; override;
     function GetDefaultCaption: string; override;
-
 
     procedure ShowMem(Adr: integer); overload;
     procedure ShowMem(const AdrCpx1: TAdrCpx); overload;
@@ -120,22 +116,9 @@ Const
 procedure TMemForm.FormCreate(Sender: TObject);
 begin
   inherited;
-  MemFrame.Init;
   MemFrame.MemSize := $100;
   MemFrame.RegisterSize := 1;
   MemFrame.setByteOrder(ProgCfg.ByteOrder);
-end;
-
-procedure TMemForm.FormDestroy(Sender: TObject);
-begin
-  inherited;
-  MemFrame.Done;
-end;
-
-
-function TMemForm.GetPhAdr(Adr: cardinal): cardinal;
-begin
-  Result := Adr;
 end;
 
 function TMemForm.ReadPtrValue(A: cardinal): cardinal;
@@ -198,7 +181,7 @@ begin
   Adr := MapParser.StrToAdr(AdresBox.Text);
 
   GetFromText(Adr, ShowAdr, Size, RegSize);
-  MemFrame.MemTypeStr := 'B';
+  MemFrame.MemTypeStr := 'MEM';
   MemFrame.RegisterSize := RegSize;
   MemFrame.MemSize := Size;
 
@@ -218,10 +201,13 @@ begin
   if item.Result = stOK then
   begin
     MemFrame.SrcAdr := (item as TWorkRdMemItem).BufferAdr;
-    if item.WorkTime <> 0 then
-      DoMsg(Format('RdMem v=%.2f[kB/sek]', [(MemFrame.MemSize / 1024) / (item.WorkTime / 1000.0)]))
-    else
-      DoMsg('RdMem OK');
+    if ProgCfg.ShowMessageAboutSpeed then
+    begin
+      if item.WorkTime <> 0 then
+        DoMsg(Format('RdMem v=%.2f[kB/sek]', [(MemFrame.MemSize / 1024) / (item.WorkTime / 1000.0)]))
+      else
+        DoMsg('RdMem OK');
+    end;
     MemFrame.SetNewData;
   end
   else
@@ -348,7 +334,7 @@ begin
         end;
         if n <> 0 then
         begin
-          Adr := GetPhAdr(BufAdr) + i;
+          Adr := BufAdr + i;
           CommThread.AddToDoItem(TWorkWrMemItem.Create(Handle, wm_WriteMem2, MemFrame.MemBuf.Buf[i], Adr, n));
           DoMsg(Format('WriteMem, adr=0x%X, size=%u', [Adr, n]));
 
@@ -451,7 +437,6 @@ procedure TMemForm.FormActivate(Sender: TObject);
 begin
   inherited;
   ReloadVarList;
-  MemBxLeft := VarListBox.Left;
 end;
 
 procedure TMemForm.ReloadVarList;
@@ -550,11 +535,11 @@ begin
   begin
     if MemFrame.MemBuf.LoadFromFile(Fname) then
     begin
-      MemFrame.MemSize := MemFrame.MemBuf.len;
+      MemFrame.MemSize := MemFrame.MemBuf.Size;
       MemFrame.SetNewData;
       SizeBox.Text := Format('0x%X', [MemFrame.MemSize]);
       AddToList(SizeBox);
-      DoMsg(Format('Wczytano %u [0x%X] bajtów', [MemFrame.MemSize, MemFrame.MemSize]));
+      DoMsg(Format('Read %u [0x%X] bytes', [MemFrame.MemSize, MemFrame.MemSize]));
     end;
   end;
 end;

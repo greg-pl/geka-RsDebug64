@@ -4,8 +4,8 @@ object SettingForm: TSettingForm
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'SettingForm'
-  ClientHeight = 550
-  ClientWidth = 396
+  ClientHeight = 609
+  ClientWidth = 425
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,13 +16,13 @@ object SettingForm: TSettingForm
   Position = poOwnerFormCenter
   OnActivate = FormActivate
   DesignSize = (
-    396
-    550)
+    425
+    609)
   PixelsPerInch = 96
   TextHeight = 13
   object OkBtn: TButton
-    Left = 221
-    Top = 518
+    Left = 250
+    Top = 577
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -31,34 +31,35 @@ object SettingForm: TSettingForm
     ModalResult = 1
     TabOrder = 0
     OnClick = OkBtnClick
-    ExplicitTop = 509
+    ExplicitLeft = 221
+    ExplicitTop = 518
   end
   object Button2: TButton
-    Left = 309
-    Top = 518
+    Left = 338
+    Top = 577
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
     Caption = '&Cancel'
     ModalResult = 2
     TabOrder = 1
-    ExplicitTop = 509
+    ExplicitLeft = 309
+    ExplicitTop = 518
   end
   object PageControl1: TPageControl
     Left = 5
     Top = 4
-    Width = 385
-    Height = 507
+    Width = 414
+    Height = 566
     ActivePage = TabSheet1
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 2
-    ExplicitHeight = 498
+    ExplicitWidth = 385
+    ExplicitHeight = 507
     object TabSheet1: TTabSheet
       Caption = 'Og'#243'lne'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 470
+      ExplicitWidth = 377
+      ExplicitHeight = 479
       object Label1: TLabel
         Left = 4
         Top = 4
@@ -214,7 +215,7 @@ object SettingForm: TSettingForm
       end
       object ObjdumpPathEdit: TLabeledEdit
         Left = 11
-        Top = 258
+        Top = 322
         Width = 349
         Height = 25
         EditLabel.Width = 151
@@ -248,21 +249,35 @@ object SettingForm: TSettingForm
         ParentFont = False
         TabOrder = 2
       end
+      object ShowSpeedBox: TCheckBox
+        Left = 14
+        Top = 277
+        Width = 247
+        Height = 17
+        Caption = 'Show message abou transfer speed'
+        Font.Charset = EASTEUROPE_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Arial'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 9
+      end
     end
   end
   inline SectionsDefFrame: TSectionsDefFrame
     Left = 20
-    Top = 320
+    Top = 392
     Width = 349
-    Height = 178
+    Height = 161
     TabOrder = 3
     ExplicitLeft = 20
-    ExplicitTop = 320
+    ExplicitTop = 392
     ExplicitWidth = 349
-    ExplicitHeight = 178
+    ExplicitHeight = 161
     inherited Panel1: TPanel
       Width = 349
-      Height = 178
+      Height = 161
       ExplicitWidth = 349
       ExplicitHeight = 178
       inherited Label1: TLabel
@@ -272,7 +287,7 @@ object SettingForm: TSettingForm
       end
       inherited SectionsListMemo: TMemo
         Width = 159
-        Height = 156
+        Height = 139
         ExplicitWidth = 159
         ExplicitHeight = 156
       end

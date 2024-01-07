@@ -42,7 +42,6 @@ inherited VarListForm: TVarListForm
     OnDrawCell = ShowVarGridDrawCell
     OnKeyDown = ShowVarGridKeyDown
     OnKeyPress = ShowVarGridKeyPress
-    OnMouseActivate = ShowVarGridMouseActivate
     OnRowMoved = ShowVarGridRowMoved
     ColWidths = (
       30
@@ -115,9 +114,6 @@ inherited VarListForm: TVarListForm
       OnCompare = VarListViewCompare
       OnDblClick = VarListViewDblClick
       OnGetImageIndex = VarListViewGetImageIndex
-      OnMouseActivate = VarListViewMouseActivate
-      OnMouseUp = VarListViewMouseUp
-      ExplicitLeft = -1
     end
     object Panel3: TPanel
       Left = 0
@@ -163,17 +159,17 @@ inherited VarListForm: TVarListForm
     Width = 738
     ExplicitWidth = 738
     object AutoReadBtn: TToolButton
-      Left = 58
+      Left = 81
       Top = 0
       Action = ReadVarAct
     end
     object ToolButton2: TToolButton
-      Left = 81
+      Left = 104
       Top = 0
       Action = AutoReadAct
     end
     object ToolButton1: TToolButton
-      Left = 104
+      Left = 127
       Top = 0
       Width = 8
       Caption = 'ToolButton1'
@@ -181,18 +177,18 @@ inherited VarListForm: TVarListForm
       Style = tbsSeparator
     end
     object ShowVarPanelBtn: TToolButton
-      Left = 112
+      Left = 135
       Top = 0
       Action = ShowVarPanelAct
       Style = tbsCheck
     end
     object ToolButton5: TToolButton
-      Left = 135
+      Left = 158
       Top = 0
       Action = EditSectionsAct
     end
     object ToolButton4: TToolButton
-      Left = 158
+      Left = 181
       Top = 0
       Width = 27
       Caption = 'ToolButton4'
@@ -200,7 +196,7 @@ inherited VarListForm: TVarListForm
       Style = tbsSeparator
     end
     object SaveItemsBtn: TToolButton
-      Left = 185
+      Left = 208
       Top = 0
       Hint = 'Zapisz definicj'#281' zmiennych'
       Caption = 'SaveItemsBtn'
@@ -208,7 +204,7 @@ inherited VarListForm: TVarListForm
       OnClick = SaveItemsBtnClick
     end
     object AddItemsBtn: TToolButton
-      Left = 208
+      Left = 231
       Top = 0
       Hint = 'Dodaj zmienne z pliku'
       Caption = 'AddItemsBtn'
@@ -270,7 +266,7 @@ inherited VarListForm: TVarListForm
     Left = 32
     Top = 288
     Bitmap = {
-      494C0101020004002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010102000400300010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -582,7 +578,7 @@ inherited VarListForm: TVarListForm
     Left = 32
     Top = 232
     Bitmap = {
-      494C010104000900380010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101040009003C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -857,7 +853,7 @@ inherited VarListForm: TVarListForm
     Left = 32
     Top = 176
     Bitmap = {
-      494C0101130080005C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010113008000600010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

@@ -26,8 +26,12 @@ type
   public
     BufCopy: array of byte;
     MemState: array of TCellState;
-    procedure SetLen(len: integer); override;
+    procedure SetSize(len: integer); override;
+    function LoadFromFile(FName: string): boolean;
+
     function GetState(n: integer; Size: byte): TCellState;
+    procedure SetState(n: integer; Size: byte; State: TCellState);
+
     procedure SetNewData;
     procedure ClrData;
     procedure Fill(Val: byte);
@@ -100,7 +104,7 @@ type
     Panel6: TPanel;
     procedure GridDrawCell(Sender: TObject; ACol, ARow: integer; Rect: TRect; State: TGridDrawState);
     procedure GridKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ByteGridSelectCell(Sender: TObject; ACol, ARow: integer; var CanSelect: Boolean);
+    procedure ByteGridSelectCell(Sender: TObject; ACol, ARow: integer; var CanSelect: boolean);
     procedure ByteGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
     procedure ByteSheetShow(Sender: TObject);
     procedure WordSheetShow(Sender: TObject);
@@ -135,6 +139,7 @@ type
     EditCellMem: string;
     FRegisterSize: integer;
     LasPosPoint: TPoint;
+
     ChartMinMaxTab: array [0 .. MAX_MEM_BOX - 1] of TRect;
 
     procedure FSetSize(ASize: cardinal);
@@ -150,13 +155,13 @@ type
     function FirstColTxt(w: cardinal): string;
     function LiczFirstRow(w: real): integer;
 
-    function HexToInt(s: string; var Ok: Boolean): cardinal;
+    function HexToInt(s: string; var Ok: boolean): cardinal;
     function FloatToF1_15(w: real): Word;
     function F1_15ToFloat(w: Word): real;
     function FGetActivPage: integer;
     procedure FSetActivPage(APageNr: integer);
     procedure FSetRegisterSize(ARegisterSize: integer);
-    function ReadMinMaxBox(var R: TRect): Boolean;
+    function ReadMinMaxBox(var R: TRect): boolean;
     procedure SetMinMaxBox(const R: TRect);
     procedure ShowMinMaxBox(const R: TRect);
     procedure MakeMinMaxBoxHints;
@@ -168,14 +173,13 @@ type
     property ChartSerCount: integer read FGetChartSerCount write FSetChartSerCount;
   public
     MemBuf: TChangeByteBuffer;
-
     MemTypeStr: String;
+    Row0AsDec: boolean;
 
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
 
-    procedure Init;
-    procedure Done;
-    procedure setByteOrder(ord : TByteOrder);
-
+    procedure setByteOrder(ord: TByteOrder);
 
     property SrcAdr: cardinal read FSrcAdr write FSetSrcAdr;
     property MemSize: cardinal read FGetSize write FSetSize;
@@ -188,12 +192,11 @@ type
     property ActivPage: integer read FGetActivPage write FSetActivPage;
     property RegisterSize: integer read FRegisterSize write FSetRegisterSize;
 
-
     function GetJSONObject: TJSONBuilder;
     procedure LoadfromJson(jParent: TJSONLoader);
 
     procedure CopyToStringList(SL: TStrings);
-    procedure doParamVisible(vis: Boolean);
+    procedure doParamVisible(vis: boolean);
   end;
 
 implementation
@@ -203,11 +206,20 @@ uses
 
 {$R *.dfm}
 
-procedure TChangeByteBuffer.SetLen(len: integer);
+procedure TChangeByteBuffer.SetSize(len: integer);
 begin
   inherited;
   setlength(BufCopy, len);
   setlength(MemState, len);
+end;
+
+function TChangeByteBuffer.LoadFromFile(FName: string): boolean;
+begin
+  Result := inherited LoadFromFile(FName);
+  if Result then
+  begin
+    SetNewData;
+  end;
 end;
 
 function TChangeByteBuffer.GetState(n: integer; Size: byte): TCellState;
@@ -220,6 +232,16 @@ begin
     if n + i < length(MemState) then
       if MemState[n + i] > Result then
         Result := MemState[n + i];
+  end;
+end;
+
+procedure TChangeByteBuffer.SetState(n: integer; Size: byte; State: TCellState);
+var
+  i: integer;
+begin
+  for i := 0 to Size - 1 do
+  begin
+    MemState[n + i] := State;
   end;
 end;
 
@@ -241,7 +263,7 @@ procedure TChangeByteBuffer.ClrData;
 var
   i: integer;
 begin
-  for i := 0 to len - 1 do
+  for i := 0 to Size - 1 do
   begin
     MemState[i] := csEmpty;
   end;
@@ -297,7 +319,7 @@ var
 begin
   for i := 0 to cnt - 1 do
   begin
-    if n + i > len then
+    if n + i > Size then
       break;
     MemState[n + i] := st;
   end;
@@ -312,18 +334,21 @@ end;
 const
   DIRST_COL_WIDTH = 78;
 
-procedure TMemFrame.Init;
+constructor TMemFrame.Create(AOwner: TComponent);
 begin
+  inherited;
   MemBuf := TChangeByteBuffer.Create;
-  RegisterSize := 1;
+  FRegisterSize := 1;
+  Row0AsDec := false;
 end;
 
-procedure TMemFrame.Done;
+destructor TMemFrame.Destroy;
 begin
+  inherited;
   MemBuf.Free;
 end;
 
-procedure TMemFrame.setByteOrder(ord : TByteOrder);
+procedure TMemFrame.setByteOrder(ord: TByteOrder);
 begin
   MemBuf.ByteOrder := ord;
 end;
@@ -346,7 +371,7 @@ begin
   PaintActivPage;
 end;
 
-function TMemFrame.HexToInt(s: string; var Ok: Boolean): cardinal;
+function TMemFrame.HexToInt(s: string; var Ok: boolean): cardinal;
 var
   n: int64;
 begin
@@ -397,14 +422,14 @@ end;
 
 function TMemFrame.FGetSize: cardinal;
 begin
-  Result := MemBuf.len;
+  Result := MemBuf.Size;
 end;
 
 procedure TMemFrame.FSetSize(ASize: cardinal);
 begin
   if RegisterSize = 0 then
-    RegisterSize := 1;
-  MemBuf.SetLen(ASize);
+    raise Exception.Create('RegisterSize is zero');
+  MemBuf.SetSize(ASize * RegisterSize);
   PaintActivPage;
 end;
 
@@ -459,7 +484,7 @@ var
   n: SmallInt;
 begin
   if abs(w) > 1 then
-    Raise exception.Create('1.15 format error');
+    Raise Exception.Create('1.15 format error');
   C := Round(w * $8000 + 0.5);
   if C = $8000 then
     C := $7FFF;
@@ -599,7 +624,10 @@ end;
 
 function TMemFrame.FirstColTxt(w: cardinal): string;
 begin
-  Result := '"' + IntToHex(w shr 16, 4) + ' ' + IntToHex(w and $FFFF, 4) + '"';
+  if not(Row0AsDec) then
+    Result := '"' + IntToHex(w shr 16, 4) + ' ' + IntToHex(w and $FFFF, 4) + '"'
+  else
+    Result := IntToStr(w);
 end;
 
 function TMemFrame.LiczFirstRow(w: real): integer;
@@ -669,7 +697,7 @@ end;
 procedure TMemFrame.ByteGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
   s: string;
-  Ok: Boolean;
+  Ok: boolean;
   V: integer;
   n: integer;
 begin
@@ -695,7 +723,7 @@ begin
   ByteGrid.Refresh;
 end;
 
-procedure TMemFrame.ByteGridSelectCell(Sender: TObject; ACol, ARow: integer; var CanSelect: Boolean);
+procedure TMemFrame.ByteGridSelectCell(Sender: TObject; ACol, ARow: integer; var CanSelect: boolean);
 begin
   CanSelect := (ACol <> 17);
 end;
@@ -741,7 +769,7 @@ end;
 
 procedure TMemFrame.WordGRidSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  Ok: Boolean;
+  Ok: boolean;
   V: integer;
   n: integer;
 begin
@@ -790,7 +818,7 @@ end;
 
 procedure TMemFrame.DWordGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  Ok: Boolean;
+  Ok: boolean;
   V: cardinal;
   n: integer;
 begin
@@ -843,7 +871,7 @@ end;
 
 procedure TMemFrame.FloatGridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  Ok: Boolean;
+  Ok: boolean;
   V: Single;
   n: integer;
 begin
@@ -897,7 +925,7 @@ end;
 
 procedure TMemFrame.F1_15GridSetEditText(Sender: TObject; ACol, ARow: integer; const Value: String);
 var
-  Ok: Boolean;
+  Ok: boolean;
   V: Single;
   w: Word;
   n: integer;
@@ -1152,7 +1180,7 @@ begin
     FillMeasureGridValues;
 end;
 
-function TMemFrame.ReadMinMaxBox(var R: TRect): Boolean;
+function TMemFrame.ReadMinMaxBox(var R: TRect): boolean;
 begin
   Result := true;
   try
@@ -1394,7 +1422,7 @@ var
   i, j: integer;
   Sr: TLineSeries;
   s: string;
-  Fnd: Boolean;
+  Fnd: boolean;
   SL: TStringList;
 begin
   SL := TStringList.Create;
@@ -1629,7 +1657,7 @@ begin
   RestoreM3Btn.Hint := SaveM3Btn.Hint;
 end;
 
-procedure TMemFrame.doParamVisible(vis: Boolean);
+procedure TMemFrame.doParamVisible(vis: boolean);
 begin
   WordGridPanel.Visible := vis;
   ByteGridPanel.Visible := vis;

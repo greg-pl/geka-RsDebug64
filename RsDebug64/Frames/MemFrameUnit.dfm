@@ -66,6 +66,10 @@ object MemFrame: TMemFrame
       Caption = 'WORD'
       ImageIndex = 1
       OnShow = WordSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object WordGRid: TStringGrid
         Left = 0
         Top = 33
@@ -116,6 +120,10 @@ object MemFrame: TMemFrame
       Caption = 'DWord'
       ImageIndex = 3
       OnShow = DWordSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object DWordGrid: TStringGrid
         Left = 0
         Top = 0
@@ -138,6 +146,10 @@ object MemFrame: TMemFrame
       Caption = 'FLOAT'
       ImageIndex = 2
       OnShow = FloatSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object FloatGrid: TStringGrid
         Left = 0
         Top = 0
@@ -160,6 +172,10 @@ object MemFrame: TMemFrame
       Caption = '1.15'
       ImageIndex = 5
       OnShow = F1_15SheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object F1_15Grid: TStringGrid
         Left = 0
         Top = 0
@@ -210,11 +226,10 @@ object MemFrame: TMemFrame
           object Label1: TLabel
             Left = 0
             Top = 0
-            Width = 150
+            Width = 65
             Height = 13
             Align = alTop
             Caption = 'Ilo'#347#263' kana'#322#243'w'
-            ExplicitWidth = 65
           end
           object SerCntEdit: TSpinEdit
             Left = 0
