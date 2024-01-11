@@ -92,14 +92,18 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="CmmMain.pas"/>
         <DCCReference Include="..\..\Common\Rsd64Definitions.pas"/>
-        <DCCReference Include="ModbusObj.pas"/>
-        <DCCReference Include="ComUnit.pas"/>
-        <DCCReference Include="LibUtils.pas"/>
         <DCCReference Include="..\..\JSonSTT\SttObjectDefUnit.pas"/>
         <DCCReference Include="..\..\Common\CrcUnit.pas"/>
         <DCCReference Include="..\..\Common\JSonUtils.pas"/>
+        <DCCReference Include="..\CmmCommon\LibUtils.pas">
+            <Form>$R *.res</Form>
+        </DCCReference>
+        <DCCReference Include="CmmMain.pas"/>
+        <DCCReference Include="ModbusObj.pas"/>
+        <DCCReference Include="ComUnit.pas">
+            <Form>$R *.res</Form>
+        </DCCReference>
         <None Include="..\CmmCommon\CmmBaseDef.inc"/>
         <None Include="..\CmmCommon\FileAccessDef.inc"/>
         <None Include="..\CmmCommon\MemoryAccessDef.inc"/>
@@ -520,6 +524,7 @@
                 <ProjectRoot Platform="Android" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
             </Deployment>
+            <ModelSupport>False</ModelSupport>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>

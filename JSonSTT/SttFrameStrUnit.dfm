@@ -1,4 +1,4 @@
-inherited SttFrameIp: TSttFrameIp
+inherited SttFrameStr: TSttFrameStr
   Width = 365
   Height = 56
   ExplicitWidth = 365
@@ -9,14 +9,14 @@ inherited SttFrameIp: TSttFrameIp
     ExplicitWidth = 365
     ExplicitHeight = 56
   end
-  object SttIpEdit: TLabeledEdit
+  object SttStrEdit: TLabeledEdit
     Left = 12
     Top = 24
     Width = 121
     Height = 21
-    EditLabel.Width = 50
+    EditLabel.Width = 57
     EditLabel.Height = 18
-    EditLabel.Caption = 'SttIpEdit'
+    EditLabel.Caption = 'SttStrEdit'
     EditLabel.Font.Charset = EASTEUROPE_CHARSET
     EditLabel.Font.Color = clWindowText
     EditLabel.Font.Height = -13
@@ -30,7 +30,7 @@ inherited SttFrameIp: TSttFrameIp
     Font.Style = []
     ParentFont = False
     TabOrder = 0
-    OnExit = SttIpEditExit
-    OnKeyPress = SttIpEditKeyPress
+    OnExit = SttStrEditExit
+    OnKeyPress = SttStrEditKeyPress
   end
 end

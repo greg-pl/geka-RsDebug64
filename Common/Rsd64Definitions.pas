@@ -20,15 +20,16 @@ const
   stBadId = 1;
   stTimeErr = 2;
   stNotOpen = 3;
-  stSetupErr = 4;
-  stUserBreak = 5;
-  stNoSemafor = 6;
-  stBadRepl = 7;
-  stBadArguments = 8;
-  stBufferToSmall = 9; // publiczny - rozpoznawany przez warstwê wy¿sza
-  stToBigTerminalNr = 10; //
-  stEND_OFF_DIR = 11;
-  stDelphiError = 12;
+  stNoReplay = 4;
+  stSetupErr = 5;
+  stUserBreak = 6;
+  stNoSemafor = 7;
+  stBadRepl = 8;
+  stBadArguments = 9;
+  stBufferToSmall = 10; // publiczny - rozpoznawany przez warstwê wy¿sza
+  stToBigTerminalNr = 11; //
+  stEND_OFF_DIR = 12;
+  stDelphiError = 13;
   stMdbError = 50;
   stMdbExError = 100;
 
@@ -56,6 +57,19 @@ const
 
   IPPARAM_IP = 'Ip';
   IPPARAM_PORT = 'Port';
+
+  // Driver params
+  DRVPRAM_DEFINITION = 'Definition';
+  DRVPRAM_VALUES = 'Values';
+  DRVPRAM_DRIVER_NAME = 'DriverName';
+
+  // Driver info
+  DRVINFO_TIME = 'Time';
+  DRVINFO_LIST= 'Values';
+
+  DRVINFO_NAME= 'Name';
+  DRVINFO_DESCR= 'Descr';
+  DRVINFO_VALUE= 'Value';
 
   UartParamTab: TStringArr = [UARTPARAM_COMNR, UARTPARAM_PARITY, UARTPARAM_BAUDRATE, UARTPARAM_BITCNT];
   IpParamTab: TStringArr = [IPPARAM_IP, IPPARAM_PORT];
@@ -85,7 +99,7 @@ type
   PLibParams = ^TLibParams;
 
   TLibParams = record
-    shortName: string;
+    DriverName: string;
     SubGroups: TSubGroups;
     Description: string;
     ConnectionType: TConnectionType;
@@ -96,7 +110,7 @@ type
   TLibPropertyBuilder = class(TObject)
   public
     Params: TLibParams;
-    procedure AddChildLibObject(parent: TJsonObject); virtual;
+    procedure AddChildLibObject(jBuil: TJSONBuilder); virtual;
   public
     constructor Create;
     function Build: String;
@@ -119,7 +133,7 @@ procedure TLibParams.Init;
 begin
   SubGroups := [subBASE];
   Description := '';
-  shortName := '';
+  DriverName := '';
   ConnectionType := connTypNODEF;
   ConnectionParams := TSttObjectListJson.Create;
 end;
@@ -130,41 +144,37 @@ begin
   Params.Init;
 end;
 
-procedure TLibPropertyBuilder.AddChildLibObject(parent: TJsonObject);
+procedure TLibPropertyBuilder.AddChildLibObject(jBuil: TJSONBuilder);
 begin
 
 end;
 
 function TLibPropertyBuilder.Build: String;
 var
-  tmpObj: TJsonObject;
-  jsonArray: TJSONArray;
-  jsonSubArray: TJSONArray;
-  jsonPair: TJSONPair;
-  i: integer;
+  jBuil: TJSONBuilder;
+  jArr: TJSONArray;
   gr: TSubGroup;
 begin
-  tmpObj := TJsonObject.Create;
+  jBuil.Init;
 
-  AddChildLibObject(tmpObj);
+  AddChildLibObject(jBuil);
 
-  tmpObj.AddPair(TJSONPair.Create('ShortName', Params.shortName));
-  tmpObj.AddPair(TJSONPair.Create('Description', Params.Description));
-  tmpObj.AddPair(TJSONPair.Create('ConnectionType', ConnectionTypeName[ord(Params.ConnectionType)]));
+  jBuil.Add('DriverName', Params.DriverName);
+  jBuil.Add('Description', Params.Description);
+  jBuil.Add('ConnectionType', ConnectionTypeName[ord(Params.ConnectionType)]);
 
-  jsonSubArray := TJSONArray.Create();
+  jArr := TJSONArray.Create();
   for gr := Low(TSubGroup) to High(TSubGroup) do
   begin
     if gr in Params.SubGroups then
     begin
-      jsonSubArray.Add(SubGroupName[ord(gr)]);
+      jArr.Add(SubGroupName[ord(gr)]);
     end;
   end;
-  tmpObj.AddPair(TJSONPair.Create('SubGroups', jsonSubArray));
+  jBuil.Add('SubGroups', jArr);
+  jBuil.Add('ConectionParams', Params.ConnectionParams.getJSonObject);
 
-  tmpObj.AddPair(TJSONPair.Create('ConectionParams', Params.ConnectionParams.getJSonObject));
-
-  Result := tmpObj.ToString;
+  Result := jBuil.jobj.ToString;
 end;
 
 function TLibPropertyBuilder.LoadFromTxt(txt: string): boolean;
@@ -186,45 +196,20 @@ function TLibPropertyBuilder.LoadFromTxt(txt: string): boolean;
     Result := groups;
   end;
 
-  procedure ConnectionParamsLoadfromArr(arr: TJSONArray);
-  var
-    i: integer;
-    nm: string;
-    sttObj: TSttObjectJson;
-    jobj: TJsonObject;
-    jLoader: TJsonLoader;
-  begin
-    for i := 0 to arr.Count - 1 do
-    begin
-      jLoader.Init(arr.items[i]);
-      if jLoader.Load('SttType', nm) then
-      begin
-        sttObj := TSttObjectJson.CreateObject(nm);
-        sttObj.LoadFromJSonObj(jLoader);
-        Params.ConnectionParams.Add(sttObj);
-      end;
-    end;
-  end;
-
 var
-  JSonValue: TJSONValue;
-  myObj: TJsonObject;
-  arr: TJSONArray;
+  jLoader: TJSONLoader;
+  s1: string;
 begin
   try
-    JSonValue := TJsonObject.ParseJSONValue(txt);
-    myObj := JSonValue as TJsonObject;
+    jLoader.Init(txt);
+    jLoader.Load('DriverName', Params.DriverName);
+    jLoader.Load('Description', Params.Description);
 
-    Params.shortName := myObj.Get('ShortName').JSonValue.Value;
-    Params.Description := myObj.Get('Description').JSonValue.Value;
-    Params.ConnectionType := TConnectionType(FindStringInArray(myObj.Get('ConnectionType').JSonValue.Value,
-      ConnectionTypeName, ord(connTypNODEF)));
+    if jLoader.Load('ConnectionType', s1) then
+      Params.ConnectionType := TConnectionType(FindStringInArray(s1, ConnectionTypeName, ord(connTypNODEF)));
 
-    arr := myObj.Get('SubGroups').JSonValue as TJSONArray;
-    Params.SubGroups := LoadGroups(arr);
-
-    arr := myObj.Get('ConectionParams').JSonValue as TJSONArray;
-    ConnectionParamsLoadfromArr(arr);
+    Params.SubGroups := LoadGroups(jLoader.getArray('SubGroups'));
+    Params.ConnectionParams.LoadfromArr(jLoader.getArray('ConectionParams'));
     Result := true;
   except
     Result := false;
@@ -252,13 +237,13 @@ end;
 
 function ExtractConnInfoStr(ConnectJson: string; var ConnInfoStr: string): boolean;
 var
-  jLoader: TJsonLoader;
-  jParamLoader: TJsonLoader;
+  jLoader: TJSONLoader;
+  jParamLoader: TJSONLoader;
   tmp: string;
 begin
   Result := false;
   try
-    if jLoader.Init(TJsonObject.ParseJSONValue(ConnectJson)) then
+    if jLoader.Init(ConnectJson) then
     begin
       if jLoader.Load(CONNECTION_DRIVER_NAME, ConnInfoStr) then
       begin

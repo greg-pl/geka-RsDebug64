@@ -32,7 +32,7 @@ const
   wm_WriteMem2 = wm_WindowCmm + 11;
   wm_WriteMem3 = wm_WindowCmm + 12;
 
-  wm_AllDone   = wm_WindowCmm + 20;
+  wm_AllDone = wm_WindowCmm + 20;
 
   INI_PARAM_DEV_STR = '_PrmDevStr_';
 
@@ -63,6 +63,24 @@ type
     procedure LoadFromJson(jArr: TJSONArray);
     function GetJSONObject: TJSONValue;
     procedure AddMenuItems(ParentItem: TMenuItem; Proc: TNotifyEvent);
+  end;
+
+  TDriverParams = class(TObject)
+    DrvName: string;
+    DrvParams: TJSONObject;
+    constructor Create;
+    function LoadFromJson(jLoader: TJSonLoader): boolean;
+    function GetJSONObject: TJSONValue;
+  end;
+
+  TDriverParamsList = class(TObjectList)
+    function FGetItem(Index: integer): TDriverParams;
+    function FindDriver(Name: string): TDriverParams;
+    property Items[Index: integer]: TDriverParams read FGetItem;
+    procedure LoadFromJson(jArr: TJSONArray);
+    function GetJSONObject: TJSONValue;
+    procedure AddDrv(DriverName: string; jObj: TJSONObject);
+    function getDriverParams(DriverName: string): string;
   end;
 
   TReopenItem = class(TObject)
@@ -114,7 +132,7 @@ type
     procedure Init;
     procedure Done;
     procedure CopyFrom(Src: TSectionsCfg);
-    procedure JSONLoad(jLoader: TJSonLoader);
+    procedure JSONLoad(jVal: TJSONValue);
     procedure JSONAdd(jBuild: TJSONBuilder);
     function getJsonValue: TJSONValue;
   end;
@@ -149,6 +167,7 @@ type
     ObjDumpPath: string; // path to objdump.exe from GNU compiler
 
     ClosedWinList: TClosedWinList;
+    DriverParamsList: TDriverParamsList;
 
     constructor Create;
     destructor Destroy; override;
@@ -158,6 +177,9 @@ type
     procedure SaveWorkspaceAs(FileName: string);
     function GetWorkingPath: string;
     function GetWorkSpacefile: string;
+
+    procedure AddDriverSettings(DriverName: string; jObj: TJSONObject);
+    function getDriverParams(DriverName: string): string;
 
     property OnWriteJsonCfg: TGetJsonObject read FOnWriteJsonCfg write FOnWriteJsonCfg;
     property OnReadJsonCfg: TReadJsonObject read FOnReadJsonCfg write FOnReadJsonCfg;
@@ -264,11 +286,11 @@ begin
   jBuild.Add('ShowVarCfg', jBuild2);
 end;
 
-procedure TSectionsCfg.JSONLoad(jLoader: TJSonLoader);
+procedure TSectionsCfg.JSONLoad(jVal: TJSONValue);
 var
   jLoader2: TJSonLoader;
 begin
-  if jLoader2.Init(jLoader, 'ShowVarCfg') then
+  if jLoader2.Init(jVal) then
   begin
     SelSectionMode := TSelSectionMode(jLoader2.LoadDef('SectionsMode', ord(SelSectionMode)));
     jLoader2.Load('Sections', SelSections);
@@ -354,6 +376,111 @@ begin
     Item.OnClick := Proc;
     ParentItem.Add(Item);
   end;
+end;
+
+// --------------------- TDriverParamsList ----------------------------------------
+
+constructor TDriverParams.Create;
+begin
+  inherited;
+  DrvParams := nil
+end;
+
+function TDriverParams.LoadFromJson(jLoader: TJSonLoader): boolean;
+begin
+  Result := jLoader.Load('DriverName', DrvName);
+  DrvParams := jLoader.GetObject('Params');
+  Result := Result and Assigned(DrvParams);
+end;
+
+function TDriverParams.GetJSONObject: TJSONValue;
+var
+  jBuild: TJSONBuilder;
+begin
+  jBuild.Init;
+  jBuild.Add('DriverName', DrvName);
+  jBuild.Add('Params', DrvParams);
+  Result := jBuild.jObj;
+end;
+
+function TDriverParamsList.FGetItem(Index: integer): TDriverParams;
+begin
+  Result := inherited GetItem(Index) as TDriverParams;
+end;
+
+function TDriverParamsList.FindDriver(Name: string): TDriverParams;
+var
+  i: integer;
+begin
+  Result := nil;
+  for i := 0 to Count - 1 do
+  begin
+    if Items[i].DrvName = Name then
+    begin
+      Result := Items[i];
+      break;
+    end;
+  end;
+end;
+
+procedure TDriverParamsList.LoadFromJson(jArr: TJSONArray);
+var
+  i: integer;
+  jChild: TJSonLoader;
+  drvParam: TDriverParams;
+begin
+  Clear;
+  if Assigned(jArr) then
+  begin
+    for i := 0 to jArr.Count - 1 do
+    begin
+      if jChild.Init(jArr.Items[i]) then
+      begin
+        drvParam := TDriverParams.Create;
+        if drvParam.LoadFromJson(jChild) then
+          Add(drvParam)
+        else
+          drvParam.Free;
+      end;
+    end;
+  end;
+end;
+
+function TDriverParamsList.GetJSONObject: TJSONValue;
+var
+  jArr: TJSONArray;
+  i: integer;
+begin
+  jArr := TJSONArray.Create;
+  for i := 0 to Count - 1 do
+  begin
+    jArr.AddElement(Items[i].GetJSONObject);
+  end;
+  Result := jArr;
+end;
+
+procedure TDriverParamsList.AddDrv(DriverName: string; jObj: TJSONObject);
+var
+  drvPar: TDriverParams;
+begin
+  drvPar := FindDriver(DriverName);
+  if not Assigned(drvPar) then
+  begin
+    drvPar := TDriverParams.Create;
+    drvPar.DrvName := DriverName;
+    Add(drvPar);
+  end;
+  drvPar.DrvParams := jObj;
+end;
+
+function TDriverParamsList.getDriverParams(DriverName: string): string;
+var
+  drvPar: TDriverParams;
+begin
+  Result := '';
+  drvPar := FindDriver(DriverName);
+  if Assigned(drvPar) then
+    Result := drvPar.DrvParams.ToString;
 end;
 
 // --------------------- TReopenItem ----------------------------------------
@@ -533,6 +660,8 @@ constructor TProgCfg.Create;
 begin
   inherited;
   ClosedWinList := TClosedWinList.Create;
+  DriverParamsList := TDriverParamsList.Create;
+
   ReOpenMapfileList := TReopenList.Create(10);
   ReOpenWorkspaceList := TReopenList.Create(10);
   FWorkSpaceFilename := IncludeTrailingPathDelimiter(GetCurrentDir) +
@@ -548,6 +677,7 @@ begin
   ReOpenMapfileList.Free;
   ReOpenWorkspaceList.Free;
   SectionsCfg.Done;
+  DriverParamsList.Free;
   ClosedWinList.Free;
   inherited;
 end;
@@ -607,13 +737,23 @@ begin
   OpenWorkspace(FWorkSpaceFilename);
 end;
 
+procedure TProgCfg.AddDriverSettings(DriverName: string; jObj: TJSONObject);
+begin
+  DriverParamsList.AddDrv(DriverName, jObj);
+end;
+
+function TProgCfg.getDriverParams(DriverName: string): string;
+begin
+  Result := DriverParamsList.getDriverParams(DriverName);
+end;
+
 procedure TProgCfg.OpenWorkspace(FileName: string);
 var
-  jVal: TJSONValue;
   txt: string;
   MS: TMemoryStream;
   jLoader: TJSonLoader;
   jLoader2: TJSonLoader;
+  jVal: TJSONValue;
 begin
   FWorkSpaceFilename := FileName;
   ReOpenWorkspaceList.AddFile(FWorkSpaceFilename);
@@ -634,8 +774,7 @@ begin
   if txt <> '' then
   begin
     try
-      jVal := TJSONObject.ParseJSONValue(txt);
-      jLoader.Init(jVal);
+      jLoader.Init(txt);
       if jLoader2.Init(jLoader, 'MainCfg') then
       begin
         jLoader2.Load('MapFile', WorkingMap);
@@ -660,10 +799,11 @@ begin
         ByteOrder := TByteOrder(jLoader2.LoadDef('ByteOrder', ord(ByteOrder)));
       end;
 
-      SectionsCfg.JSONLoad(jLoader);
+      SectionsCfg.JSONLoad(jLoader.GetObject('ShowVarCfg'));
 
       ReOpenMapfileList.LoadFromJObj(jLoader.getArray('ReOpenMapFileList'));
       ClosedWinList.LoadFromJson(jLoader.getArray('ClosedWin'));
+      DriverParamsList.LoadFromJson(jLoader.getArray('DriverParamsList'));
 
       if Assigned(FOnReadJsonCfg) then
       begin
@@ -717,6 +857,8 @@ begin
 
   jBuild.Add('ReOpenMapFileList', ReOpenMapfileList.GetJSONObject);
   jBuild.Add('ClosedWin', ClosedWinList.GetJSONObject);
+  jBuild.Add('DriverParamsList', DriverParamsList.GetJSONObject);
+
 
   // jBuild.Add('ReOpenWorkspaceList', ReOpenWorkspaceList.GetJSONObject);
 

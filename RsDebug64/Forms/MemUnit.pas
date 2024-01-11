@@ -187,7 +187,7 @@ begin
 
   if Size <> 0 then
   begin
-    MemFrame.ClrData;
+    //MemFrame.ClrData;
     CommThread.AddToDoItem(TWorkRdMemItem.Create(Handle, wm_ReadMem1, AdrModeGroup.ItemIndex = 1,
       MemFrame.MemBuf.Buf[0], Adr, Size));
   end;

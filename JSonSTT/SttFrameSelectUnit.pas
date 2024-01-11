@@ -14,12 +14,15 @@ type
   TSttFrameSelect = class(TSttFrameBase)
     SttLabel: TLabel;
     SttComboBox: TComboBox;
+    procedure SttComboBoxChange(Sender: TObject);
   private
-    { Private declarations }
+    defVal: string;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
     function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
+    procedure LoadDefaultValue; override;
+    procedure setActive(active: boolean); override;
   end;
 
 implementation
@@ -27,20 +30,41 @@ implementation
 {$R *.dfm}
 
 procedure TSttFrameSelect.LoadField(ParamList: TSttObjectListJson);
+var
+  stt : TSttSelectObjectJson;
 begin
   inherited;
-  InitComboBoxItem(SttComboBox, SttLabel, ParamList, FItemName);
+  stt := InitComboBoxItem(SttComboBox, SttLabel, ParamList, ItemName);
+  if Assigned(stt) then
+    defVal := stt.defVal;
 end;
 
 function TSttFrameSelect.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, SttComboBox.Text));
-  Result :=true;
+  Result := true;
 end;
 
 procedure TSttFrameSelect.setData(obj: TJSONObject);
 begin
   LoadValComboBoxJSon(obj, FItemName, SttComboBox);
+end;
+
+procedure TSttFrameSelect.LoadDefaultValue;
+begin
+  SttComboBox.ItemIndex := SttComboBox.Items.IndexOf(defVal);
+end;
+
+procedure TSttFrameSelect.setActive(active: boolean);
+begin
+  SttComboBox.Enabled := active;
+end;
+
+procedure TSttFrameSelect.SttComboBoxChange(Sender: TObject);
+begin
+  inherited;
+  if Assigned(FOnValueEdited) then
+    FOnValueEdited(self, ItemName, SttComboBox.Text);
 end;
 
 initialization

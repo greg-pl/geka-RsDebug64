@@ -1,42 +1,64 @@
 object EditDrvParamsForm: TEditDrvParamsForm
   Left = 4037
   Top = 200
-  BorderIcons = [biSystemMenu, biMinimize]
-  BorderStyle = bsDialog
-  Caption = 'EditDrvParamsForm'
-  ClientHeight = 183
-  ClientWidth = 308
+  Caption = 'Driver params'
+  ClientHeight = 347
+  ClientWidth = 456
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
-  FormStyle = fsMDIChild
-  OldCreateOrder = False
-  Position = poDefault
-  Visible = True
-  OnActivate = FormActivate
-  OnClose = FormClose
+  OldCreateOrder = True
+  Position = poMainFormCenter
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
-  object ParamGrid: TStringGrid
+  object Panel1: TPanel
     Left = 0
-    Top = 0
-    Width = 308
-    Height = 183
-    Align = alClient
-    ColCount = 3
-    DefaultColWidth = 20
-    DefaultRowHeight = 20
-    RowCount = 20
-    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goEditing]
+    Top = 304
+    Width = 456
+    Height = 43
+    Align = alBottom
+    BevelOuter = bvNone
     TabOrder = 0
-    OnKeyPress = ParamGridKeyPress
-    OnSelectCell = ParamGridSelectCell
-    ColWidths = (
-      20
-      144
-      111)
+    DesignSize = (
+      456
+      43)
+    object OkBtn: TButton
+      Left = 279
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akRight, akBottom]
+      Caption = '&Ok'
+      Default = True
+      ModalResult = 1
+      TabOrder = 0
+      OnClick = OkBtnClick
+    end
+    object Button2: TButton
+      Left = 368
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akRight, akBottom]
+      Caption = '&Cancel'
+      ModalResult = 2
+      TabOrder = 1
+    end
+    object DefaultBtn: TButton
+      Left = 183
+      Top = 8
+      Width = 75
+      Height = 25
+      Anchors = [akRight, akBottom]
+      Caption = '&Default'
+      TabOrder = 2
+      OnClick = DefaultBtnClick
+    end
   end
 end

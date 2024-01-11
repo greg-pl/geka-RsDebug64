@@ -4,6 +4,12 @@ inherited SttFrameUart: TSttFrameUart
   ParentFont = False
   ExplicitWidth = 379
   ExplicitHeight = 140
+  inherited BevelAll: TBevel
+    Width = 379
+    Height = 140
+    ExplicitWidth = 379
+    ExplicitHeight = 140
+  end
   object Label1: TLabel
     Left = 24
     Top = 16
@@ -56,13 +62,6 @@ inherited SttFrameUart: TSttFrameUart
     Font.Style = []
     ParentFont = False
   end
-  object Bevel1: TBevel
-    Left = 4
-    Top = 4
-    Width = 370
-    Height = 134
-    Anchors = [akLeft, akTop, akRight]
-  end
   object ComNrBox: TComboBox
     Left = 128
     Top = 13
@@ -76,6 +75,7 @@ inherited SttFrameUart: TSttFrameUart
     Font.Style = []
     ParentFont = False
     TabOrder = 0
+    OnClick = ComNrBoxClick
   end
   object BoudRateBox: TComboBox
     Left = 128
@@ -90,6 +90,7 @@ inherited SttFrameUart: TSttFrameUart
     Font.Style = []
     ParentFont = False
     TabOrder = 1
+    OnClick = BoudRateBoxClick
   end
   object ParityBox: TComboBox
     Left = 128
@@ -104,6 +105,7 @@ inherited SttFrameUart: TSttFrameUart
     Font.Style = []
     ParentFont = False
     TabOrder = 2
+    OnClick = ParityBoxClick
   end
   object BitCntBox: TComboBox
     Left = 128
@@ -118,5 +120,6 @@ inherited SttFrameUart: TSttFrameUart
     Font.Style = []
     ParentFont = False
     TabOrder = 3
+    OnClick = BitCntBoxClick
   end
 end

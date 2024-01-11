@@ -14,6 +14,8 @@ uses
   Rsd64Definitions;
 
 const
+  DRIVER_NAME = 'MBUS';
+
   MAX_MDB_FRAME_SIZE = 240;
   MAX_MDB_STD_FRAME_SIZE = 112;
   DRIVER_SHORT_NAME = 'MCOM';
@@ -37,6 +39,8 @@ type
   TTabWord = array [0 .. 32768] of word;
 
   TMdbMode = (mdbRTU, mdbASCII);
+  TMemoryAccessMode = (memAccGEKA, memAccDIEHL);
+
   TParity = (paNONE, paEVEN, paODD);
   TMdbMemAccess = (mdbmemGEKA, mdbmemDPC06);
 
@@ -169,7 +173,7 @@ type
 
     function GetDrvInfo: String;
     function GetDrvParams: String;
-    function SetDrvParam(ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus;
+    function SetDrvParams(const jsonParams: string): TStatus;
 
     procedure RegisterCallBackFun(ACallBackFunc: TCallBackFunc; CmmId: integer);
     // funkcje podstawowe Modbusa
@@ -528,7 +532,7 @@ begin
   SumRecTime := 0;
   SumSendTime := 0;
 
-  Result := stBadArguments;
+  Result := stNotOpen;
   if GlobComList.GetComAccessHandle(ComNr, ComHandle, SemHandle) then
   begin
     if GetComAcces then
@@ -801,6 +805,7 @@ begin
   if DriverMode = dmSTD then
   begin
     RecLen := RsRead(Buffer[0], length(Buffer));
+    setLength(Buffer, RecLen);
   end
   else
   begin
@@ -1099,7 +1104,10 @@ begin
         end
         else if Rep = 0 then
         begin
-          Result := stBadRepl;
+          if length(OutBuf) = 0 then
+            Result := stNoReplay
+          else
+            Result := stBadRepl;
         end
         else if not(q) then
         begin
@@ -1158,90 +1166,110 @@ begin
 end;
 
 function TDevItem.GetDrvInfo: String;
+  procedure AddItem(jArr: TJSONArray; Name, descr, Val: string); overload;
+  var
+    jBuild: TJSONBuilder;
+  begin
+    jBuild.Init;
+    jBuild.Add(DRVINFO_NAME, Name);
+    jBuild.Add(DRVINFO_DESCR, descr);
+    jBuild.Add(DRVINFO_VALUE, Val);
+    jArr.AddElement(jBuild.jobj);
+  end;
+
+  procedure AddItem(jArr: TJSONArray; Name, descr: string; Val: integer); overload;
+  begin
+    AddItem(jArr, Name, descr, IntToStr(Val));
+  end;
+
 var
   s: String;
   ParamName: String;
   jBuild: TJSONBuilder;
+  jArr: TJSONArray;
 begin
-  jBuild.Init;
-  jBuild.Add('REPEAT_CNT', FrameRepCnt);
-  jBuild.Add('FRAME_CNT', FrameCnt);
+  jArr := TJSONArray.Create;
+  AddItem(jArr, 'FRAME_CNT', 'Count of transmited frames', FrameCnt);
+  AddItem(jArr, 'REPEAT_CNT', 'Count of repetition', FrameRepCnt);
+  AddItem(jArr, 'WAIT_CNT', '', WaitCnt);
+  AddItem(jArr, 'RECIVE_TIME', '', SumRecTime);
+  AddItem(jArr, 'SEND_TIME', '', SumSendTime);
 
-  jBuild.Add('WAIT_CNT', WaitCnt);
-  jBuild.Add('RECIVE_TIME', SumRecTime);
-  jBuild.Add('SEND_TIME', SumSendTime);
-  jBuild.Add('FRAME_CNT', FrameCnt);
-  jBuild.Add('FRAME_CNT', FrameCnt);
-  jBuild.Add('FRAME_CNT', FrameCnt);
-  jBuild.Add('FRAME_CNT', FrameCnt);
-  jBuild.Add('FRAME_CNT', FrameCnt);
-  jBuild.Add('FRAME_CNT', FrameCnt);
+  jBuild.Init;
+  jBuild.Add(DRVINFO_LIST, jArr);
+  jBuild.Add(DRVINFO_TIME, TimeToStr(Now));
 
   Result := jBuild.jobj.ToString;
 
-  {
-    else if ParamName = 'WAIT_CNT' then
-    s := IntToStr(WaitCnt)
-    else if ParamName = 'RECIVE_TIME' then
-    s := IntToStr(SumRecTime)
-    else if ParamName = 'SEND_TIME' then
-    s := IntToStr(SumSendTime)
-    else if ParamName = 'DIVIDE_LEN' then
-    s := IntToStr(CountDivide)
-    else if ParamName = 'DRIVER_MODE' then
-    s := IntToStr(ord(DriverMode))
-    else if ParamName = 'RS485_WAIT' then
-    s := IntToStr(byte(Rs485Wait))
-    else if ParamName = 'CLR_RDCNT' then
-    s := IntToStr(byte(FClr_ToRdCnt));
-  }
+end;
+
+const
+  PAR_ITEM_DIVIDE_LEN = 'DIVIDE_LEN';
+  PAR_ITEM_DRIVER_MODE = 'DRIVER_MODE';
+  DriverModeName: TStringArr = ['STD', 'SLOW', 'FAST'];
+
+function getDriverMode(Txt: string; default: TDriverMode): TDriverMode;
+var
+  i: TDriverMode;
+begin
+  Result := default;
+  for i := low(TDriverMode) to high(TDriverMode) do
+  begin
+    if Txt = DriverModeName[ord(i)] then
+    begin
+      Result := i;
+      break;
+    end;
+  end;
 end;
 
 function TDevItem.GetDrvParams: String;
+
 var
+  jBuild: TJSONBuilder;
+  vBuild: TJSONBuilder;
   p: TSttObjectListJson;
+  sttObj : TSttObjectJson;
 begin
+  jBuild.Init;
+  //description section
   p := TSttObjectListJson.Create;
   try
-    P.Add(TSttIntObjectJson.Create('DIVIDE_LEN', 'Port number', 40, 240, 128));
-    P.Add(TSttSelectObjectJson.Create('DRIVER_MODE', 'Driwer work mode', ['STD','SLOW','FAST'],'STD'));
-
-
-    Result := P.getJSonObject.ToString
+    sttObj := TSttIntObjectJson.Create(PAR_ITEM_DIVIDE_LEN, 'Read/write memory divide bloks', 40, 240, 128);
+    sttObj.SetUniBool(true); //UniBool=true - allow change during open connection
+    p.Add(sttObj);
+    sttObj := TSttSelectObjectJson.Create(PAR_ITEM_DRIVER_MODE, 'Driver work mode', DriverModeName, 'STD');
+    sttObj.SetUniBool(false);
+    p.Add(sttObj);
+    jBuild.Add(DRVPRAM_DEFINITION, p.getJSonObject);
   finally
     p.Free;
   end;
 
+  //value section
+  vBuild.Init;
+  vBuild.Add(PAR_ITEM_DIVIDE_LEN, FCountDivide);
+  vBuild.Add(PAR_ITEM_DRIVER_MODE, DriverModeName[ord(DriverMode)]);
+  jBuild.Add(DRVPRAM_VALUES, vBuild.jobj);
+  jBuild.Add(DRVPRAM_DRIVER_NAME, DRIVER_NAME);
+
+  Result := jBuild.jobj.ToString;
 end;
 
-function TDevItem.SetDrvParam(ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus;
+function TDevItem.SetDrvParams(const jsonParams: string): TStatus;
 var
-  n: integer;
+  jLoader: TJsonLoader;
+  vInt: integer;
+  vTxt: string;
 begin
   Result := stOK;
-  if ParamName = 'DIVIDE_LEN' then
-  begin
-    CountDivide := StrToIntDef(pchar(ParamValue), MAX_MDB_FRAME_SIZE);
-  end
-  else if ParamName = 'DRIVER_MODE' then
-  begin
-    n := StrToIntDef(pchar(ParamValue), ord(dmSTD));
-    if (n >= ord(low(TDriverMode))) and (n <= ord(high(TDriverMode))) then
-    begin
-      DriverMode := TDriverMode(n);
-      SetupState;
-    end;
-  end
-  else if ParamName = 'RS485_WAIT' then
-  begin
-    n := StrToIntDef(pchar(ParamValue), 1);
-    Rs485Wait := (n <> 0);
-  end
-  else if ParamName = 'CLR_RDCNT' then
-  begin
-    n := StrToIntDef(pchar(ParamValue), 1);
-    FClr_ToRdCnt := (n <> 0);
-  end
+  jLoader.Init(TJSONObject.ParseJSONValue(jsonParams));
+  if jLoader.Load(PAR_ITEM_DIVIDE_LEN, vInt) then
+    FCountDivide := vInt
+  else
+    Result := stBadArguments;
+  if jLoader.Load(PAR_ITEM_DRIVER_MODE, vTxt) then
+    DriverMode := getDriverMode(vTxt, DriverMode)
   else
     Result := stBadArguments;
 end;
@@ -2515,7 +2543,7 @@ end;
 // ConnectStr - JSON format
 
 function TDevList.AddDevice(ConnectStr: PAnsiChar): TAccId;
-  function GetJsonVal(jobj: TJsonObject; Name: string; var valStr: string): boolean;
+  function GetJsonVal(jobj: TJSONObject; Name: string; var valStr: string): boolean;
   var
     jPair: TJSonPair;
   begin
@@ -2535,21 +2563,21 @@ var
 
   DevItem: TDevItem;
   jVal: TJSONValue;
-  jobj: TJsonObject;
-  jObj2: TJsonObject;
+  jobj: TJSONObject;
+  jObj2: TJSONObject;
   tmpStr: string;
   q: boolean;
 begin
   Result := -1;
   try
-    jVal := TJsonObject.ParseJSONValue(String(ConnectStr));
-    jobj := jVal as TJsonObject;
+    jVal := TJSONObject.ParseJSONValue(String(ConnectStr));
+    jobj := jVal as TJSONObject;
     OpenParams.InitDefault;
 
     q := false;
     if Assigned(jobj) then
     begin
-      jObj2 := jobj.Get(CONNECTION_PARAMS_NAME).JsonValue as TJsonObject;
+      jObj2 := jobj.Get(CONNECTION_PARAMS_NAME).JsonValue as TJSONObject;
       if Assigned(jObj2) then
       begin
         if GetJsonVal(jObj2, UARTPARAM_COMNR, tmpStr) then

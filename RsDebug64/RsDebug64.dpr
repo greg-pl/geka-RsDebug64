@@ -12,11 +12,13 @@ uses
   CommThreadUnit in 'Tools\CommThreadUnit.pas',
   ComTradeUnit in 'Tools\ComTradeUnit.pas',
   CommonDef in 'Tools\CommonDef.pas',
+  UpLoadDefUnit in 'Tools\UpLoadDefUnit.pas',
+  About in 'Dialogs\About.pas' {AboutForm},
   SettingUnit in 'Dialogs\SettingUnit.pas' {SettingForm},
   EditTypeItemUnit in 'Dialogs\EditTypeItemUnit.pas' {EditTypeItemForm},
   EditVarItemUnit in 'Dialogs\EditVarItemUnit.pas' {EditVarItemForm},
-  EditDrvParamsUnit in 'Dialogs\EditDrvParamsUnit.pas' {EditDrvParamsForm},
-  About in 'Dialogs\About.pas' {AboutForm},
+  ShowDrvInfoUnit in 'Dialogs\ShowDrvInfoUnit.pas' {ShowDrvInfoForm},
+  EditSectionsDialog in 'Dialogs\EditSectionsDialog.pas' {EditSectionsDlg},
   MemFrameUnit in 'Frames\MemFrameUnit.pas' {MemFrame: TFrame},
   AnalogFrameUnit in 'Frames\AnalogFrameUnit.pas' {AnalogFrame: TFrame},
   BinaryFrameUnit in 'Frames\BinaryFrameUnit.pas' {BinaryFrame: TFrame},
@@ -36,7 +38,6 @@ uses
   UpLoadFileUnit in 'Forms\UpLoadFileUnit.pas' {UpLoadFileForm},
   Wykres3Unit in '..\Wykres3\Wykres3Unit.pas',
   WykresEngUnit in '..\Wykres3\WykresEngUnit.pas',
-  UpLoadDefUnit in 'Tools\UpLoadDefUnit.pas',
   Rsd64Definitions in '..\Common\Rsd64Definitions.pas',
   CrcUnit in '..\Common\CrcUnit.pas',
   OpenConnectionDlgUnit in 'Dialogs\OpenConnectionDlgUnit.pas' {OpenConnectionDlg},
@@ -55,7 +56,8 @@ uses
   ElfParserUnit in 'Tools\ElfParserUnit.pas',
   CallProcessUnit in 'Tools\CallProcessUnit.pas',
   ProgressWindowUnit in 'Tools\ProgressWindowUnit.pas' {ProgressForm},
-  EditSectionsDialog in 'Dialogs\EditSectionsDialog.pas' {EditSectionsDlg};
+  EditDrvParamsUnit in 'Dialogs\EditDrvParamsUnit.pas' {EditDrvParamsForm},
+  SttFrameStrUnit in '..\JSonSTT\SttFrameStrUnit.pas' {SttFrameStr: TFrame};
 
 {$R *.res}
 

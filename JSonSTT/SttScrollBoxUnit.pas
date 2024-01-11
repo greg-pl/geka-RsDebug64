@@ -3,6 +3,7 @@ unit SttScrollBoxUnit;
 interface
 
 uses
+  System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   System.JSON,
   JsonUtils,
@@ -16,15 +17,33 @@ uses
   SttFrameSelectUnit;
 
 type
+
   TSttScrollBox = class(TScrollBox)
+  private
+    FOnSttItemValueEdited: TOnSttItemValueEdited;
+
+  public
+    constructor Create(AOwner: TComponent); override;
     procedure RemoveItems;
-    procedure LoadList(List: TSttObjectListJson; RmArr: TStringArr);
-    procedure AddFrame(SttClass: TSttFrameBaseClass; SttName: string; List: TSttObjectListJson);
-    function getValueArray(arr: TJSONObject) : boolean;
-    procedure setValueArray(arr: TJSONObject);
+    procedure LoadList(List: TSttObjectListJson; SkipArr: TStringArr); overload;
+    procedure LoadList(List: TSttObjectListJson); overload;
+    procedure AddFrame(SttClass: TSttFrameBaseClass; aItemName: string; ParamList: TSttObjectListJson);
+    function getValueArray(obj: TJSONObject): boolean;
+    procedure setValueArray(obj: TJSONObject);
+    procedure SetOnValueEdited(aOnSttItemValueEdited: TOnSttItemValueEdited);
+    procedure LoadDefaultValue;
+    procedure setActiveFromUniBool;
+    procedure setAllActive;
   end;
 
 implementation
+
+constructor TSttScrollBox.Create(AOwner: TComponent);
+begin
+  inherited;
+  BevelInner := bvNone;
+  BorderStyle := bsNone;
+end;
 
 procedure TSttScrollBox.RemoveItems;
 begin
@@ -34,17 +53,35 @@ begin
   end;
 end;
 
-procedure TSttScrollBox.AddFrame(SttClass: TSttFrameBaseClass; SttName: string; List: TSttObjectListJson);
+procedure TSttScrollBox.AddFrame(SttClass: TSttFrameBaseClass; aItemName: string; ParamList: TSttObjectListJson);
 var
   Frame: TSttFrameBase;
 begin
-  Frame := SttClass.Create(self, SttName);
+  Frame := SttClass.Create(self, aItemName);
   Frame.Parent := self;
   Frame.Align := alTop;
-  Frame.LoadField(List);
+  Frame.LoadField(ParamList);
+  SetOnValueEdited(FOnSttItemValueEdited);
 end;
 
-procedure TSttScrollBox.LoadList(List: TSttObjectListJson; RmArr: TStringArr);
+procedure TSttScrollBox.SetOnValueEdited(aOnSttItemValueEdited: TOnSttItemValueEdited);
+var
+  i: integer;
+begin
+  FOnSttItemValueEdited := aOnSttItemValueEdited;
+  if Assigned(FOnSttItemValueEdited) then
+  begin
+    for i := 0 to ComponentCount - 1 do
+      (Components[i] as TSttFrameBase).SetOnValueEdited(FOnSttItemValueEdited);
+  end
+  else
+  begin
+    for i := 0 to ComponentCount - 1 do
+      (Components[i] as TSttFrameBase).SetOnValueEdited(nil);
+  end;
+end;
+
+procedure TSttScrollBox.LoadList(List: TSttObjectListJson; SkipArr: TStringArr);
 var
   i: integer;
   SttClass: TSttFrameBaseClass;
@@ -52,7 +89,7 @@ begin
   RemoveItems;
   for i := List.Count - 1 downto 0 do
   begin
-    if FindStringInArray(List.Items[i].Name, RmArr, -1) = -1 then
+    if FindStringInArray(List.Items[i].Name, SkipArr, -1) = -1 then
     begin
       SttClass := GetSttFrameClass(List.Items[i].SettType);
       if Assigned(SttClass) then
@@ -60,12 +97,15 @@ begin
         AddFrame(SttClass, List.Items[i].Name, List);
       end;
     end;
-
   end;
-
 end;
 
-function TSttScrollBox.getValueArray(arr: TJSONObject) : boolean;
+procedure TSttScrollBox.LoadList(List: TSttObjectListJson);
+begin
+  LoadList(List, []);
+end;
+
+function TSttScrollBox.getValueArray(obj: TJSONObject): boolean;
 var
   i: integer;
 begin
@@ -74,12 +114,12 @@ begin
   begin
     if Components[i] is TSttFrameBase then
     begin
-      Result := Result and (Components[i] as TSttFrameBase).getData(arr);
+      Result := Result and (Components[i] as TSttFrameBase).getData(obj);
     end;
   end;
 end;
 
-procedure TSttScrollBox.setValueArray(arr: TJSONObject);
+procedure TSttScrollBox.setValueArray(obj: TJSONObject);
 var
   i: integer;
 begin
@@ -87,7 +127,46 @@ begin
   begin
     if Components[i] is TSttFrameBase then
     begin
-      (Components[i] as TSttFrameBase).setData(arr);
+      (Components[i] as TSttFrameBase).setData(obj);
+    end;
+  end;
+end;
+
+procedure TSttScrollBox.LoadDefaultValue;
+var
+  i: integer;
+begin
+  for i := 0 to ComponentCount - 1 do
+  begin
+    if Components[i] is TSttFrameBase then
+    begin
+      (Components[i] as TSttFrameBase).LoadDefaultValue;
+    end;
+  end;
+end;
+
+procedure TSttScrollBox.setAllActive;
+var
+  i: integer;
+begin
+  for i := 0 to ComponentCount - 1 do
+  begin
+    if Components[i] is TSttFrameBase then
+    begin
+      (Components[i] as TSttFrameBase).setActive(true);
+    end;
+  end;
+end;
+
+procedure TSttScrollBox.setActiveFromUniBool;
+var
+  i: integer;
+begin
+  for i := 0 to ComponentCount - 1 do
+  begin
+    if Components[i] is TSttFrameBase then
+    begin
+      (Components[i] as TSttFrameBase).setActiveFromUniBool;
     end;
   end;
 end;

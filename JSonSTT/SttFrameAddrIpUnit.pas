@@ -11,19 +11,23 @@ uses
   SttFrameBaseUnit,
   SttObjectDefUnit;
 
-
 type
   TSttFrameAddrIp = class(TSttFrameBase)
     AddressIpEdit: TLabeledEdit;
     PortNrEdit: TLabeledEdit;
-    Bevel1: TBevel;
+    procedure AddressIpEditExit(Sender: TObject);
+    procedure PortNrEditKeyPress(Sender: TObject; var Key: Char);
+    procedure PortNrEditExit(Sender: TObject);
   private
-    { Private declarations }
+    defIP: string;
+    defport: integer;
   public
     procedure AddObjectsName(SL: TStrings); override;
     procedure LoadField(ParamList: TSttObjectListJson); override;
     function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
+    procedure LoadDefaultValue; override;
+    procedure setActive(active: boolean); override;
   end;
 
 implementation
@@ -37,15 +41,63 @@ begin
 end;
 
 procedure TSttFrameAddrIp.LoadField(ParamList: TSttObjectListJson);
+var
+  sttIP: TSttIPObjectJson;
+  sttInt: TSttIntObjectJson;
 begin
-  InitIPEditItem(AddressIpEdit,  ParamList, IPPARAM_IP);
-  InitIntEditItem(PortNrEdit,  ParamList, IPPARAM_PORT);
+  sttIP:= InitIPEditItem(AddressIpEdit, ParamList, IPPARAM_IP);
+  if Assigned(sttIP) then
+    defIP := sttIP.defVal;
+
+  sttInt := InitIntEditItem(PortNrEdit, ParamList, IPPARAM_PORT);
+  if Assigned(sttInt) then
+    defport := sttInt.defVal;
 end;
+
+procedure TSttFrameAddrIp.LoadDefaultValue;
+begin
+  if defIP <> '' then
+    AddressIpEdit.Text := defIP;
+  if defport <> 0 then
+    PortNrEdit.Text := IntToStr(defport);
+end;
+
+procedure TSttFrameAddrIp.setActive(active: boolean);
+begin
+  AddressIpEdit.Enabled := active;
+  PortNrEdit.Enabled := active;
+end;
+
+procedure TSttFrameAddrIp.AddressIpEditExit(Sender: TObject);
+begin
+  inherited;
+  if Assigned(FOnValueEdited) then
+    FOnValueEdited(self, IPPARAM_IP, AddressIpEdit.Text);
+end;
+
+procedure TSttFrameAddrIp.PortNrEditExit(Sender: TObject);
+begin
+  inherited;
+  if Assigned(FOnValueEdited) then
+    FOnValueEdited(self, IPPARAM_PORT, PortNrEdit.Text);
+end;
+
+procedure TSttFrameAddrIp.PortNrEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  inherited;
+  if Key = #10 then
+  begin
+    Key := #0;
+    (Sender as TLabeledEdit).OnExit(Sender);
+  end;
+
+end;
+
 function TSttFrameAddrIp.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(IPPARAM_IP, AddressIpEdit.Text));
   obj.AddPair(TJSONPair.Create(IPPARAM_PORT, PortNrEdit.Text));
-  Result :=true;
+  Result := True;
 end;
 
 procedure TSttFrameAddrIp.setData(obj: TJSONObject);

@@ -133,6 +133,12 @@ type
     Saveworkspaceas1: TMenuItem;
     N6: TMenuItem;
     ReopenWorkspaceItem: TMenuItem;
+    ToolButton7: TToolButton;
+    ToolButton9: TToolButton;
+    ToolButton10: TToolButton;
+    ToolButton11: TToolButton;
+    OnLine1: TMenuItem;
+    Pocz1: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
@@ -185,6 +191,7 @@ type
     procedure OpenWorkSpaceActExecute(Sender: TObject);
     procedure SaveWorkSpaceAsActExecute(Sender: TObject);
     procedure Fiel1Click(Sender: TObject);
+    procedure SetDrvParamsActUpdate(Sender: TObject);
   private
     function GetDev: TCmmDevice;
     function GetCommThread: TCommThread;
@@ -252,7 +259,8 @@ uses
   TerminalUnit,
   RegMemUnit,
   BinaryMemUnit,
-  OpenConnectionDlgUnit;
+  OpenConnectionDlgUnit,
+  ShowDrvInfoUnit;
 
 function GetComNr(s: string): integer;
 begin
@@ -312,6 +320,8 @@ begin
 end;
 
 procedure TMainForm.InitConnectionDev;
+var
+  txt: string;
 begin
   if Assigned(Dev) then
     FreeAndNil(Dev);
@@ -319,6 +329,9 @@ begin
   Dev := TCmmDevice.Create(Handle, ProgCfg.DevString);
   if Dev.isDllReady then
   begin
+    txt := ProgCfg.getDriverParams(Dev.getDriverName);
+    Dev.SetDrvParams(txt);
+
     CommThread.SetDev(Dev);
   end
   else
@@ -343,7 +356,7 @@ begin
     else
     begin
       st := Dev.OpenDev;
-      NL(Format('OpenDev [%s]=%s', [Dev.getDriverShortName, Dev.GetErrStr(st)]));
+      NL(Format('OpenDev [%s]=%s', [Dev.getDriverName, Dev.GetErrStr(st)]));
       if st = stOK then
       begin
         SetDriverParamsFromIni;
@@ -462,7 +475,7 @@ var
   i: integer;
   pName, pVal: string;
 begin
-  SecName := FindIniDrvPrmSection(Dev.getDriverShortName);
+  SecName := FindIniDrvPrmSection(Dev.getDriverName);
   if SecName <> '' then
   begin
     {
@@ -1183,36 +1196,53 @@ end;
 
 procedure TMainForm.GetDrvParamsActExecute(Sender: TObject);
 var
+  Dlg: TShowDrvInfoForm;
   s: string;
   ParValue: string;
   SL: TStringList;
   i: integer;
 begin
-  s := Dev.GetDrvParams; // GetDrvInfo
-  NL(s);
+  for i := 0 to MDIChildCount - 1 do
+  begin
+    if MDIChildren[i] is TShowDrvInfoForm then
+    begin
+      Dlg := MDIChildren[i] as TShowDrvInfoForm;
+      Dlg.BringToFront;
+      break;
+    end;
+  end;
+  if not Assigned(Dlg) then
+  begin
+    Dlg := TShowDrvInfoForm.CreateIterf(self, self);
+    Dlg.Show;
+  end;
 end;
 
 procedure TMainForm.GetDrvParamsActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := isDevConnected;
+  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isDllReady
 end;
 
 procedure TMainForm.SetDrvParamsActExecute(Sender: TObject);
 var
   i: integer;
-  Form: TEditDrvParamsForm;
+  Dlg: TEditDrvParamsForm;
 begin
-  Form := nil;
-  for i := 0 to MDIChildCount - 1 do
+  if Assigned(Dev) then
   begin
-    if MDIChildren[i] is TEditDrvParamsForm then
-    begin
-      Form := MDIChildren[i] as TEditDrvParamsForm;
-      Form.BringToFront;
+    Dlg := TEditDrvParamsForm.Create(self);
+    try
+      Dlg.SetMainWinInterf(self);
+      Dlg.ShowModal;
+    finally
+      Dlg.Free;
     end;
   end;
-  if Form = nil then
-    TEditDrvParamsForm.CreateIterf(self, self);
+end;
+
+procedure TMainForm.SetDrvParamsActUpdate(Sender: TObject);
+begin
+  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isDllReady;
 end;
 
 procedure TMainForm.CloseEditDrvParamsForm;
@@ -1225,7 +1255,7 @@ begin
     if MDIChildren[i] is TEditDrvParamsForm then
     begin
       Form := MDIChildren[i] as TEditDrvParamsForm;
-      if Form.Caption <> Dev.getDriverShortName then
+      if Form.Caption <> Dev.getDriverName then
         Form.Close;
     end;
   end;

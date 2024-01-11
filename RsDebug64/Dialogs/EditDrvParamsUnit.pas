@@ -4,127 +4,114 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Grids,RmtChildUnit,IniFiles,
-  RsdDll,ProgCfgUnit,Rsd64Definitions;
+  Dialogs, Grids, RmtChildUnit, IniFiles,
+  RsdDll, ProgCfgUnit, Rsd64Definitions,
+  System.JSON,
+  JSonUtils,
+  SttObjectDefUnit,
+  SttScrollBoxUnit,
+  SttFrameBaseUnit, Vcl.StdCtrls, Vcl.ExtCtrls;
 
 type
   TEditDrvParamsForm = class(TForm)
-    ParamGrid: TStringGrid;
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure FormActivate(Sender: TObject);
-    procedure ParamGridSelectCell(Sender: TObject; ACol, ARow: Integer;
-      var CanSelect: Boolean);
-    procedure ParamGridKeyPress(Sender: TObject; var Key: Char);
+    Panel1: TPanel;
+    OkBtn: TButton;
+    Button2: TButton;
+    DefaultBtn: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure OkBtnClick(Sender: TObject);
+    procedure DefaultBtnClick(Sender: TObject);
   private
-    procedure SaveDrvParamToIni;
+    SttScrollBox: TSttScrollBox;
+    FMainWinInterf: IMainWinInterf;
+    DriverName : string;
+    procedure OnSttItemValueEditedProc(Sender: TObject; itemName, value: string);
   public
-    MainWinInterf  : IMainWinInterf;
-    constructor CreateIterf(AMainWinInterf  : IMainWinInterf; AOwner: TComponent);
+    procedure SetMainWinInterf(aMainWinInterf: IMainWinInterf);
   end;
-
 
 implementation
 
 {$R *.dfm}
 
-constructor TEditDrvParamsForm.CreateIterf(AMainWinInterf  : IMainWinInterf; AOwner: TComponent);
+
+procedure TEditDrvParamsForm.FormCreate(Sender: TObject);
 begin
-  inherited Create(AOwner);
-  MainWinInterf := AMainWinInterf;
-  //Caption := MainWinInterf.GetDev.ConnectStr; TODO
+  inherited;
+  SttScrollBox := TSttScrollBox.Create(self);
+  SttScrollBox.Parent := self;
+  SttScrollBox.Align := alClient;
+  SttScrollBox.SetOnValueEdited(OnSttItemValueEditedProc);
 end;
 
-procedure TEditDrvParamsForm.FormClose(Sender: TObject;
-  var Action: TCloseAction);
+procedure TEditDrvParamsForm.FormDestroy(Sender: TObject);
 begin
-  Action := caFree;
+  inherited;
+  // SttScrollBox.Free;
 end;
 
-procedure TEditDrvParamsForm.FormActivate(Sender: TObject);
+
+procedure TEditDrvParamsForm.SetMainWinInterf(aMainWinInterf: IMainWinInterf);
+begin
+  FMainWinInterf := aMainWinInterf;
+end;
+
+procedure TEditDrvParamsForm.FormShow(Sender: TObject);
 var
-  s        : string;
-  ParValue : string;
-  SL       : TStringList;
-  i        : integer;
-  k        : integer;
+  s: string;
+  jVal: TJSONValue;
+  jObj: TJsonObject;
+  jObj2: TJsonObject;
+  List: TSttObjectListJson;
+  jLoader: TJSONLoader;
 begin
-  ParamGrid.Rows[0].CommaText := 'lp. Parametr wartoœæ';
-  s := MainWinInterf.GetDev.GetDrvParamList(true);
-  SL  := TStringList.Create;
-  try
-    SL.QuoteChar := '"';
-    SL.Delimiter := ';';
-    SL.DelimitedText := s;
-    k:=1;
-    for i:=0 to SL.Count-1 do
-    begin
-{
-      if MainWinInterf.GetDev.GetDrvStatus(SL.Strings[i],ParValue)=stOk then
-      begin
-        ParamGrid.Cells[0,k]:=IntToStr(k);
-        ParamGrid.Cells[1,k]:=SL.Strings[i];
-        ParamGrid.Cells[2,k]:=ParValue;
-        inc(k);
-      end;
-}
-    end;
-  finally
-    Sl.Free;
-  end;
-  ParamGrid.Row:=1;
-  ParamGrid.Col:=2;
-end;
-
-
-procedure TEditDrvParamsForm.ParamGridSelectCell(Sender: TObject; ACol,
-  ARow: Integer; var CanSelect: Boolean);
-begin
-  CanSelect := (Acol=2);
-end;
-
-procedure TEditDrvParamsForm.ParamGridKeyPress(Sender: TObject;
-  var Key: Char);
-var
-  ParamName,ParamVal : string;
-  st                 : TStatus;
-  Msg                : string;
-begin
-  if Key=#13 then
+  if Assigned(FMainWinInterf) then
   begin
-    ParamName := ParamGrid.Cells[1,ParamGrid.Row];
-    ParamVal := ParamGrid.Cells[2,ParamGrid.Row];
-    st := MainWinInterf.GetDev.SetDrvParam(ParamName,ParamVal);
-    Msg := Format('SetParam(%s,%s)=%s',[ParamName,ParamVal,MainWinInterf.GetDev.GetErrStr(st)]);
-    MainWinInterf.Msg(Msg);
-    SaveDrvParamToIni;
+    s := FMainWinInterf.GetDev.GetDrvParams;
+    jVal := TJsonObject.ParseJSONValue(s);
+    List := TSttObjectListJson.Create;
+    try
+      jLoader.Init(jVal);
+      List.LoadfromArr(jLoader.getArray(DRVPRAM_DEFINITION));
+      SttScrollBox.LoadList(List);
+      SttScrollBox.setValueArray(jLoader.GetObject(DRVPRAM_VALUES));
+      jLoader.Load(DRVPRAM_DRIVER_NAME,DriverName);
+      if FMainWinInterf.GetDev.Connected then
+        SttScrollBox.setActiveFromUniBool
+      else
+        SttScrollBox.setAllActive;
+    finally
+      List.Free;
+    end;
   end;
 end;
 
-procedure TEditDrvParamsForm.SaveDrvParamToIni;
-var
-  Ini : TIniFile;
-  SecName : string;
-  i       : integer;
+
+procedure TEditDrvParamsForm.OnSttItemValueEditedProc(Sender: TObject; itemName, value: string);
 begin
-  SecName := MainWinInterf.FindIniDrvPrmSection(MainWinInterf.GetDev.getDriverShortName);
-  if SecName='' then
-    SecName := MainWinInterf.FindIniDrvPrmSection('');
-{
-  Ini := TIniFile.Create(ProgCfg.MainIniFName);
-  try
-    Ini.WriteString(SecName,INI_PARAM_DEV_STR,MainWinInterf.GetDev.getDriverShortName);
-    for i:=1 to ParamGrid.RowCount-1 do
-    begin
-      if ParamGrid.Cells[1,i]<>'' then
-      begin
-        Ini.WriteString(SecName,ParamGrid.Cells[1,i],ParamGrid.Cells[2,i]);
-      end;
-    end;
-  finally
-    Ini.UpdateFile;
-    Ini.Free;
-  end;
-}
+  FMainWinInterf.Msg(Format('Edited : %s - %s', [itemName, value]));
 end;
+
+procedure TEditDrvParamsForm.DefaultBtnClick(Sender: TObject);
+begin
+  SttScrollBox.LoadDefaultValue;
+end;
+
+procedure TEditDrvParamsForm.OkBtnClick(Sender: TObject);
+var
+  jObj2: TJsonObject;
+  s : string;
+begin
+  jObj2 := TJsonObject.Create;
+  if SttScrollBox.getValueArray(jObj2) then
+  begin
+    s := jObj2.ToString;
+    FMainWinInterf.GetDev.SetDrvParams(s);
+    ProgCfg.AddDriverSettings(DriverName,jObj2);
+  end;
+end;
+
 
 end.

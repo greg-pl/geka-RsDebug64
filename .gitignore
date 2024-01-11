@@ -3,3 +3,4 @@
 *.db
 StLink/Win32/Debug/StLink.exe
 **/__history/*.*
+*.bak

@@ -24,5 +24,7 @@ inherited SttFrameFloat: TSttFrameFloat
     Font.Style = []
     ParentFont = False
     TabOrder = 0
+    OnExit = SttFloatEditExit
+    OnKeyPress = SttFloatEditKeyPress
   end
 end

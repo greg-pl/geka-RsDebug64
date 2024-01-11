@@ -10,25 +10,23 @@ library MBusCom;
   with your DLL. To avoid using BORLNDMM.DLL, pass string information
   using PChar or ShortString parameters. }
 
-{$E cmm64}
+{$E cmm2}
 
 uses
   Windows,
   SysUtils,
   Classes,
-  CmmMain in 'CmmMain.pas',
   Rsd64Definitions in '..\..\Common\Rsd64Definitions.pas',
-  ModbusObj in 'ModbusObj.pas',
-  ComUnit in 'ComUnit.pas',
-  LibUtils in 'LibUtils.pas',
   SttObjectDefUnit in '..\..\JSonSTT\SttObjectDefUnit.pas',
   CrcUnit in '..\..\Common\CrcUnit.pas',
-  JSonUtils in '..\..\Common\JSonUtils.pas';
+  JSonUtils in '..\..\Common\JSonUtils.pas',
+  LibUtils in '..\CmmCommon\LibUtils.pas',
+  CmmMain in 'CmmMain.pas',
+  ModbusObj in 'ModbusObj.pas',
+  ComUnit in 'ComUnit.pas';
 
 {$R *.res}
-
 
 begin
 
 end.
-

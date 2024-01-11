@@ -94,7 +94,6 @@ type
     constructor Create(H: THandle; Msg: UINT; var Buf; adr, size: word);
   end;
 
-
   TWorkRdMdbInputTableItem = class(TWorkModbusMultiBoolItem)
 
   end;
@@ -139,6 +138,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure AddToDoItem(WorkItem: TCommWorkItem);
+    procedure AddToDoItemAllowDouble(WorkItem: TCommWorkItem);
     procedure SetDev(Dev: TCmmDevice);
   end;
 
@@ -505,8 +505,6 @@ begin
                 st := doWrMdbOutputTab(item as TWorkWrMdbOutputTableItem);
               end;
 
-
-
               item.WorkTime := GetTickCount - TT;
               item.Result := st;
             end
@@ -532,6 +530,35 @@ begin
 end;
 
 procedure TCommThread.AddToDoItem(WorkItem: TCommWorkItem);
+  function FindSameSorce(WorkItem: TCommWorkItem): boolean;
+  var
+    i: Integer;
+    item: TCommWorkItem;
+  begin
+    Result := False;
+    FToDoList.Lock;
+    try
+      for i := 0 to FToDoList.Flist.Count - 1 do
+      begin
+        item := FToDoList.Flist.Items[i] as TCommWorkItem;
+        Result := (item.OwnerHandle = WorkItem.OwnerHandle) and (item.ReturnMsg = WorkItem.ReturnMsg);
+        if Result then
+          break;
+      end;
+    finally
+      FToDoList.Unlock;
+    end;
+  end;
+
+begin
+  if not FindSameSorce(WorkItem) then
+  begin
+    FToDoList.Add(WorkItem);
+    SetEvent(FAsyncMutex);
+  end;
+end;
+
+procedure TCommThread.AddToDoItemAllowDouble(WorkItem: TCommWorkItem);
 begin
   FToDoList.Add(WorkItem);
   SetEvent(FAsyncMutex);

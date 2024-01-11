@@ -24,7 +24,6 @@ implementation
 // -------------------- Export ---------------------------------------------
 var
   GlobLibProperty: AnsiString;
-  LibParams: AnsiString;
 
 function LibIdentify: PGUID; stdcall;
 begin
@@ -73,8 +72,9 @@ begin
     begin
       s := AnsiString(Dev.GetDrvInfo);
       n := length(s);
-      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n));
+      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n + 1));
       move(s[1], Result^, n);
+      Result[n] := #0;
     end;
   end;
 end;
@@ -95,20 +95,28 @@ begin
     begin
       s := AnsiString(Dev.GetDrvParams);
       n := length(s);
-      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n));
+      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n + 1));
       move(s[1], Result^, n);
+      Result[n] := #0;
     end;
   end;
 end;
 
-
-function SetDrvParam(Id: TAccId; ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus; stdcall;
+function SetDrvParams(Id: TAccId; jsonParams: PAnsiChar): TStatus; stdcall;
 var
   Dev: TDevItem;
+  n: integer;
+  s1: AnsiString;
+
 begin
   Dev := GlobDevList.FindId(Id);
   if Dev <> nil then
-    Result := Dev.SetDrvParam(ParamName, ParamValue)
+  begin
+    n := System.AnsiStrings.strLen(jsonParams);
+    setlength(s1, n);
+    move(jsonParams^, s1[1], n);
+    Result := Dev.SetDrvParams(String(s1));
+  end
   else
     Result := stBadId;
 end;
@@ -511,6 +519,8 @@ begin
       R := 'Time Out.';
     stNotOpen:
       R := 'Port not open.';
+    stNoReplay:
+      R := 'No replay.';
     stSetupErr:
       R := 'Invalid parameters.';
     stUserBreak:
@@ -547,11 +557,11 @@ begin
     Dev := GlobDevList.FindId(Id);
     if Dev <> nil then
     begin
-      SetLength(s1, Max);
+      setlength(s1, Max);
       Result := Dev.GetErrStr(Code, PAnsiChar(s1), Max);
       if Result then
       begin
-        SetLength(s1, System.AnsiStrings.strlen(PAnsiChar(s1)));
+        setlength(s1, System.AnsiStrings.strLen(PAnsiChar(s1)));
         R := String(s1);
       end;
     end;
@@ -564,9 +574,6 @@ begin
 end;
 
 type
-  TModbusType = (mdbRTU, mdbASCII);
-  TMemoryAccessMode = (memAccGEKA, memAccDIEHL);
-
   TModbusLibPropertyBuilder = class(TLibPropertyBuilder)
   protected
   public
@@ -576,7 +583,7 @@ type
 constructor TModbusLibPropertyBuilder.Create;
 begin
   inherited;
-  Params.shortName := 'MBUS';
+  Params.DriverName := DRIVER_NAME;
   Params.Description := 'Modbus on Uart';
   Params.ConnectionType := connTypUART;
   Params.SubGroups := [subBASE, subMEMORY, subTERMINAL, subMODBUS_STD, subMODBUS_FILE];
@@ -606,23 +613,10 @@ begin
 
 end;
 
-procedure BuildLibParams;
-var
-  lpb: TLibPropertyBuilder;
-begin
-  lpb := TModbusLibPropertyBuilder.Create;
-  try
-    LibParams := AnsiString(lpb.Build);
-  finally
-    lpb.Free;
-  end;
-
-end;
 
 initialization
 
 IsMultiThread := True; // Make memory manager thread safe
 BuildLibProperty;
-BuildLibParams;
 
 end.

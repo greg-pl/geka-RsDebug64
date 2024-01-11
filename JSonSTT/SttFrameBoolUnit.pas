@@ -13,12 +13,15 @@ uses
 type
   TSttFrameBool = class(TSttFrameBase)
     SttCheckBox: TCheckBox;
+    procedure SttCheckBoxClick(Sender: TObject);
   private
-    { Private declarations }
+    defVal: boolean;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
     function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
+    procedure LoadDefaultValue; override;
+    procedure setActive(active: boolean); override;
   end;
 
 implementation
@@ -26,20 +29,50 @@ implementation
 {$R *.dfm}
 
 procedure TSttFrameBool.LoadField(ParamList: TSttObjectListJson);
+var
+  stt: TSttBoolObjectJson;
 begin
   inherited;
-  InitCheckBoxItem(SttCheckBox, ParamList, FItemName);
+  stt := InitCheckBoxItem(SttCheckBox, ParamList,itemName);
+  if Assigned(stt) then
+    defVal := stt.defVal;
+end;
+
+procedure TSttFrameBool.LoadDefaultValue;
+begin
+  SttCheckBox.Checked := defVal;
+end;
+
+procedure TSttFrameBool.setActive(active: boolean);
+begin
+  SttCheckBox.Enabled := active;
 end;
 
 function TSttFrameBool.getData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, JSonBoolToStr(SttCheckBox.Checked)));
-  Result :=true;
+  Result := true;
 end;
 
 procedure TSttFrameBool.setData(obj: TJSONObject);
 begin
   LoadValCheckBoxJSon(obj, FItemName, SttCheckBox);
+end;
+
+procedure TSttFrameBool.SttCheckBoxClick(Sender: TObject);
+var
+  obj: TJSONBool;
+begin
+  inherited;
+  if Assigned(FOnValueEdited) then
+  begin
+    obj := TJSONBool.Create(SttCheckBox.Checked);
+    try
+      FOnValueEdited(self, ItemName, obj.Value);
+    finally
+      obj.Free;
+    end;
+  end;
 end;
 
 initialization

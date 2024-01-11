@@ -16,17 +16,18 @@ type
     TabControl: TTabControl;
     Panel1: TPanel;
     LibDescrLabel: TLabel;
+    DefaultBtn: TButton;
     procedure TabControlChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure OKBtnClick(Sender: TObject);
     procedure TabControlChanging(Sender: TObject; var AllowChange: Boolean);
+    procedure DefaultBtnClick(Sender: TObject);
   private
     SttScrollBox: TSttScrollBox;
     MemConfig: string;
     memDevStr: array of string;
     procedure SetDevStr(aDevStr: string);
-
   public
     procedure SetConfig(config: string);
     function GetConfig(var devStr: string): Boolean;
@@ -41,7 +42,12 @@ uses
   SttFrameBaseUnit,
   SttFrameUartUnit,
   SttFrameAddrIpUnit,
-  RsdDll;
+  RsdDll, Main;
+
+procedure TOpenConnectionDlg.DefaultBtnClick(Sender: TObject);
+begin
+  SttScrollBox.LoadDefaultValue;
+end;
 
 procedure TOpenConnectionDlg.FormCreate(Sender: TObject);
 begin
@@ -90,7 +96,6 @@ begin
       begin
         ConnFrameClass := TSttFrameUart;
         RmArr := UartParamTab;
-
       end;
     connTypTCPIP:
       begin
@@ -99,11 +104,11 @@ begin
       end;
   end;
 
+  // Add element not defined in ConnFrameClass
   SttScrollBox.LoadList(Params.ConnectionParams, RmArr);
+  // Add ConnFrameClass
   if Assigned(ConnFrameClass) then
-  begin
     SttScrollBox.AddFrame(ConnFrameClass, ConnFrameClass.ClassName, Params.ConnectionParams);
-  end;
   SetDevStr(memDevStr[TabControl.TabIndex]);
 end;
 

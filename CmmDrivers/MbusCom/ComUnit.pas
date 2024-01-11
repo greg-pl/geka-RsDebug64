@@ -32,7 +32,6 @@ var
 
 implementation
 
-
 // -----------------------------------------------------------------------------
 // ComList
 // -----------------------------------------------------------------------------
@@ -67,19 +66,29 @@ begin
     if not(Assigned(it)) then
     begin
       it := TComItem.Create;
-      Add(it);
       it.ComNr := ComNr;
       s := '\\.\COM' + IntToStr(ComNr);
       it.ComHandle := CreateFile(pchar(s), GENERIC_READ or GENERIC_WRITE, 0, nil, OPEN_EXISTING,
         FILE_FLAG_OVERLAPPED, 0);
-      it.SemHandle := createsemaphore(nil, 1, 1, nil);
+      if it.ComHandle <> INVALID_HANDLE_VALUE then
+      begin
+        it.SemHandle := createsemaphore(nil, 1, 1, nil);
+        Add(it);
+        ComHandle := it.ComHandle;
+        SemHandle := it.SemHandle;
+        Result := true;
+      end
+      else
+      begin
+        it.Free;
+        ComHandle := INVALID_HANDLE_VALUE;
+        SemHandle := INVALID_HANDLE_VALUE;
+        Result := false;
+      end;
     end;
-    ComHandle := it.ComHandle;
-    SemHandle := it.SemHandle;
   finally
     LeaveCriticalSection(FCriSection);
   end;
-  Result := True;
 end;
 
 function TComList.find(ComNr: integer): TComItem;

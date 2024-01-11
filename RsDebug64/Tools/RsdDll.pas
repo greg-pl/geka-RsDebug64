@@ -17,7 +17,7 @@ type
     FConnected: boolean;
     FToTrnsSize: integer;
     ProgressHandle: THandle;
-    FShortDriverName: string;
+    FDriverName: string;
     SubGroups: TSubGroups;
     procedure FreeLibMemory(pch: pAnsiChar);
   public
@@ -33,11 +33,10 @@ type
     property Connected: boolean read FConnected;
 
     function IsDllReady: boolean;
-    function getDriverShortName: string;
+    function getDriverName: string;
 
-    function GetDrvParamList(ToSet: boolean): string;
     function GetDrvParams: String;
-    function SetDrvParam(ParamName, ParamValue: string): TStatus;
+    function SetDrvParams(jsonParams: string): TStatus;
     function GetDrvInfo: String;
   public
     // funkcje podstawowe Modbusa
@@ -141,7 +140,6 @@ type
 
   TGetLibProperty = function: pAnsiChar; stdcall;
   TSetLoggerHandle = procedure(H: THandle); stdcall;
-  TGetDrvParamList = function(ToSet: boolean): pAnsiChar; stdcall;
   TSetGetMemFunction = procedure(LibID: integer; GetMemFunc: TGetMemFunction); stdcall;
 
   TGetErrStr = function(ID: TAccId; Code: TStatus; S: pAnsiChar; Max: integer): boolean; stdcall;
@@ -155,7 +153,7 @@ type
 
   TGetDrvInfo = function(ID: TAccId): pAnsiChar; stdcall;
   TGetDrvParams = function(ID: TAccId): pAnsiChar; stdcall;
-  TSetDrvParam = function(ID: TAccId; ParamName: pAnsiChar; ParamValue: pAnsiChar): TStatus; stdcall;
+  TSetDrvParams = function(ID: TAccId; jsonParams: pAnsiChar): TStatus; stdcall;
 
   // funkcje podstawowe Modbusa
   TRdOutTable = function(ID: TAccId; var Buf; Adress: word; Count: word): TStatus; stdcall;
@@ -218,11 +216,11 @@ begin
   ProgressHandle := AHandle;
   FID := -1;
   DllHandle := INVALID_HANDLE_VALUE;
-  FShortDriverName := '';
+  FDriverName := '';
 
   if ExtractDriverName(ConnectParamJson, driverName) then
   begin
-    FShortDriverName := driverName;
+    FDriverName := driverName;
     CmmLib := CmmLibraryList.FindLibraryByName(driverName);
     if Assigned(CmmLib) then
     begin
@@ -254,9 +252,9 @@ begin
   inherited;
 end;
 
-function TCmmDevice.getDriverShortName: string;
+function TCmmDevice.getDriverName: string;
 begin
-  Result := FShortDriverName;
+  Result := FDriverName;
 end;
 
 function TCmmDevice.IsDllReady: boolean;
@@ -539,17 +537,6 @@ begin
   end;
 end;
 
-function TCmmDevice.GetDrvParamList(ToSet: boolean): string;
-var
-  _GetDrvParamList: TGetDrvParamList;
-begin
-  @_GetDrvParamList := GetProcAddress(DllHandle, 'GetDrvParamList');
-  if Assigned(_GetDrvParamList) then
-    Result := _GetDrvParamList(ToSet)
-  else
-    Result := '';
-end;
-
 procedure TCmmDevice.FreeLibMemory(pch: pAnsiChar);
 var
   CmmLibrary: TCmmLibrary;
@@ -577,13 +564,17 @@ begin
     Result := '';
 end;
 
-function TCmmDevice.SetDrvParam(ParamName, ParamValue: string): TStatus;
+function TCmmDevice.SetDrvParams(jsonParams: string): TStatus;
 var
-  _SetDrvParam: TSetDrvParam;
+  _SetDrvParams: TSetDrvParams;
+  s1: AnsiString;
 begin
-  @_SetDrvParam := GetProcAddress(DllHandle, 'SetDrvParam');
-  if Assigned(_SetDrvParam) then
-    Result := _SetDrvParam(FID, pAnsiChar(ParamName), pAnsiChar(ParamValue))
+  @_SetDrvParams := GetProcAddress(DllHandle, 'SetDrvParams');
+  if Assigned(_SetDrvParams) then
+  begin
+    s1 := AnsiString(jsonParams);
+    Result := _SetDrvParams(FID, pAnsiChar(s1))
+  end
   else
     Result := stNoImpl;
 end;
@@ -671,7 +662,7 @@ end;
 constructor TCmmLibrary.Create;
 begin
   inherited;
-   MemList:= TObjectList.Create;
+  MemList := TObjectList.Create;
 end;
 
 destructor TCmmLibrary.Destroy;
@@ -750,7 +741,7 @@ begin
     LibParams := lib.Params;
     lib.Params.ConnectionParams := nil;
   finally
-    lib.free;
+    lib.Free;
   end;
 end;
 
@@ -792,7 +783,7 @@ begin
   Result := nil;
   for i := 0 to Count - 1 do
   begin
-    if (Items[i] as TCmmLibrary).LibParams.shortName = Name then
+    if (Items[i] as TCmmLibrary).LibParams.DriverName = Name then
     begin
       Result := (Items[i] as TCmmLibrary);
       break;
@@ -847,7 +838,7 @@ begin
   LibList.Clear;
   for i := 0 to Count - 1 do
   begin
-    LibList.Add(Items[i].LibParams.shortName);
+    LibList.Add(Items[i].LibParams.DriverName);
   end;
 end;
 
@@ -889,7 +880,7 @@ var
 begin
   Path := ParamStr(0);
   Path := IncludeTrailingPathDelimiter(ExtractFilePath(Path));
-  st := FindFirst(Path + '*.cmm64', faAnyFile, F);
+  st := FindFirst(Path + '*.cmm2', faAnyFile, F);
   while st = 0 do
   begin
     FName := Path + F.Name;
@@ -940,8 +931,8 @@ begin
     end;
     (Result as TStringList).CustomSort(MyCompare);
   finally
-    Reg.free;
-    SL.free;
+    Reg.Free;
+    SL.Free;
   end;
 end;
 

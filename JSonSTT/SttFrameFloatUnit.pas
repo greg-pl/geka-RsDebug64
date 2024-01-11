@@ -13,14 +13,19 @@ uses
 type
   TSttFrameFloat = class(TSttFrameBase)
     SttFloatEdit: TLabeledEdit;
+    procedure SttFloatEditExit(Sender: TObject);
+    procedure SttFloatEditKeyPress(Sender: TObject; var Key: Char);
   private
     minVal: double;
     maxVal: double;
+    defVal: double;
     frmStr: string;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
     function getData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
+    procedure LoadDefaultValue; override;
+    procedure setActive(active: boolean); override;
   end;
 
 implementation
@@ -32,13 +37,24 @@ var
   obj: TSttFloatObjectJson;
 begin
   inherited;
-  obj := InitFloatEditItem(SttFloatEdit, ParamList, FItemName);
+  obj := InitFloatEditItem(SttFloatEdit, ParamList, itemName);
   if Assigned(obj) then
   begin
     minVal := obj.minVal;
     maxVal := obj.maxVal;
+    defVal := obj.defVal;
     frmStr := obj.FormatStr;
   end;
+end;
+
+procedure TSttFrameFloat.LoadDefaultValue;
+begin
+  SttFloatEdit.Text := Formatfloat(frmStr, defVal);
+end;
+
+procedure TSttFrameFloat.setActive(active: boolean);
+begin
+  SttFloatEdit.Enabled := active;
 end;
 
 function TSttFrameFloat.getData(obj: TJSONObject): boolean;
@@ -59,6 +75,24 @@ end;
 procedure TSttFrameFloat.setData(obj: TJSONObject);
 begin
   LoadValFloatEditJSon(obj, FItemName, SttFloatEdit);
+end;
+
+procedure TSttFrameFloat.SttFloatEditExit(Sender: TObject);
+begin
+  inherited;
+  if Assigned(FOnValueEdited) then
+    FOnValueEdited(self, itemName, SttFloatEdit.Text);
+end;
+
+procedure TSttFrameFloat.SttFloatEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  inherited;
+  if Key = #10 then
+  begin
+    Key := #0;
+    SttFloatEditExit(Sender);
+  end;
+
 end;
 
 initialization

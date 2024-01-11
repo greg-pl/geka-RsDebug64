@@ -1,4 +1,4 @@
-library MBusCom2;
+library StLinkTcp;
 
 { Important note about DLL memory management: ShareMem must be the
   first unit in your library's USES clause AND your project's (select
@@ -10,23 +10,24 @@ library MBusCom2;
   with your DLL. To avoid using BORLNDMM.DLL, pass string information
   using PChar or ShortString parameters. }
 
-{$E cmm64}
+{$E cmm2}
 
 uses
-  Windows,
-  SysUtils,
-  Classes,
-  Rsd64Definitions in '..\..\Common\Rsd64Definitions.pas',
+  System.SysUtils,
+  System.Classes,
   SttObjectDefUnit in '..\..\JSonSTT\SttObjectDefUnit.pas',
-  CmmMain in 'CmmMain.pas',
-  ComUnit in 'ComUnit.pas',
-  LibUtils in 'LibUtils.pas',
-  ModbusObj in 'ModbusObj.pas';
+  Rsd64Definitions in '..\..\Common\Rsd64Definitions.pas',
+  JSonUtils in '..\..\Common\JSonUtils.pas',
+  LibUtils in '..\CmmCommon\LibUtils.pas',
+  StLinkMain in 'StLinkMain.pas',
+  StLinkObjUnit in 'StLinkObjUnit.pas',
+  SimpSock_Tcp in 'SimpSock_Tcp.pas',
+  StLinkDriver in 'StLinkDriver.pas';
 
 {$R *.res}
 
-
 begin
 
-end.
 
+
+end.

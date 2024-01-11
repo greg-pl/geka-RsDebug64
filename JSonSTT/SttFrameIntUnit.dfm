@@ -3,6 +3,10 @@ inherited SttFrameInt: TSttFrameInt
   Height = 56
   ExplicitWidth = 365
   ExplicitHeight = 56
+  inherited BevelAll: TBevel
+    Width = 365
+    Height = 56
+  end
   object SttIntEdit: TLabeledEdit
     Left = 12
     Top = 24
@@ -24,5 +28,7 @@ inherited SttFrameInt: TSttFrameInt
     Font.Style = []
     ParentFont = False
     TabOrder = 0
+    OnExit = SttIntEditExit
+    OnKeyPress = SttIntEditKeyPress
   end
 end

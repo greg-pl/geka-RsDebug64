@@ -7,22 +7,29 @@ uses
   System.Generics.Collections, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   System.JSON,
+  JsonUtils,
   SttObjectDefUnit;
 
 type
+  TOnSttItemValueEdited = procedure(Sender: TObject; itemName, value: string) of object;
+
   TSttFrameBase = class(TFrame)
+    BevelAll: TBevel;
   private
-    { Private declarations }
+    FActiveWhileOpen: boolean;
   protected
     FItemName: string;
+    FOnValueEdited: TOnSttItemValueEdited;
   protected
-    class procedure InitComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson; SttName: string);
-    class procedure InitCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string);
+    class function InitComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson; SttName: string)
+      : TSttSelectObjectJson;
+    class function InitCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string): TSttBoolObjectJson;
+
     class function InitIntEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
       : TSttIntObjectJson;
     class function InitFloatEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
       : TSttFloatObjectJson;
-    class procedure InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
+    class function InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string): TSttIPObjectJson;
   protected
     class function LoadValComboBoxJSon(obj: TJSONObject; Name: String; combo: TComboBox): boolean;
     class function LoadValCheckBoxJSon(obj: TJSONObject; Name: String; Box: TCheckBox): boolean;
@@ -33,9 +40,16 @@ type
   public
     constructor Create(AOwner: TComponent; aItemName: string); virtual;
     procedure AddObjectsName(SL: TStrings); virtual;
-    procedure LoadField(ParamList: TSttObjectListJson); virtual;
+    procedure LoadField(ParamList: TSttObjectListJson); virtual; // --
     function getData(arr: TJSONObject): boolean; virtual;
     procedure setData(arr: TJSONObject); virtual;
+    procedure SetOnValueEdited(aOnValueEdited: TOnSttItemValueEdited); virtual;
+    procedure LoadDefaultValue; virtual;
+    procedure setActive(active: boolean); virtual;
+    procedure setActiveFromUniBool;
+
+    property itemName: string read FItemName;
+
   end;
 
   TSttFrameBaseClass = class of TSttFrameBase;
@@ -96,8 +110,17 @@ begin
 end;
 
 procedure TSttFrameBase.LoadField(ParamList: TSttObjectListJson);
+var
+  stt: TSttObjectJson;
 begin
-
+  stt := ParamList.FindSttObject(itemName);
+  if Assigned(stt) then
+  begin
+    if stt.UniBoolValid then
+      FActiveWhileOpen := stt.UniBool
+    else
+      FActiveWhileOpen := true;
+  end;
 end;
 
 function TSttFrameBase.getData(arr: TJSONObject): boolean;
@@ -110,21 +133,42 @@ begin
 
 end;
 
-class procedure TSttFrameBase.InitComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson;
-  SttName: string);
+procedure TSttFrameBase.SetOnValueEdited(aOnValueEdited: TOnSttItemValueEdited);
+begin
+  FOnValueEdited := aOnValueEdited;
+end;
+
+procedure TSttFrameBase.LoadDefaultValue;
+begin
+
+end;
+
+procedure TSttFrameBase.setActive(active: boolean);
+begin
+
+end;
+
+procedure TSttFrameBase.setActiveFromUniBool;
+begin
+  setActive(FActiveWhileOpen);
+end;
+
+class function TSttFrameBase.InitComboBoxItem(Box: TComboBox; aLabel: TLabel; ParamList: TSttObjectListJson;
+  SttName: string): TSttSelectObjectJson;
 var
-  stt: TSttObjectJson;
   SL: TStrings;
   idx: integer;
+  stt: TSttObjectJson;
 begin
   stt := ParamList.FindSttObject(SttName);
   if Assigned(stt) then
   begin
     Box.Enabled := true;
-    SL := (stt as TSttSelectObjectJson).GetItemsAsStrings;
+    Result := stt as TSttSelectObjectJson;
+    SL := Result.GetItemsAsStrings;
     Box.Items.SetStrings(SL);
     Box.Style := csDropDownList;
-    idx := SL.IndexOf((stt as TSttSelectObjectJson).DefVal);
+    idx := SL.IndexOf(Result.defVal);
     if idx < 0 then
       idx := 0;
     Box.ItemIndex := idx;
@@ -136,16 +180,18 @@ begin
     Box.Enabled := false;
 end;
 
-class procedure TSttFrameBase.InitCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string);
+class function TSttFrameBase.InitCheckBoxItem(Box: TCheckBox; ParamList: TSttObjectListJson; SttName: string)
+  : TSttBoolObjectJson;
 var
   stt: TSttObjectJson;
 begin
   stt := ParamList.FindSttObject(SttName);
   if Assigned(stt) then
   begin
+    Result := stt as TSttBoolObjectJson;
     Box.Enabled := true;
     Box.Caption := stt.Description;
-    Box.Checked := (stt as TSttBoolObjectJson).DefVal;
+    Box.Checked := Result.defVal;
   end
   else
     Box.Enabled := false;
@@ -163,7 +209,7 @@ begin
     Box.Enabled := true;
     Box.EditLabel.Caption := stt.Description;
     Result := stt as TSttIntObjectJson;
-    Box.Text := IntToStr(Result.DefVal);
+    Box.Text := IntToStr(Result.defVal);
   end
   else
     Box.Enabled := false;
@@ -178,22 +224,24 @@ begin
   stt := ParamList.FindSttObject(SttName);
   if Assigned(stt) then
   begin
-    f_Stt := stt as TSttFloatObjectJson;
+    Result := stt as TSttFloatObjectJson;
     Box.Enabled := true;
     Box.EditLabel.Caption := stt.Description;
-    Box.Text := FormatFloat(f_Stt.FormatStr, f_Stt.DefVal);
+    Box.Text := FormatFloat(Result.FormatStr, Result.defVal);
   end
   else
     Box.Enabled := false;
 end;
 
-class procedure TSttFrameBase.InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string);
+class function TSttFrameBase.InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
+  : TSttIPObjectJson;
 var
   stt: TSttObjectJson;
 begin
   stt := ParamList.FindSttObject(SttName);
   if Assigned(stt) then
   begin
+    Result := stt as TSttIPObjectJson;
     Box.Enabled := true;
     Box.EditLabel.Caption := stt.Description;
     Box.Text := '';
@@ -212,7 +260,7 @@ begin
   jPair := obj.Get(Name);
   if Assigned(jPair) then
   begin
-    txt := jPair.JsonValue.Value;
+    txt := jPair.JsonValue.value;
     idx := combo.Items.IndexOf(txt);
     if idx >= 0 then
     begin
@@ -231,7 +279,7 @@ begin
   jPair := obj.Get(Name);
   if Assigned(jPair) then
   begin
-    if JSonStrToBool(jPair.JsonValue.Value, q) then
+    if JSonStrToBool(jPair.JsonValue.value, q) then
     begin
       Result := true;
       Box.Checked := q;
@@ -247,7 +295,7 @@ begin
   jPair := obj.Get(Name);
   if Assigned(jPair) then
   begin
-    Box.Text := jPair.JsonValue.Value;
+    Box.Text := jPair.JsonValue.value;
   end;
 end;
 
@@ -259,7 +307,7 @@ begin
   jPair := obj.Get(Name);
   if Assigned(jPair) then
   begin
-    Box.Text := jPair.JsonValue.Value;
+    Box.Text := jPair.JsonValue.value;
   end;
 end;
 
@@ -271,7 +319,7 @@ begin
   jPair := obj.Get(Name);
   if Assigned(jPair) then
   begin
-    Box.Text := jPair.JsonValue.Value;
+    Box.Text := jPair.JsonValue.value;
   end;
 end;
 

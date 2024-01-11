@@ -3,13 +3,11 @@ inherited SttFrameAddrIp: TSttFrameAddrIp
   Height = 77
   ExplicitWidth = 379
   ExplicitHeight = 77
-  object Bevel1: TBevel
-    Left = 4
-    Top = 4
-    Width = 371
-    Height = 69
-    Anchors = [akLeft, akTop, akRight]
-    ExplicitWidth = 370
+  inherited BevelAll: TBevel
+    Width = 379
+    Height = 77
+    ExplicitWidth = 379
+    ExplicitHeight = 77
   end
   object AddressIpEdit: TLabeledEdit
     Left = 124
@@ -33,6 +31,8 @@ inherited SttFrameAddrIp: TSttFrameAddrIp
     LabelPosition = lpLeft
     ParentFont = False
     TabOrder = 0
+    OnExit = AddressIpEditExit
+    OnKeyPress = PortNrEditKeyPress
   end
   object PortNrEdit: TLabeledEdit
     Left = 124
@@ -56,5 +56,7 @@ inherited SttFrameAddrIp: TSttFrameAddrIp
     LabelPosition = lpLeft
     ParentFont = False
     TabOrder = 1
+    OnExit = PortNrEditExit
+    OnKeyPress = PortNrEditKeyPress
   end
 end

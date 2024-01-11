@@ -1,4 +1,4 @@
-unit CmmMain;
+unit StLinkMain;
 
 interface
 
@@ -9,21 +9,8 @@ uses
   System.JSON,
   SttObjectDefUnit,
   Rsd64Definitions,
-  ModbusObj,
-  ComUnit,
+  StLinkObjUnit,
   LibUtils;
-
-const
-
-  LibPropertyStrV2: AnsiString = '<?xml version="1.0" standalone="yes"?>' + '<CMM_DESCR>' +
-    '<CMM_INFO TYPE="RS" DESCR="Port RS (protocol Modbus+)" SIGN="MCOM"/>' + '<GROUP>' +
-    '<ITEM NAME="COM" TYPE="COM_NR" DESCR="Port number" DEFVALUE="1" />' +
-    '<ITEM NAME="DEV_NR" TYPE="INT" DESCR="Device number" DEFVALUE="1" MIN="1" MAX="240" />' +
-    '<ITEM NAME="RS_SPEED" TYPE="SELECT" DESCR="Baudrate" DEFVALUE="19200" ' +
-    'ITEMS="115200|57600|56000|38400|19200|14400|9600|4800|2400|1200|600|300|110"/>' +
-    '<ITEM NAME="MODE" DESCR="Mode RTU/ASCII" TYPE="SELECT" ITEMS="RTU|ASCII" DEFVALUE="RTU"/>' +
-    '<ITEM NAME="PARITY" DESCR="Parity" TYPE="SELECT" ITEMS="N|E|O" ITEMDESCR="No parity|Even|Odd"  DEFVALUE="N"/>' +
-    '</GROUP>' + '</CMM_DESCR>';
 
 {$INCLUDE ..\CmmCommon\CmmBaseDef.inc}
 {$INCLUDE ..\CmmCommon\FileAccessDef.inc}
@@ -58,23 +45,6 @@ begin
   GlobGetMemFunc := GetMemFunc;
 end;
 
-const
-  ToSetParamStr: AnsiString = 'DIVIDE_LEN;DRIVER_MODE;RS485_WAIT;CLR_RDCNT;';
-  ToGetParamStr
-    : AnsiString = 'REPEAT_CNT;FRAME_CNT;WAIT_CNT;RECIVE_TIME;SEND_TIME;DIVIDE_LEN;DRIVER_MODE;RS485_WAIT;CLR_RDCNT;';
-
-function GetDrvParamList(ToSet: boolean): PAnsiChar; stdcall;
-begin
-  if ToSet then
-    Result := PAnsiChar(ToSetParamStr)
-  else
-    Result := PAnsiChar(ToGetParamStr)
-end;
-
-// ConnectStr:
-// MCOM;nr_rs;nr_dev;rs_speed;[ASCII|RTU];[N|E|O]
-// MCOM;1;7;115200;RTU;N
-
 function AddDev(ConnectStr: PAnsiChar): TAccId; stdcall;
 begin
   Result := GlobDevList.AddDevice(ConnectStr);
@@ -85,24 +55,67 @@ begin
   Result := GlobDevList.DelDevice(Id);
 end;
 
-function GetDrvStatus(Id: TAccId; ParamName: PAnsiChar; ParamValue: PAnsiChar; MaxRpl: integer): TStatus; stdcall;
+// return information about current state
+// JSON format
+function GetDrvInfo(Id: TAccId): PAnsiChar; stdcall;
 var
   Dev: TDevItem;
+  s: AnsiString;
+  n: integer;
 begin
-  Dev := GlobDevList.FindId(Id);
-  if Dev <> nil then
-    Result := Dev.GetDrvStatus(ParamName, ParamValue, MaxRpl)
-  else
-    Result := stBadId;
+  Result := nil;
+  if assigned(GlobGetMemFunc) then
+  begin
+    Dev := GlobDevList.FindId(Id);
+    if Dev <> nil then
+    begin
+      s := AnsiString(Dev.GetDrvInfo);
+      n := length(s);
+      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n + 1));
+      move(s[1], Result^, n);
+      Result[n] := #0;
+    end;
+  end;
 end;
 
-function SetDrvParam(Id: TAccId; ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus; stdcall;
+// function return text as JSON
+// caller should releas the memory
+function GetDrvParams(Id: TAccId): PAnsiChar; stdcall;
 var
   Dev: TDevItem;
+  s: AnsiString;
+  n: integer;
+begin
+  Result := nil;
+  if assigned(GlobGetMemFunc) then
+  begin
+    Dev := GlobDevList.FindId(Id);
+    if Dev <> nil then
+    begin
+      s := AnsiString(Dev.GetDrvParams);
+      n := length(s);
+      Result := PAnsiChar(GlobGetMemFunc(GlobLibID, n + 1));
+      move(s[1], Result^, n);
+      Result[n] := #0;
+    end;
+  end;
+end;
+
+function SetDrvParams(Id: TAccId; jsonParams: PAnsiChar): TStatus; stdcall;
+var
+  Dev: TDevItem;
+  n: integer;
+  s1: AnsiString;
+
 begin
   Dev := GlobDevList.FindId(Id);
   if Dev <> nil then
-    Result := Dev.SetDrvParam(ParamName, ParamValue)
+  begin
+    n := System.AnsiStrings.strLen(jsonParams);
+    setlength(s1, n);
+    move(jsonParams^, s1[1], n);
+    Result := Dev.SetDrvParams(String(s1));
+  end
   else
     Result := stBadId;
 end;
@@ -289,6 +302,7 @@ begin
 end;
 
 function TerminalRead(Id: TAccId; Buf: PAnsiChar; var rdcnt: integer): TStatus; stdcall;
+
 var
   Dev: TDevItem;
 begin
@@ -298,7 +312,6 @@ begin
   else
     Result := stBadId;
 end;
-
 
 function TerminalSetPipe(Id: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
 var
@@ -310,6 +323,7 @@ begin
   else
     Result := stBadId;
 end;
+
 function TerminalSetRunFlag(Id: TAccId; TerminalNr: integer; RunFlag: boolean): TStatus; stdcall;
 var
   Dev: TDevItem;
@@ -498,40 +512,42 @@ begin
   case Code of
     stOk:
       R := 'Ok';
-    stAttSemError:
-      R := 'B³¹d semafora dostêpowego';
-    stMaxAttachCom:
-      R := 'Zbyt du¿o otwartych dostêpów.';
-    stSemafErr:
-      R := 'B³¹d semafora dostêpu do portu.';
-    stCommErr:
-      R := 'B³¹d otwarcia portu.';
     stBadId:
-      R := 'Po³¹czenie nie nawi¹zane.';
+      R := 'Identificator error.';
     stTimeErr:
       R := 'Time Out.';
     stNotOpen:
-      R := 'Port nie otwarty.';
+      R := 'Port not open.';
+    stNoReplay:
+      R := 'No replay.';
     stSetupErr:
-      R := 'Z³e parametry portu.';
+      R := 'Invalid parameters.';
     stUserBreak:
-      R := 'Operacja przerwana.';
+      R := 'Break used';
     stNoSemafor:
-      R := 'Brak dostêpu do semafora portu.';
+      R := 'Port access error.';
     stBadRepl:
-      R := 'Nieprawid³owa odpowiedŸ urz¹dzenia.';
+      R := 'Improper slave answer.';
     stBadArguments:
-      R := 'Z³e argumenty dla zapytania MODBUS.';
+      R := 'Incorrect Modbus ask parameters.';
+    stBufferToSmall:
+      R := 'Buffer too small';
+    stToBigTerminalNr:
+      R := 'Terminal Nr too big';
+    stEND_OFF_DIR:
+      R := 'End off dir';
+    stDelphiError:
+      R := 'Delphi error';
   else
     Result := false;
     if (Code >= stMdbError) and (Code < stMdbExError) then
     begin
-      R := Format('B³¹d protoko³u MODBUS :%u', [Code - stMdbError]);
+      R := Format('MODBUS protocol error :%u', [Code - stMdbError]);
       Result := True;
     end;
     if (Code >= stMdbExError) and (Code < stMdbExError + 256) then
     begin
-      R := Format('B³¹d protoko³u MODBUS_EX :%u', [Code - stMdbExError]);
+      R := Format('MODBUS_EX protocol error :%u', [Code - stMdbExError]);
       Result := True;
     end;
   end;
@@ -540,25 +556,23 @@ begin
     Dev := GlobDevList.FindId(Id);
     if Dev <> nil then
     begin
-      SetLength(s1, Max);
+      setlength(s1, Max);
       Result := Dev.GetErrStr(Code, PAnsiChar(s1), Max);
       if Result then
       begin
-        SetLength(s1, System.AnsiStrings.strlen(PAnsiChar(s1)));
+        setlength(s1, System.AnsiStrings.strLen(PAnsiChar(s1)));
         R := String(s1);
       end;
     end;
   end;
   if not(Result) then
   begin
-    R := 'B³¹d' + ' ' + IntToStr(Code);
+    R := 'Error' + ' ' + IntToStr(Code);
   end;
   System.AnsiStrings.StrPLCopy(s, AnsiString(R), Max);
 end;
 
 type
-  TModbusType = (mdbRTU, mdbASCII);
-  TMemoryAccessMode = (memAccGEKA, memAccDIEHL);
 
   TModbusLibPropertyBuilder = class(TLibPropertyBuilder)
   protected
@@ -569,19 +583,21 @@ type
 constructor TModbusLibPropertyBuilder.Create;
 begin
   inherited;
-  Params.shortName := 'MBUS2';
-  Params.Description := 'Modbus2 on Uart';
+  Params.DriverName := DRIVER_NAME;
+  Params.Description := 'Modbus on Uart';
   Params.ConnectionType := connTypUART;
   Params.SubGroups := [subBASE, subMEMORY, subTERMINAL, subMODBUS_STD, subMODBUS_FILE];
 
   Params.ConnectionParams.Add(TSttIntObjectJson.Create(UARTPARAM_COMNR, 'Port number', 1, NAN_INT, NAN_INT));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_PARITY, 'Parity', ['N', 'E', 'O'],'N'));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BAUDRATE, 'Transmision speed', [300, 600, 1200, 2400, 4800,
-    9600, 19200, 38400, 56000, 57600, 115200],115200));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BITCNT, 'Count of data bits', [6, 7, 8],8));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_PARITY, 'Parity', ['N', 'E', 'O'], 'N'));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BAUDRATE, 'Transmision speed',
+    [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 56000, 57600, 115200], 115200));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(UARTPARAM_BITCNT, 'Count of data bits', [6, 7, 8], 8));
 
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create('MdbMode', 'Modbus mode', ['XRTU', 'XASCI'],'RTU'));
-  Params.ConnectionParams.Add(TSttSelectObjectJson.Create('MemAccessMode', 'Memory access mode', ['GEKA', 'DPC06'],'DPC06'));
+  Params.ConnectionParams.Add(TSttIntObjectJson.Create(MODBUS_DEVNR, 'Numer on modbus', 1, 254, 1));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(MODBUS_MODE, 'Modbus mode', ['RTU', 'ASCI'], 'RTU'));
+  Params.ConnectionParams.Add(TSttSelectObjectJson.Create(MODBUS_MEMACCESS, 'Memory access mode', ['GEKA', 'DPC06'],
+    'DPC06'));
 end;
 
 procedure BuildLibProperty;
@@ -596,6 +612,7 @@ begin
   end;
 
 end;
+
 
 initialization
 

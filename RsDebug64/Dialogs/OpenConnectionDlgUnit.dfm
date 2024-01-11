@@ -26,8 +26,6 @@ object OpenConnectionDlg: TOpenConnectionDlg
     ModalResult = 1
     TabOrder = 0
     OnClick = OKBtnClick
-    ExplicitLeft = 289
-    ExplicitTop = 357
   end
   object CancelBtn: TButton
     Left = 383
@@ -39,8 +37,6 @@ object OpenConnectionDlg: TOpenConnectionDlg
     Caption = 'Cancel'
     ModalResult = 2
     TabOrder = 1
-    ExplicitLeft = 385
-    ExplicitTop = 357
   end
   object TabControl: TTabControl
     Left = 0
@@ -56,8 +52,6 @@ object OpenConnectionDlg: TOpenConnectionDlg
     TabIndex = 0
     OnChange = TabControlChange
     OnChanging = TabControlChanging
-    ExplicitWidth = 478
-    ExplicitHeight = 344
     object Panel1: TPanel
       Left = 4
       Top = 24
@@ -66,7 +60,6 @@ object OpenConnectionDlg: TOpenConnectionDlg
       Align = alTop
       ParentBackground = False
       TabOrder = 0
-      ExplicitWidth = 470
       object LibDescrLabel: TLabel
         Left = 5
         Top = 2
@@ -81,5 +74,15 @@ object OpenConnectionDlg: TOpenConnectionDlg
         ParentFont = False
       end
     end
+  end
+  object DefaultBtn: TButton
+    Left = 191
+    Top = 445
+    Width = 75
+    Height = 25
+    Anchors = [akRight, akBottom]
+    Caption = '&Default'
+    TabOrder = 3
+    OnClick = DefaultBtnClick
   end
 end

@@ -14,5 +14,6 @@ inherited SttFrameBool: TSttFrameBool
     Font.Style = []
     ParentFont = False
     TabOrder = 0
+    OnClick = SttCheckBoxClick
   end
 end

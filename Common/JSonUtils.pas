@@ -58,6 +58,7 @@ type
 type
   TJSONLoader = record
     jobj: TJsonObject;
+    function Init(txt: string): boolean; overload;
     function Init(Obj: TJSONValue): boolean; overload;
     function Init(Parent: TJSONLoader; name: string): boolean; overload;
 
@@ -267,6 +268,19 @@ begin
   Result := Assigned(Obj) and (Obj is TJsonObject);
   if Result then
     jobj := Obj as TJsonObject
+end;
+
+function TJSONLoader.Init(txt: string): boolean;
+var
+  jv: TJSONValue;
+begin
+  Result := false;
+  jv := TJsonObject.ParseJSONValue(txt);
+  if jv is TJsonObject then
+  begin
+    jobj := jv as TJsonObject;
+    Result := true;
+  end;
 end;
 
 function TJSONLoader.Init(Parent: TJSONLoader; name: string): boolean;

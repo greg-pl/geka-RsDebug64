@@ -17,7 +17,7 @@ const
 
 type
 
-  TSttType = (sttBOOL, sttINTEGER, sttFLOAT, sttSELECT, sttIP);
+  TSttType = (sttSTRING, sttBOOL, sttINTEGER, sttFLOAT, sttSELECT, sttIP);
 
   TSttObjectJson = class(TObject)
   public
@@ -25,8 +25,11 @@ type
     Description: string;
     SettType: TSttType;
     ValueValid: boolean;
+    UniBool: boolean;
+    UniBoolValid: boolean;
     class function CreateObject(SttTypeNm: string): TSttObjectJson;
     constructor Create(aName, aDescription: string; aTyp: TSttType);
+    procedure SetUniBool(q : boolean);
     function getJSonObject: TJSONBuilder; virtual;
     procedure LoadFromJSonObj(jLoader: TJSONLoader); virtual;
   public
@@ -41,6 +44,16 @@ type
   public
     function FindSttObject(aName: string): TSttObjectJson;
     function getJSonObject: TJsonValue;
+    procedure LoadfromArr(jVal: TJsonValue);
+  end;
+
+  TSttStringObjectJson = class(TSttObjectJson)
+    defVal: String;
+    Value: String;
+    constructor Create; overload;
+    constructor Create(aName, aDescription: string; adef: String); overload;
+    function getJSonObject: TJSONBuilder; override;
+    procedure LoadFromJSonObj(jLoader: TJSONLoader); override;
   end;
 
   TSttBoolObjectJson = class(TSttObjectJson)
@@ -88,8 +101,13 @@ type
   end;
 
   TSttIPObjectJson = class(TSttObjectJson)
+    defVal: String;
+    Value: String;
     constructor Create; overload;
     constructor Create(aName, aDescription: string); overload;
+    function getJSonObject: TJSONBuilder; override;
+    procedure LoadFromJSonObj(jLoader: TJSONLoader); override;
+
   end;
 
 function FindStringInArray(item: string; tab: TStringArr; defValue: integer): integer;
@@ -99,7 +117,7 @@ function JSonBoolToStr(q: boolean): string;
 implementation
 
 const
-  SttTypeNames: TStringArr = ['sttBOOL', 'sttINTEGER', 'sttFLOAT', 'sttSELECT', 'sttIP'];
+  SttTypeNames: TStringArr = ['sttSTRING', 'sttBOOL', 'sttINTEGER', 'sttFLOAT', 'sttSELECT', 'sttIP'];
 
 function JSonBoolToStr(q: boolean): string;
 begin
@@ -143,9 +161,20 @@ end;
 
 constructor TSttObjectJson.Create(aName, aDescription: string; aTyp: TSttType);
 begin
+  inherited Create;
+  UniBool := false;
+  UniBoolValid := false;
+  ValueValid := false;
+
   SettType := aTyp;
   Name := aName;
   Description := aDescription;
+end;
+
+procedure TSttObjectJson.SetUniBool(q : boolean);
+begin
+  UniBool := q;
+  UniBoolValid := True;
 end;
 
 class function TSttObjectJson.CreateObject(SttTypeNm: string): TSttObjectJson;
@@ -154,6 +183,8 @@ var
 begin
   stt := TSttType(FindStringInArray(SttTypeNm, SttTypeNames, ord(sttINTEGER)));
   case stt of
+    sttSTRING:
+      Result := TSttStringObjectJson.Create;
     sttBOOL:
       Result := TSttBoolObjectJson.Create;
     sttINTEGER:
@@ -179,12 +210,15 @@ begin
   Result.Add('SttType', SttTypeNames[ord(SettType)]);
   Result.Add('Name', Name);
   Result.Add('Descr', Description);
+  if UniBoolValid then
+    Result.Add('UniBool', UniBool);
 end;
 
 procedure TSttObjectJson.LoadFromJSonObj(jLoader: TJSONLoader);
 begin
   Name := jLoader.LoadDef('Name', '_noName_');
   Description := jLoader.LoadDef('Descr', '');
+  UniBoolValid := jLoader.Load('UniBool', UniBool);
 end;
 
 class function TSttObjectJson.LoadJsonStr(jobj: TJsonObject; valName: string; defTex: string): string;
@@ -272,6 +306,31 @@ begin
   end;
 end;
 
+procedure TSttObjectListJson.LoadfromArr(jVal: TJsonValue);
+var
+  i: integer;
+  nm: string;
+  sttObj: TSttObjectJson;
+  jobj: TJsonObject;
+  jLoader: TJSONLoader;
+  arr: TJSONArray;
+begin
+  if Assigned(jVal) and (jVal is TJSONArray) then
+  begin
+    arr := jVal as TJSONArray;
+    for i := 0 to arr.Count - 1 do
+    begin
+      jLoader.Init(arr.items[i]);
+      if jLoader.Load('SttType', nm) then
+      begin
+        sttObj := TSttObjectJson.CreateObject(nm);
+        sttObj.LoadFromJSonObj(jLoader);
+        Add(sttObj);
+      end;
+    end;
+  end;
+end;
+
 function TSttObjectListJson.getJSonObject: TJsonValue;
 var
   jsonArray: TJSONArray;
@@ -283,6 +342,36 @@ begin
     jsonArray.AddElement(items[i].getJSonObject.jobj);
   end;
   Result := jsonArray;
+end;
+
+// ----- TSttStringObjectJson ---------------------------------------------------
+
+constructor TSttStringObjectJson.Create;
+begin
+  inherited Create('', '', sttSTRING);
+  defVal := '';
+
+end;
+
+constructor TSttStringObjectJson.Create(aName, aDescription: string; adef: String);
+begin
+  inherited Create(aName, aDescription, sttSTRING);
+  defVal := adef;
+end;
+
+function TSttStringObjectJson.getJSonObject: TJSONBuilder;
+begin
+  Result := inherited getJSonObject;
+  Result.Add('DefVal', defVal);
+  if ValueValid then
+    Result.Add('DefVal', Value);
+end;
+
+procedure TSttStringObjectJson.LoadFromJSonObj(jLoader: TJSONLoader);
+begin
+  inherited LoadFromJSonObj(jLoader);
+  jLoader.Load('DefVal', defVal);
+  ValueValid := jLoader.Load('Value', Value);
 end;
 
 
@@ -430,7 +519,6 @@ begin
 
   Result.Add('Items', items);
 
-
   Result.Add('DefVal', defVal);
 end;
 
@@ -440,8 +528,8 @@ var
   i: integer;
 begin
   inherited LoadFromJSonObj(jLoader);
-  defVal := jLoader.LoadDef( 'DefVal', '');
-  jLoader.Load('Items',items);
+  defVal := jLoader.LoadDef('DefVal', '');
+  jLoader.Load('Items', items);
 
 end;
 
@@ -466,6 +554,21 @@ end;
 constructor TSttIPObjectJson.Create(aName, aDescription: string);
 begin
   inherited Create(aName, aDescription, sttIP);
+end;
+
+function TSttIPObjectJson.getJSonObject: TJSONBuilder;
+begin
+  Result := inherited getJSonObject;
+  Result.Add('DefVal', defVal);
+  if ValueValid then
+    Result.Add('DefVal', Value);
+end;
+
+procedure TSttIPObjectJson.LoadFromJSonObj(jLoader: TJSONLoader);
+begin
+  inherited LoadFromJSonObj(jLoader);
+  jLoader.Load('DefVal', defVal);
+  ValueValid := jLoader.Load('Value', Value);
 end;
 
 end.

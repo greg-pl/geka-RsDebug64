@@ -129,6 +129,10 @@
         <DCCReference Include="Tools\CommThreadUnit.pas"/>
         <DCCReference Include="Tools\ComTradeUnit.pas"/>
         <DCCReference Include="Tools\CommonDef.pas"/>
+        <DCCReference Include="Tools\UpLoadDefUnit.pas"/>
+        <DCCReference Include="Dialogs\About.pas">
+            <Form>AboutForm</Form>
+        </DCCReference>
         <DCCReference Include="Dialogs\SettingUnit.pas">
             <Form>SettingForm</Form>
         </DCCReference>
@@ -138,11 +142,11 @@
         <DCCReference Include="Dialogs\EditVarItemUnit.pas">
             <Form>EditVarItemForm</Form>
         </DCCReference>
-        <DCCReference Include="Dialogs\EditDrvParamsUnit.pas">
-            <Form>EditDrvParamsForm</Form>
+        <DCCReference Include="Dialogs\ShowDrvInfoUnit.pas">
+            <Form>ShowDrvInfoForm</Form>
         </DCCReference>
-        <DCCReference Include="Dialogs\About.pas">
-            <Form>AboutForm</Form>
+        <DCCReference Include="Dialogs\EditSectionsDialog.pas">
+            <Form>EditSectionsDlg</Form>
         </DCCReference>
         <DCCReference Include="Frames\MemFrameUnit.pas">
             <Form>MemFrame</Form>
@@ -202,7 +206,6 @@
         </DCCReference>
         <DCCReference Include="..\Wykres3\Wykres3Unit.pas"/>
         <DCCReference Include="..\Wykres3\WykresEngUnit.pas"/>
-        <DCCReference Include="Tools\UpLoadDefUnit.pas"/>
         <DCCReference Include="..\Common\Rsd64Definitions.pas"/>
         <DCCReference Include="..\Common\CrcUnit.pas"/>
         <DCCReference Include="Dialogs\OpenConnectionDlgUnit.pas">
@@ -257,9 +260,14 @@
             <Form>ProgressForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="Dialogs\EditSectionsDialog.pas">
-            <Form>EditSectionsDlg</Form>
+        <DCCReference Include="Dialogs\EditDrvParamsUnit.pas">
+            <Form>EditDrvParamsForm</Form>
             <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="..\JSonSTT\SttFrameStrUnit.pas">
+            <Form>SttFrameStr</Form>
+            <FormType>dfm</FormType>
+            <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>

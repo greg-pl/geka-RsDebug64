@@ -1,6 +1,10 @@
 inherited SttFrameSelect: TSttFrameSelect
   Height = 56
   ExplicitHeight = 56
+  inherited BevelAll: TBevel
+    Height = 56
+    ExplicitHeight = 56
+  end
   object SttLabel: TLabel
     Left = 12
     Top = 4
@@ -27,5 +31,6 @@ inherited SttFrameSelect: TSttFrameSelect
     ParentFont = False
     TabOrder = 0
     Text = 'SttComboBox'
+    OnChange = SttComboBoxChange
   end
 end

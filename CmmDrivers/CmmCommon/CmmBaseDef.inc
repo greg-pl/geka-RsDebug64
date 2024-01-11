@@ -11,7 +11,7 @@ function  AddDev(ConnectStr : PAnsiChar): TAccId; stdcall;
 
 function GetDrvInfo(Id: TAccID ): PAnsiChar; stdcall;
 function GetDrvParams(Id: TAccId): PAnsiChar; stdcall;
-function SetDrvParam(Id: TAccId; ParamName: PAnsiChar; ParamValue: PAnsiChar): TStatus; stdcall;
+function SetDrvParams(Id: TAccId; jsonParams: PAnsiChar): TStatus; stdcall;
 
 
 
@@ -37,7 +37,7 @@ Exports
     SetBreakFlag,
     GetDrvInfo,
     GetDrvParams,
-    SetDrvParam;
+    SetDrvParams;
 
 
 

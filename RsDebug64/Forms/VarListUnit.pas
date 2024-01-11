@@ -734,7 +734,7 @@ begin
     RdRegion.WorkItem := TWorkRdMemItem.Create(FOwnHandle, wm_ReadMem1, RdRegion.FBuf[0], RdRegion.FAdr,
       RdRegion.GetSize);
 
-    CommThread.AddToDoItem(RdRegion.WorkItem);
+    CommThread.AddToDoItemAllowDouble(RdRegion.WorkItem);
   end;
 end;
 
@@ -875,8 +875,7 @@ begin
 
   jParent.Load('FilterStr', FilterEdit);
   GridVarList.LoadfromJson(jParent.getArray('VarList'));
-  if jParent2.Init(jParent, 'ShowVarCfg') then
-    ShowVarCfg.JSONLoad(jParent2);
+  ShowVarCfg.JSONLoad(jParent.GetObject('ShowVarCfg'));
   ListPanel.Visible := ShowVarPanelAct.Checked;
   ReloadVarList;
   FillShowVarGrid;
@@ -1722,7 +1721,7 @@ end;
 procedure TVarListForm.AutoReadActUpdate(Sender: TObject);
 begin
   inherited;
-  (Sender as TAction).Enabled := isConnected;
+  (Sender as TAction).Enabled := IsConnected;
 end;
 
 procedure TVarListForm.AutoReadActExecute(Sender: TObject);
