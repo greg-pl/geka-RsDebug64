@@ -186,7 +186,6 @@ type
   end;
 
 const
-
   REG_KEY = '\SOFTWARE\GEKA\RSDEBUG_2';
 
 var

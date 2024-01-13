@@ -3,8 +3,9 @@ program StLink;
 uses
   Vcl.Forms,
   Main in 'Main.pas' {Form2},
-  SimpSock_Tcp in 'SimpSock_Tcp.pas',
-  StLinkDriver in 'StLinkDriver.pas';
+  SimpSock_Tcp in '..\CmmDrivers\StLink\SimpSock_Tcp.pas',
+  StLinkDriver in '..\CmmDrivers\StLink\StLinkDriver.pas',
+  ErrorDefUnit in '..\Common\ErrorDefUnit.pas';
 
 {$R *.res}
 

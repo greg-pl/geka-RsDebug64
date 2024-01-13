@@ -56,7 +56,8 @@ uses
   SttFrameAddrIpUnit in '..\JSonSTT\SttFrameAddrIpUnit.pas' {SttFrameAddrIp: TFrame},
   SttScrollBoxUnit in '..\JSonSTT\SttScrollBoxUnit.pas',
   SttFrameStrUnit in '..\JSonSTT\SttFrameStrUnit.pas' {SttFrameStr: TFrame},
-  EditDrvParamsUnit in 'Dialogs\EditDrvParamsUnit.pas' {EditDrvParamsForm};
+  EditDrvParamsUnit in 'Dialogs\EditDrvParamsUnit.pas' {EditDrvParamsForm},
+  ErrorDefUnit in '..\Common\ErrorDefUnit.pas';
 
 {$R *.res}
 

@@ -104,6 +104,7 @@
         <DCCReference Include="ComUnit.pas">
             <Form>$R *.res</Form>
         </DCCReference>
+        <DCCReference Include="..\..\Common\ErrorDefUnit.pas"/>
         <None Include="..\CmmCommon\CmmBaseDef.inc"/>
         <None Include="..\CmmCommon\FileAccessDef.inc"/>
         <None Include="..\CmmCommon\MemoryAccessDef.inc"/>

@@ -103,8 +103,9 @@
             <Form>Form2</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="SimpSock_Tcp.pas"/>
-        <DCCReference Include="StLinkDriver.pas"/>
+        <DCCReference Include="..\CmmDrivers\StLink\SimpSock_Tcp.pas"/>
+        <DCCReference Include="..\CmmDrivers\StLink\StLinkDriver.pas"/>
+        <DCCReference Include="..\Common\ErrorDefUnit.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

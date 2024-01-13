@@ -11,7 +11,8 @@ uses
   ProgCfgUnit,
   MapParserUnit, Menus, System.ImageList, System.Actions,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 const
   PREFIX = 'RFC_WRAPPER_';

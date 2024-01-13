@@ -29,7 +29,7 @@ type
     UniBoolValid: boolean;
     class function CreateObject(SttTypeNm: string): TSttObjectJson;
     constructor Create(aName, aDescription: string; aTyp: TSttType);
-    procedure SetUniBool(q : boolean);
+    procedure SetUniBool(q: boolean);
     function getJSonObject: TJSONBuilder; virtual;
     procedure LoadFromJSonObj(jLoader: TJSONLoader); virtual;
   public
@@ -104,7 +104,7 @@ type
     defVal: String;
     Value: String;
     constructor Create; overload;
-    constructor Create(aName, aDescription: string); overload;
+    constructor Create(aName, aDescription, aDefVal: string); overload;
     function getJSonObject: TJSONBuilder; override;
     procedure LoadFromJSonObj(jLoader: TJSONLoader); override;
 
@@ -171,10 +171,10 @@ begin
   Description := aDescription;
 end;
 
-procedure TSttObjectJson.SetUniBool(q : boolean);
+procedure TSttObjectJson.SetUniBool(q: boolean);
 begin
   UniBool := q;
-  UniBoolValid := True;
+  UniBoolValid := true;
 end;
 
 class function TSttObjectJson.CreateObject(SttTypeNm: string): TSttObjectJson;
@@ -551,9 +551,10 @@ begin
   inherited Create('', '', sttIP);
 end;
 
-constructor TSttIPObjectJson.Create(aName, aDescription: string);
+constructor TSttIPObjectJson.Create(aName, aDescription, aDefVal: string);
 begin
   inherited Create(aName, aDescription, sttIP);
+  defVal := aDefVal
 end;
 
 function TSttIPObjectJson.getJSonObject: TJSONBuilder;

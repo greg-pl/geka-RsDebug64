@@ -14,6 +14,8 @@ var
   GlobLibID: integer;
   GlobLogLevel: integer;
 
+  WorkingPath : string;
+
 function GetUserMem(MemSize: integer): PAnsiChar;
 procedure Logger(LogLevel: integer; Txt: string);
 function DSwap(w: cardinal): cardinal;

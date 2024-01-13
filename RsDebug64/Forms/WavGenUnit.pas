@@ -15,7 +15,8 @@ uses
   Rsd64Definitions,
   System.ImageList, System.Actions,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 type
   TWavGenForm = class(TChildForm)

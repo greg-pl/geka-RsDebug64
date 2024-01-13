@@ -8,6 +8,7 @@ uses
   GkStrUtils,
   ProgCfgUnit,
   Rsd64Definitions,
+  ErrorDefUnit,
   ToolsUnit;
 
 type

@@ -11,7 +11,8 @@ uses
   Rsd64Definitions,
   ModbusObj,
   ComUnit,
-  LibUtils;
+  LibUtils,
+  ErrorDefUnit;
 
 {$INCLUDE ..\CmmCommon\CmmBaseDef.inc}
 {$INCLUDE ..\CmmCommon\FileAccessDef.inc}
@@ -40,6 +41,12 @@ begin
   AnsiChar_LoggerHandle:= H_AnsiChar;
   WideChar_LoggerHandle:= H_WideChar;
 end;
+
+procedure SetWorkingPath(path: pchar); stdcall;
+begin
+  WorkingPath := path;
+end;
+
 
 procedure SetGetMemFunction(LibID: integer; GetMemFunc: TGetMemFunction); stdcall;
 begin

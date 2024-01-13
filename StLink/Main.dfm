@@ -30,7 +30,6 @@ object Form2: TForm2
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 0
-    ExplicitTop = 103
   end
   object Panel3: TPanel
     Left = 577
@@ -40,8 +39,6 @@ object Form2: TForm2
     Align = alLeft
     BevelOuter = bvLowered
     TabOrder = 1
-    ExplicitLeft = 488
-    ExplicitTop = -6
     object Label5: TLabel
       Left = 21
       Top = 5
@@ -148,7 +145,6 @@ object Form2: TForm2
     Align = alLeft
     BevelOuter = bvLowered
     TabOrder = 3
-    ExplicitLeft = 345
     object Label3: TLabel
       Left = 13
       Top = 5

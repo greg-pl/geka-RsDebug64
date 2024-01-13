@@ -16,7 +16,8 @@ uses
   RsdDll, System.Actions, System.ImageList,
   System.JSON,
   JSonUtils,
-  EditSectionsDialog;
+  EditSectionsDialog,
+  ErrorDefUnit;
 
 type
   TType = (ppByte, ppHex8, ppWord, ppInt16, ppHex16);

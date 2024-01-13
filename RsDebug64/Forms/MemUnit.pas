@@ -14,7 +14,8 @@ uses
   Rsd64Definitions,
   CommThreadUnit, System.Actions, System.ImageList,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 type
   TMemForm = class(TChildForm)

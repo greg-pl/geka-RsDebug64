@@ -30,9 +30,12 @@ implementation
 {$R *.dfm}
 
 procedure TSttFrameStr.LoadField(ParamList: TSttObjectListJson);
+var
+  stt : TSttStringObjectJson;
 begin
   inherited;
-  InitStrEditItem(SttStrEdit, ParamList, FItemName);
+  stt := InitStrEditItem(SttStrEdit, ParamList, FItemName);
+  defVal := stt.defVal;
 end;
 
 function TSttFrameStr.getSttData(obj: TJSONObject): boolean;

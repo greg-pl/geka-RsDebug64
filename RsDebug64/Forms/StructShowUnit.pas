@@ -11,7 +11,8 @@ uses
   ToolsUnit,
   Rsd64Definitions,
   TypeDefUnit, ImgList, Buttons, Spin, ActnList, Menus, ToolWin,
-  System.ImageList, System.Actions;
+  System.ImageList, System.Actions,
+  ErrorDefUnit;
 
 type
   TStructShowForm = class(TChildForm)

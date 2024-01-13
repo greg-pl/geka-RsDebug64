@@ -11,7 +11,8 @@ uses
   LibUtils,
   JsonUtils,
   SttObjectDefUnit,
-  Rsd64Definitions;
+  Rsd64Definitions,
+  ErrorDefUnit;
 
 const
   DRIVER_NAME = 'MBUS';

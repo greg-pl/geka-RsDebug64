@@ -7,7 +7,8 @@ uses
   GkStrUtils,
   ProgCfgUnit,
   System.JSON,
-  Rsd64Definitions;
+  Rsd64Definitions,
+  ErrorDefUnit;
 
 type
   TCmmDevice = class(TObject)
@@ -140,6 +141,7 @@ type
 
   TGetLibProperty = function: pAnsiChar; stdcall;
   TSetLoggerHandle = procedure(H_WideChar, H_AnsiChar: THandle); stdcall;
+  TSetWorkingPath = procedure(path: pchar); stdcall;
   TSetGetMemFunction = procedure(LibID: integer; GetMemFunc: TGetMemFunction); stdcall;
 
   TGetErrStr = function(ID: TAccId; Code: TStatus; S: pAnsiChar; Max: integer): boolean; stdcall;
@@ -235,6 +237,7 @@ begin
         _RegBeck := GetProcAddress(DllHandle, 'RegisterCallBackFun');
         if Assigned(_RegBeck) then
           _RegBeck(FID, Cardinal(TCmmDevice), CallBackFunc);
+
         CmmDevList.Add(self);
       end;
     end;
@@ -675,6 +678,8 @@ procedure TCmmLibrary.RegisterMe;
 var
   _GetLibProperty: TGetLibProperty;
   _SetGetMemFunction: TSetGetMemFunction;
+  _SetWorkingPath: TSetWorkingPath;
+  S: string;
   pLibProp: pAnsiChar;
 begin
   @_SetGetMemFunction := GetProcAddress(CmmHandle, 'SetGetMemFunction');
@@ -689,6 +694,14 @@ begin
     pLibProp := _GetLibProperty;
     SetLibProperty(String(pLibProp));
   end;
+
+  _SetWorkingPath := GetProcAddress(CmmHandle, 'SetWorkingPath');
+  if Assigned(_SetWorkingPath) then
+  begin
+    S := GetCurrentDir;
+    _SetWorkingPath(pchar(S));
+  end;
+
 end;
 
 function TCmmLibrary.LibraryGetMemFunc(size: integer): pointer;
@@ -878,17 +891,17 @@ end;
 
 procedure TCmmLibraryList.ScanLibrary;
 var
-  Path: string;
+  path: string;
   FName: string;
   F: TSearchRec;
   st: integer;
 begin
-  Path := ParamStr(0);
-  Path := IncludeTrailingPathDelimiter(ExtractFilePath(Path));
-  st := FindFirst(Path + '*.cmm2', faAnyFile, F);
+  path := ParamStr(0);
+  path := IncludeTrailingPathDelimiter(ExtractFilePath(path));
+  st := FindFirst(path + '*.cmm2', faAnyFile, F);
   while st = 0 do
   begin
-    FName := Path + F.Name;
+    FName := path + F.Name;
     TryToAddLibrary(FName);
     st := FindNext(F);
   end;
@@ -941,7 +954,7 @@ begin
   end;
 end;
 
-procedure RsdSetLoggerHandle(H_WideChar, H_AnsiChar:  THandle);
+procedure RsdSetLoggerHandle(H_WideChar, H_AnsiChar: THandle);
 begin
   CmmLibraryList.SetLoggerHandle(H_WideChar, H_AnsiChar);
 end;

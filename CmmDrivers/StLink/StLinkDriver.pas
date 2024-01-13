@@ -7,7 +7,8 @@ uses
   WinSock2,
   ExtCtrls,
   SimpSock_Tcp,
-  Rsd64Definitions;
+  ErrorDefUnit;
+  //Rsd64Definitions;
 
 type
   TStLinkDrv = class;
@@ -39,67 +40,19 @@ type
     function isOpen: boolean;
 
     function ReadMem(adr, cnt: integer; var buf: TBytes): TStatus;
+    function WriteMem(adr: cardinal; buf: TBytes): TStatus;
+
     function RCommand(rcmd: string; var repl: string; verbose: boolean): TStatus; overload;
     function RCommand(rcmd: string): TStatus; overload;
-    function WriteMem(adr: cardinal; buf: TBytes): TStatus;
 
   end;
 
-function DumpBytes(Offset: integer; buf: TBytes): TStringList;
 function ParseArray(txt: string): TBytes;
 function StringToBytes(txt: AnsiString): TBytes;
 
 implementation
 
-// 080004C0 : 00 20 FF F7 1B FF 00 20  FF F7 34 FF 00 20 FF F7
-// address  : +0 +1 +2 +3 +4 +5 +6 +7  +8 +9 +A +B +C +D +E +F
-// ---------+-------------------------------------------------
 
-function DumpBytes(Offset: integer; buf: TBytes): TStringList;
-var
-  i, n: integer;
-  txt: string;
-  row: integer;
-  Offset1: integer;
-  beg: integer;
-
-begin
-  Result := TStringList.Create;
-  Result.add('address  : +0 +1 +2 +3 +4 +5 +6 +7  +8 +9 +A +B +C +D +E +F');
-  Result.add('---------+-------------------------------------------------');
-
-  Offset1 := Offset and $FFFFFFF0;
-  beg := Offset1 - Offset;
-
-  row := 0;
-  n := length(buf);
-  for i := beg to n - 1 do
-  begin
-    if row = 0 then
-      txt := IntToHex(Offset + i, 8) + ' : ';
-    if i >= 0 then
-      txt := txt + IntToHex(buf[i], 2)
-    else
-      txt := txt + '  ';
-
-    if row = 7 then
-      txt := txt + '  '
-    else if row <> 15 then
-      txt := txt + ' ';
-    inc(row);
-
-    if (Offset + i) mod 16 = 15 then
-    begin
-      Result.add(txt);
-      txt := '';
-      row := 0;
-    end;
-
-  end;
-  if txt <> '' then
-    Result.add(txt);
-
-end;
 
 function ParseArray(txt: string): TBytes;
 var

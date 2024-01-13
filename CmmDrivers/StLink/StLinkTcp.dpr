@@ -22,8 +22,9 @@ uses
   StLinkMain in 'StLinkMain.pas',
   StLinkObjUnit in 'StLinkObjUnit.pas',
   SimpSock_Tcp in 'SimpSock_Tcp.pas',
-  StLinkDriver in 'StLinkDriver.pas' {$R *.res},
-  CallProcessUnit in '..\..\Common\CallProcessUnit.pas';
+  StLinkDriver in 'StLinkDriver.pas',
+  CallProcessUnit in '..\..\Common\CallProcessUnit.pas',
+  ErrorDefUnit in '..\..\Common\ErrorDefUnit.pas';
 
 {$R *.res}
 

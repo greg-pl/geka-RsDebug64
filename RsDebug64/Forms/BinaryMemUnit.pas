@@ -16,7 +16,8 @@ uses
   Rsd64Definitions,
   System.Actions, System.ImageList,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 type
   TBinaryMemType = (bmBINARYINP, bmCOILS);

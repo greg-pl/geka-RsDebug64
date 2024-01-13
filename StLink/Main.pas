@@ -5,7 +5,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Grids,
-  StLinkDriver, SimpSock_Tcp, Vcl.ExtCtrls;
+  StLinkDriver, SimpSock_Tcp, Vcl.ExtCtrls,
+  ErrorDefUnit;
 
 type
   TForm2 = class(TForm)
@@ -65,6 +66,56 @@ var
 implementation
 
 {$R *.dfm}
+
+// 080004C0 : 00 20 FF F7 1B FF 00 20  FF F7 34 FF 00 20 FF F7
+// address  : +0 +1 +2 +3 +4 +5 +6 +7  +8 +9 +A +B +C +D +E +F
+// ---------+-------------------------------------------------
+
+function DumpBytes(Offset: integer; buf: TBytes): TStringList;
+var
+  i, n: integer;
+  txt: string;
+  row: integer;
+  Offset1: integer;
+  beg: integer;
+
+begin
+  Result := TStringList.Create;
+  Result.add('address  : +0 +1 +2 +3 +4 +5 +6 +7  +8 +9 +A +B +C +D +E +F');
+  Result.add('---------+-------------------------------------------------');
+
+  Offset1 := Offset and $FFFFFFF0;
+  beg := Offset1 - Offset;
+
+  row := 0;
+  n := length(buf);
+  for i := beg to n - 1 do
+  begin
+    if row = 0 then
+      txt := IntToHex(Offset + i, 8) + ' : ';
+    if i >= 0 then
+      txt := txt + IntToHex(buf[i], 2)
+    else
+      txt := txt + '  ';
+
+    if row = 7 then
+      txt := txt + '  '
+    else if row <> 15 then
+      txt := txt + ' ';
+    inc(row);
+
+    if (Offset + i) mod 16 = 15 then
+    begin
+      Result.add(txt);
+      txt := '';
+      row := 0;
+    end;
+
+  end;
+  if txt <> '' then
+    Result.add(txt);
+
+end;
 
 procedure TForm2.FormCreate(Sender: TObject);
 begin

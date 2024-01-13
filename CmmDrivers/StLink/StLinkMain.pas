@@ -10,7 +10,8 @@ uses
   SttObjectDefUnit,
   Rsd64Definitions,
   StLinkObjUnit,
-  LibUtils;
+  LibUtils,
+  ErrorDefUnit;
 
 {$INCLUDE ..\CmmCommon\CmmBaseDef.inc}
 {$INCLUDE ..\CmmCommon\MemoryAccessDef.inc}
@@ -36,6 +37,11 @@ procedure SetLoggerHandle(H_WideChar, H_AnsiChar: THandle); stdcall;
 begin
   WideChar_LoggerHandle := H_WideChar;
   AnsiChar_LoggerHandle := H_AnsiChar;
+end;
+
+procedure SetWorkingPath(path: pchar); stdcall;
+begin
+  WorkingPath := path;
 end;
 
 procedure SetGetMemFunction(LibID: integer; GetMemFunc: TGetMemFunction); stdcall;
@@ -303,27 +309,31 @@ type
   end;
 
 constructor TModbusLibPropertyBuilder.Create;
+var
+  Par : TDevItem.TOpenParams;
+
 begin
   inherited;
+  Par.InitDefault;
   Params.DriverName := DRIVER_NAME;
   Params.Description := 'StLink via TCP';
   Params.ConnectionType := connTypTCPIP;
   Params.SubGroups := [subBASE, subMEMORY, subTERMINAL];
 
-  Params.ConnectionParams.Add(TSttIPObjectJson.Create(IPPARAM_IP, 'IP Address'));
-  Params.ConnectionParams.Add(TSttIntObjectJson.Create(IPPARAM_PORT, 'Port', 1, 65535, 514));
+  Params.ConnectionParams.Add(TSttIPObjectJson.Create(IPPARAM_IP, 'IP Address',Par.IP));
+  Params.ConnectionParams.Add(TSttIntObjectJson.Create(IPPARAM_PORT, 'Port', 1, 65535, Par.Port));
 
-  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_RUNSTLINK, 'Run ST-Link gdb server', True));
-  Params.ConnectionParams.Add(TSttStringObjectJson.Create(OPEN_STLINKPATH, 'Path to ST-Link gdb server', ''));
-  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_SWDMODE, 'Enables SWD mode', True));
+  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_RUNSTLINK, 'Run ST-Link gdb server', Par.RunStLink));
+  Params.ConnectionParams.Add(TSttStringObjectJson.Create(OPEN_STLINKPATH, 'Path to ST-Link gdb server', Par.StLinkPath));
+  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_SWDMODE, 'Enables SWD mode', Par.SwdMode));
 
-  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_PERSISTANT, 'Enables persistant mode', True));
-  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_LOGINGENAB, 'Enables logging', false));
-  Params.ConnectionParams.Add(TSttStringObjectJson.Create(OPEN_LOGINGPATH, 'Path to log file', ''));
-  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_VERBOSEMODE, 'Verbose mode', false));
-  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_VERBOSCALLERMODE, 'Gdb caller verbose mode', false));
+  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_PERSISTANT, 'Enables persistant mode', Par.PersistantMode));
+  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_LOGINGENAB, 'Enables logging', Par.EnabLeLog));
+  Params.ConnectionParams.Add(TSttStringObjectJson.Create(OPEN_LOGINGPATH, 'Path to log file', Par.LogPath));
+  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_VERBOSEMODE, 'Verbose mode', Par.Verbose));
+  Params.ConnectionParams.Add(TSttBoolObjectJson.Create(OPEN_VERBOSCALLERMODE, 'Gdb caller verbose mode', Par.CallerVerbose));
 
-  Params.ConnectionParams.Add(TSttStringObjectJson.Create(OPEN_PATHTOPROGR, 'Path to STM32CubeProgrammer', ''));
+  Params.ConnectionParams.Add(TSttStringObjectJson.Create(OPEN_PATHTOPROGR, 'Path to STM32CubeProgrammer', Par.PathProgrammer));
 
 end;
 

@@ -4,8 +4,9 @@ interface
 
 uses
   Classes, Windows, Messages, Types, SysUtils, Contnrs,
-  WinSock2,
-  Rsd64Definitions;
+  //Rsd64Definitions,
+  ErrorDefUnit,
+  WinSock2;
 
 const
   wm_SocketEvent = wm_user + 100;

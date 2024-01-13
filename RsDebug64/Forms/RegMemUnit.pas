@@ -15,7 +15,8 @@ uses
   System.Actions, System.ImageList,
   CommThreadUnit,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 type
   TRegMemType = (rmANALOGINP, rmREGISTERS);

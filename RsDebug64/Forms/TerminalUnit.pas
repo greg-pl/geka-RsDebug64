@@ -11,7 +11,8 @@ uses
   Rsd64Definitions,
   ProgCfgUnit, System.ImageList, System.Actions, ExtGMemoUnit,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 type
   TTerminalForm = class(TChildForm)

@@ -12,7 +12,9 @@ uses
   JsonUtils,
   SttObjectDefUnit,
   CallProcessUnit,
-  Rsd64Definitions;
+  Registry,
+  Rsd64Definitions,
+  ErrorDefUnit;
 
 const
   DRIVER_NAME = 'STLINK';
@@ -67,6 +69,7 @@ type
       SwdMode: boolean;
       PathProgrammer: string;
       procedure InitDefault;
+      procedure SaveToDefault;
     end;
 
     TTerminalData = record
@@ -103,13 +106,7 @@ type
     FClr_ToRdCnt: boolean; // odbiór ramki az do przerwy
     FStLinkThread: TThread;
 
-    function GetNewAskNr: word;
 
-    procedure SetSmallInt(const b; Val: Smallint);
-    function GetLongInt(const b): cardinal;
-    procedure SetLongInt(const b; Val: cardinal);
-    function GetDWord(const b): cardinal;
-    // procedure SetDWord(const b; Val :cardinal);
   protected
     procedure CallBackFunct(Ev: integer; R: real);
     procedure SetProgress(F: real); overload;
@@ -159,6 +156,9 @@ var
   GlobDevList: TDevList;
 
 implementation
+
+const
+  REG_KEY = '\SOFTWARE\GEKA\STLINK_DRV';
 
 function LastErr: Shortstring;
 begin
@@ -277,7 +277,6 @@ end;
 function TDevItem.Open: TStatus;
 var
   Param: string;
-  WorkDir: string;
 begin
   FrameRepCnt := 0;
   FrameCnt := 0;
@@ -286,9 +285,6 @@ begin
   SumSendTime := 0;
   if FOpenParams.RunStLink then
   begin
-    // function CallHideProcess(OutMsgHandle, BreakHandle: THandle; App, Param, WorkDir: string; Say: boolean): TThread;
-
-    WorkDir := 'D:\';
     Param := '-p ' + IntToStr(FOpenParams.Port);
     if FOpenParams.Verbose then
       Param := Param + ' -v';
@@ -299,13 +295,15 @@ begin
     Param := Param + ' -cp ' + FOpenParams.PathProgrammer;
     // C:\ST\STM32CubeIDE_1.11.2\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.0.500.202209151145\tools\bin
 
-    FStLinkThread := CallHideProcess(AnsiChar_LoggerHandle, FOpenParams.StLinkPath, Param, WorkDir,
+    FStLinkThread := CallHideProcess(AnsiChar_LoggerHandle, FOpenParams.StLinkPath, Param, WorkingPath,
       FOpenParams.CallerVerbose, false);
 
     sleep(200);
   end;
 
   Result := StLinkDrv.Open(FOpenParams.IP, FOpenParams.Port);
+  if Result = stOK then
+    FOpenParams.SaveToDefault;
 end;
 
 procedure TDevItem.Close;
@@ -314,7 +312,6 @@ begin
   if Assigned(FStLinkThread) then
   begin
     StopHideProcess(FStLinkThread);
-    // FStLinkThread.Terminate;
     FStLinkThread := nil;
   end;
 end;
@@ -324,57 +321,6 @@ begin
   Result := StLinkDrv.isOpen;
 end;
 
-procedure TDevItem.SetSmallInt(const b; Val: Smallint);
-var
-  p: pByte;
-begin
-  p := @b;
-  p^ := byte(Val shr 8);
-  inc(p);
-  p^ := byte(Val);
-end;
-
-function TDevItem.GetLongInt(const b): cardinal;
-var
-  p: pByte;
-begin
-  p := @b;
-  Result := p^;
-  inc(p);
-  Result := (Result shl 8) or p^;
-  inc(p);
-  Result := (Result shl 8) or p^;
-  inc(p);
-  Result := LongInt((Result shl 8) or p^);
-end;
-
-procedure TDevItem.SetLongInt(const b; Val: cardinal);
-var
-  p: pByte;
-begin
-  p := @b;
-  p^ := byte(Val shr 24);
-  inc(p);
-  p^ := byte(Val shr 16);
-  inc(p);
-  p^ := byte(Val shr 8);
-  inc(p);
-  p^ := byte(Val);
-end;
-
-function TDevItem.GetDWord(const b): cardinal;
-var
-  p: pByte;
-begin
-  p := @b;
-  Result := p^;
-  inc(p);
-  Result := (Result shl 8) or p^;
-  inc(p);
-  Result := (Result shl 8) or p^;
-  inc(p);
-  Result := (Result shl 8) or p^;
-end;
 
 procedure TDevItem.CallBackFunct(Ev: integer; R: real);
 begin
@@ -629,9 +575,11 @@ begin
 end;
 
 procedure TDevItem.TOpenParams.InitDefault;
+var
+  Reg: TRegistry;
 begin
   IP := '127.0.0.1';
-  Port := 514;
+  Port := 50001;
   RunStLink := true;
   PersistantMode := true;
   StLinkPath := '';
@@ -639,13 +587,38 @@ begin
   LogPath := '';
   Verbose := false;
   SwdMode := true;
+
+  Reg := TRegistry.Create;
+  try
+    if Reg.OpenKeyReadOnly(REG_KEY) then
+    begin
+      if Reg.ValueExists('StLinkPath') then
+        StLinkPath := Reg.ReadString('StLinkPath');
+
+      if Reg.ValueExists('PathProgrammer') then
+        PathProgrammer := Reg.ReadString('PathProgrammer');
+    end;
+  finally
+    Reg.Free;
+  end;
 end;
 
-function TDevItem.GetNewAskNr: word;
+procedure TDevItem.TOpenParams.SaveToDefault;
+var
+  Reg: TRegistry;
 begin
-  inc(FAskNumber);
-  Result := FAskNumber;
+  Reg := TRegistry.Create;
+  try
+    if Reg.OpenKey(REG_KEY, true) then
+    begin
+      Reg.WriteString('StLinkPath', StLinkPath);
+      Reg.WriteString('PathProgrammer', PathProgrammer);
+    end;
+  finally
+    Reg.Free;
+  end;
 end;
+
 
 // ---------------------  TDevAcces ---------------------------
 constructor TDevList.Create;

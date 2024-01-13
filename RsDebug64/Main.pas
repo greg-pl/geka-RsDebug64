@@ -27,7 +27,8 @@ uses
   ImgList, System.ImageList, System.Actions,
   ExtG2MemoUnit,
   JSonUtils,
-  CallProcessUnit;
+  CallProcessUnit,
+  ErrorDefUnit;
 
 type
   TMainForm = class(TForm, IMainWinInterf)

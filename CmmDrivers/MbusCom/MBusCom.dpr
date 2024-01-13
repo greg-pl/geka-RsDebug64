@@ -20,10 +20,11 @@ uses
   SttObjectDefUnit in '..\..\JSonSTT\SttObjectDefUnit.pas',
   CrcUnit in '..\..\Common\CrcUnit.pas',
   JSonUtils in '..\..\Common\JSonUtils.pas',
-  LibUtils in '..\CmmCommon\LibUtils.pas',
+  LibUtils in '..\CmmCommon\LibUtils.pas' {$R *.res},
   CmmMain in 'CmmMain.pas',
   ModbusObj in 'ModbusObj.pas',
-  ComUnit in 'ComUnit.pas';
+  ComUnit in 'ComUnit.pas' {$R *.res},
+  ErrorDefUnit in '..\..\Common\ErrorDefUnit.pas';
 
 {$R *.res}
 

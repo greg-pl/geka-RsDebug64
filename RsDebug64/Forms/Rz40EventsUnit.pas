@@ -13,7 +13,8 @@ uses
   Rsd64Definitions,
   CrcUnit, System.ImageList, System.Actions,
   System.JSON,
-  JSonUtils;
+  JSonUtils,
+  ErrorDefUnit;
 
 const
   EV_IN_PACK = 15;
