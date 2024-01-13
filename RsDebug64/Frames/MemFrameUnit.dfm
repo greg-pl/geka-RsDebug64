@@ -16,6 +16,10 @@ object MemFrame: TMemFrame
     object ByteSheet: TTabSheet
       Caption = 'BYTE'
       OnShow = ByteSheetShow
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object ByteGrid: TStringGrid
         Left = 0
         Top = 33

@@ -528,13 +528,18 @@ begin
     CellSt := csEmpty;
     if Sender = ByteGrid then
     begin
-      n := (ByteGrid.ColCount - 2) * (ARow - 1) + (ACol - 1);
-      CellSt := MemBuf.GetState(n, 1);
-      if ACol = ByteGrid.ColCount - 1 then // kolumna ASCII
+      if ACol < ByteGrid.ColCount - 1 then
       begin
-        if CellSt <> csEmpty then
-          CellSt := csFull;
+        n := (ByteGrid.ColCount - 2) * (ARow - 1) + (ACol - 1);
+        CellSt := MemBuf.GetState(n, 1);
+        if ACol = ByteGrid.ColCount - 1 then // kolumna ASCII
+        begin
+          if CellSt <> csEmpty then
+            CellSt := csFull;
+        end
       end
+      else
+        CellSt := csFull;
     end
     else if Sender = F1_15Grid then
     begin
@@ -679,11 +684,18 @@ begin
         s1 := '';
       end;
       a := MemBuf.GetByte(i);
-      ByteGrid.Cells[X + 1, Y + 1] := IntToHex(a, 2);
-      if a < $20 then
-        s1 := s1 + '.'
+      if MemBuf.MemState[i] <> csEmpty then
+      begin
+        ByteGrid.Cells[X + 1, Y + 1] := IntToHex(a, 2);
+        if a < $20 then
+          s1 := s1 + '.'
+        else
+          s1 := s1 + char(a);
+      end
       else
-        s1 := s1 + char(a);
+      begin
+        ByteGrid.Cells[X + 1, Y + 1] := '';
+      end;
       if X = NN - 1 then
       begin
         ByteGrid.Cells[NN + 1, Y + 1] := s1;
