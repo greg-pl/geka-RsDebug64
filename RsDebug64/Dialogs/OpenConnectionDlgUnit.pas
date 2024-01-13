@@ -148,14 +148,15 @@ function TOpenConnectionDlg.GetConfig(var devStr: string): Boolean;
 var
   jObj: TJsonObject;
   jObj2: TJsonObject;
+  errTxt: string;
 begin
   try
     jObj2 := TJsonObject.Create;
-    Result := SttScrollBox.getValueArray(jObj2);
+    Result := SttScrollBox.getValueArray(jObj2, errTxt);
     jObj := TJsonObject.Create;
     jObj.AddPair(TJSonPair.Create(CONNECTION_PARAMS_NAME, jObj2));
     jObj.AddPair(TJSonPair.Create(CONNECTION_DRIVER_NAME, TabControl.Tabs[TabControl.TabIndex]));
-    devStr := jObj.ToString;
+    devStr := jObj.ToJSON;
   except
     Result := false;
   end;

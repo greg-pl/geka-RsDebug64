@@ -7,7 +7,9 @@ uses
   Rsd64Definitions;
 
 var
-  LoggerHandle: THandle;
+  WideChar_LoggerHandle: THandle;
+  AnsiChar_LoggerHandle: THandle;
+
   GlobGetMemFunc: TGetMemFunction;
   GlobLibID: integer;
   GlobLogLevel: integer;
@@ -30,9 +32,9 @@ procedure Logger(LogLevel: integer; Txt: string);
 var
   BytesWritten: cardinal;
 begin
-  if (LogLevel < GlobLogLevel) and (LoggerHandle <> INVALID_HANDLE_VALUE) then
+  if (LogLevel < GlobLogLevel) and (WideChar_LoggerHandle <> INVALID_HANDLE_VALUE) then
   begin
-    WriteFile(LoggerHandle, Txt[1], length(Txt) * sizeof(char), BytesWritten, nil);
+    WriteFile(WideChar_LoggerHandle, Txt[1], length(Txt) * sizeof(char), BytesWritten, nil);
   end;
 end;
 
@@ -45,7 +47,9 @@ end;
 initialization
 
 IsMultiThread := True; // Make memory manager thread safe
-LoggerHandle := INVALID_HANDLE_VALUE;
+WideChar_LoggerHandle := INVALID_HANDLE_VALUE;
+AnsiChar_LoggerHandle := INVALID_HANDLE_VALUE;
+
 GlobGetMemFunc := nil;
 GlobLibID := -1;
 

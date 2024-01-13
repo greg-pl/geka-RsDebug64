@@ -4,7 +4,7 @@ object SettingForm: TSettingForm
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'SettingForm'
-  ClientHeight = 609
+  ClientHeight = 680
   ClientWidth = 425
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,12 +17,12 @@ object SettingForm: TSettingForm
   OnActivate = FormActivate
   DesignSize = (
     425
-    609)
+    680)
   PixelsPerInch = 96
   TextHeight = 13
   object OkBtn: TButton
     Left = 250
-    Top = 577
+    Top = 648
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -31,35 +31,30 @@ object SettingForm: TSettingForm
     ModalResult = 1
     TabOrder = 0
     OnClick = OkBtnClick
-    ExplicitLeft = 221
-    ExplicitTop = 518
+    ExplicitTop = 577
   end
   object Button2: TButton
     Left = 338
-    Top = 577
+    Top = 648
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
     Caption = '&Cancel'
     ModalResult = 2
     TabOrder = 1
-    ExplicitLeft = 309
-    ExplicitTop = 518
+    ExplicitTop = 577
   end
   object PageControl1: TPageControl
     Left = 5
     Top = 4
     Width = 414
-    Height = 566
+    Height = 637
     ActivePage = TabSheet1
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 2
-    ExplicitWidth = 385
-    ExplicitHeight = 507
     object TabSheet1: TTabSheet
-      Caption = 'Og'#243'lne'
-      ExplicitWidth = 377
-      ExplicitHeight = 479
+      Caption = 'Main'
+      ExplicitHeight = 538
       object Label1: TLabel
         Left = 4
         Top = 4
@@ -214,8 +209,8 @@ object SettingForm: TSettingForm
         TabOrder = 6
       end
       object ObjdumpPathEdit: TLabeledEdit
-        Left = 11
-        Top = 322
+        Left = 14
+        Top = 394
         Width = 349
         Height = 25
         EditLabel.Width = 151
@@ -252,7 +247,7 @@ object SettingForm: TSettingForm
       object ShowSpeedBox: TCheckBox
         Left = 14
         Top = 277
-        Width = 247
+        Width = 371
         Height = 17
         Caption = 'Show message abou transfer speed'
         Font.Charset = EASTEUROPE_CHARSET
@@ -263,23 +258,39 @@ object SettingForm: TSettingForm
         ParentFont = False
         TabOrder = 9
       end
+      object ShowUnknowLineBox: TCheckBox
+        Left = 14
+        Top = 300
+        Width = 371
+        Height = 17
+        Caption = 'Show unknow line while parsing Map/Elf files'
+        Font.Charset = EASTEUROPE_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -15
+        Font.Name = 'Arial'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 10
+      end
     end
   end
   inline SectionsDefFrame: TSectionsDefFrame
     Left = 20
-    Top = 392
+    Top = 465
     Width = 349
     Height = 161
     TabOrder = 3
     ExplicitLeft = 20
-    ExplicitTop = 392
+    ExplicitTop = 465
     ExplicitWidth = 349
     ExplicitHeight = 161
     inherited Panel1: TPanel
       Width = 349
       Height = 161
+      ExplicitLeft = -3
+      ExplicitTop = 56
       ExplicitWidth = 349
-      ExplicitHeight = 178
+      ExplicitHeight = 161
       inherited Label1: TLabel
         Width = 108
         Font.Name = 'MS Sans Serif'
@@ -289,7 +300,7 @@ object SettingForm: TSettingForm
         Width = 159
         Height = 139
         ExplicitWidth = 159
-        ExplicitHeight = 156
+        ExplicitHeight = 139
       end
     end
   end

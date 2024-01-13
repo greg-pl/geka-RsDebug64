@@ -3,9 +3,14 @@ unit CallProcessUnit;
 interface
 
 uses
-  SysUtils, Classes, Windows, Forms, Messages;
+  SysUtils, Classes, Windows,
+  System.Contnrs,
+  Forms,
+  Messages;
 
-function CallHideProcess(OutMsgHandle, BreakHandle: THandle; App, Param, WorkDir: string; Say: boolean): Cardinal;
+function CallHideProcess(OutMsgHandle: THandle; App, Param, WorkDir: string; Say, AddExitMsg: boolean): TThread;
+function StopHideProcess(ProcessThread: TThread): boolean;
+
 function ExecBatchFile(BatFileName, WorkDir: string): Cardinal;
 
 const
@@ -43,9 +48,6 @@ type
 
 implementation
 
-uses
-  Main;
-
 type
 
   TPipeRider = class(TThread)
@@ -69,13 +71,12 @@ begin
   NameThreadForDebugging('CallProcessUnit-TPipeRider');
   FOwner := aOwner;
   FIsAnsiChar := isAnsiChar;
+
   FillChar(SecurityAttributes, SizeOf(SecurityAttributes), 0);
-  with SecurityAttributes do
-  begin
-    nLength := SizeOf(SecurityAttributes);
-    bInheritHandle := true;
-  end;
+  SecurityAttributes.nLength := SizeOf(SecurityAttributes);
+  SecurityAttributes.bInheritHandle := true;
   CreatePipe(PipeOut, PipeIn, @SecurityAttributes, 100000);
+
   Resume;
 end;
 
@@ -109,7 +110,7 @@ var
   i: integer;
   N: integer;
 begin
-//  MainForm.NL_T('ReadPipe_Str');
+  // MainForm.NL_T('ReadPipe_Str');
   Result := 0;
   if not(FIsAnsiChar) then
   begin
@@ -127,7 +128,7 @@ begin
       end;
     end;
   end;
-  //MainForm.NL_T('ReadPipe_End');
+  // MainForm.NL_T('ReadPipe_End');
 end;
 
 procedure TPipeRider.Execute;
@@ -280,34 +281,58 @@ begin
 end;
 
 // ------------------------------------------------------------------------------
+var
+  GlobalListOfProcessCaller: TObjectList;
+
 type
   TProcessCaller = class(TThread)
   private
-    FAsyncMutex: THandle;
+    FExitEvent: THandle;
+    ProcessInfo: TProcessInformation;
+    FSay: boolean;
+    FAddExitMessage: boolean;
+
     procedure WriteLn(s: string);
+    procedure ifSay(s: string);
   protected
     procedure Execute; override;
   public
+    MyPipeOut: THandle;
+    MyPipeIn: THandle;
+
     FOutMsgHandle: THandle;
-    FBreakHandle: THandle;
     App, Param, WorkDir: string;
-    Say: boolean;
     constructor Create;
     destructor Destroy; override;
+    function StopProcess: boolean;
   end;
 
 constructor TProcessCaller.Create;
+var
+  SecurityAttributes: TSecurityAttributes;
 begin
   inherited Create(true);
-  FAsyncMutex := CreateEvent(Nil, true, False, 'FRE_EVENT');
-  //MainForm.NL_T('TProcessCaller.Create');
+  FExitEvent := CreateEvent(Nil, false, false, 'EXIT_EVENT');
+
+  FillChar(SecurityAttributes, SizeOf(SecurityAttributes), 0);
+  SecurityAttributes.nLength := SizeOf(SecurityAttributes);
+  SecurityAttributes.bInheritHandle := true;
+  CreatePipe(MyPipeOut, MyPipeIn, @SecurityAttributes, 256);
+  FAddExitMessage := false;
+  GlobalListOfProcessCaller.Add(Self);
 end;
 
 destructor TProcessCaller.Destroy;
+var
+  idx: integer;
 begin
-  inherited ;
-  CloseHandle(FAsyncMutex);
-//  MainForm.NL_T('TProcessCaller.Destroy');
+  inherited;
+  idx := GlobalListOfProcessCaller.IndexOf(Self);
+  if idx < 0 then
+    raise Exception.Create('ProcessCaller outsize GlobalListOfProcessCaller');
+  GlobalListOfProcessCaller.Remove(Self);
+  CloseHandle(FExitEvent);
+  CloseHandle(MyPipeOut);
 end;
 
 procedure TProcessCaller.WriteLn(s: string);
@@ -323,13 +348,17 @@ begin
   end;
 end;
 
+procedure TProcessCaller.ifSay(s: string);
+begin
+  if FSay then
+    WriteLn('\i' + s);
+end;
+
 procedure TProcessCaller.Execute;
 var
   Info: TStartupInfo;
-  ProcessInfo: TProcessInformation;
   TempHandle: THandle;
 
-  SecurityAttributes: TSecurityAttributes;
   ProcessCode: Cardinal;
   StartExec: Int64;
   EndExec: Int64;
@@ -337,21 +366,12 @@ var
   s: string;
   tm: real;
   ErrorCode: integer;
-  UserBrak: boolean;
   ProcessCaller: TProcessCaller;
+  msgCnt: integer;
+  UserBrak: boolean;
 
 begin
-  if Say then
-  begin
-    WriteLn('');
-    WriteLn(App);
-  end;
-  FillChar(SecurityAttributes, SizeOf(SecurityAttributes), 0);
-  with SecurityAttributes do
-  begin
-    nLength := SizeOf(SecurityAttributes);
-    bInheritHandle := true;
-  end;
+  ifSay('');
 
   { Read end should not be inherited by child process }
   if Win32Platform <> VER_PLATFORM_WIN32_NT then
@@ -371,69 +391,76 @@ begin
   Info.wShowWindow := SW_HIDE;
   Info.hStdOutput := FOutMsgHandle;
   Info.hStdError := FOutMsgHandle;
+  Info.hStdInput := MyPipeOut;
   Info.dwFlags := STARTF_USESTDHANDLES or STARTF_USESHOWWINDOW;
 
   // Czas pracy wywo³ywanego programu
   if QueryPerformanceFrequency(PerfFreq) then
     QueryPerformanceCounter(StartExec);
 
+  ifSay(App);
+  ifSay(Param);
+
   Param := '??? ' + Param;
-  if CreateProcess(pchar(App), pchar(Param), nil, nil, true, CREATE_NO_WINDOW,
-    // or HIGH_PRIORITY_CLASS,// or CREATE_NEW_CONSOLE,//
-    nil, pchar(WorkDir), Info, ProcessInfo) then
+  if CreateProcess(pchar(App), pchar(Param), nil, nil, true, CREATE_NO_WINDOW, nil, pchar(WorkDir), Info, ProcessInfo)
+  then
   begin
     CloseHandle(ProcessInfo.hThread); { Nie odwo³ujemy siê do Handle w¹tku g³ównego }
     try
 
+      msgCnt := 0;
       UserBrak := false;
-      while WaitForSingleObject(ProcessInfo.hProcess, 50) = WAIT_TIMEOUT do
+
+      while not Terminated do
       begin
-        if FBreakHandle <> INVALID_HANDLE_VALUE then
+        if WaitForSingleObject(ProcessInfo.hProcess, 50) <> WAIT_TIMEOUT then
+          break;
+
+        if WaitForSingleObject(FExitEvent, 100) = WAIT_OBJECT_0 then
         begin
-          if WaitForSingleObject(FBreakHandle, 0) = WAIT_OBJECT_0 then
-          begin
-            UserBrak := true;
-            Break;
-          end;
+          UserBrak := true;
+          break;
         end;
-        Application.ProcessMessages;
-        sleep(4);
+
+        inc(msgCnt);
+        if msgCnt = 20 then
+        begin
+          ifSay('CallerTask run');
+          msgCnt := 0;
+        end;
       end;
 
-      if Say then
+      ifSay('');
+      ifSay('-----------------------------------------');
+      if UserBrak then
       begin
-        WriteLn('');
-        WriteLn('-----------------------------------------');
-        if not(UserBrak) then
+        ifSay('ThreadCaller terminated by user.');
+        ifSay('Waiting for process terminate....');
+        TerminateProcess(ProcessInfo.hProcess, 10);
+        while WaitForSingleObject(ProcessInfo.hProcess, 50) = WAIT_TIMEOUT do
         begin
-          GetExitCodeProcess(ProcessInfo.hProcess, ProcessCode);
-          QueryPerformanceCounter(EndExec);
-          if PerfFreq > 0 then
-          begin
-            tm := 1.0 * (EndExec - StartExec) / PerfFreq;
-            if tm < 1 then
-              s := format('Czas pracy processu: %.3f ms', [tm * 1000.0])
-            else
-              s := format('Czas pracy processu: %.3f s', [tm]);
-            WriteLn(s);
-          end;
-          s := format('Kod zakoñczenia programu : %d', [ProcessCode]);
-          WriteLn(s);
-        end
-        else
-        begin
-          WriteLn('Operacja przerwana przez u¿ytkownika');
-          WriteLn('Oczekiwanie na zakoñczenie procesu');
-          TerminateProcess(ProcessInfo.hProcess, 10);
-          while WaitForSingleObject(ProcessInfo.hProcess, 50) = WAIT_TIMEOUT do
-          begin
-            Application.ProcessMessages;
-          end;
-          WriteLn('Proces zakoñczony');
+          Application.ProcessMessages;
         end;
+        GetExitCodeProcess(ProcessInfo.hProcess, ProcessCode);
+        ifSay(Format('Process terminated. code = %u', [ProcessCode]));
+      end
+      else
+      begin
+        GetExitCodeProcess(ProcessInfo.hProcess, ProcessCode);
+        QueryPerformanceCounter(EndExec);
+        if PerfFreq > 0 then
+        begin
+          tm := 1.0 * (EndExec - StartExec) / PerfFreq;
+          if tm < 1 then
+            ifSay(Format('Process working time: %.3f ms', [tm * 1000.0]))
+          else
+            ifSay(Format('Process working time: %.3f s', [tm]));
+        end;
+        ifSay(Format('Terminated code: %d', [ProcessCode]));
       end
     finally
-      CloseHandle(ProcessInfo.hProcess);
+      if ProcessInfo.hProcess <> INVALID_HANDLE_VALUE then
+        CloseHandle(ProcessInfo.hProcess);
     end
   end
   else
@@ -441,32 +468,51 @@ begin
     ErrorCode := GetLastError;
     if ErrorCode <> 0 then
       s := SysErrorMessage(ErrorCode);
-    s := format('B³¹d wywo³ania programu %s:%s', [App, s]);
+    s := Format('Error program execution %s:%s', [App, s]);
     WriteLn(s);
   end;
-  WriteLn(END_OF_PROCESS_TXT + #10);
+  if FAddExitMessage then
+    WriteLn(END_OF_PROCESS_TXT + #10);
 end;
 
-function CallHideProcess(OutMsgHandle, BreakHandle: THandle; App, Param, WorkDir: string; Say: boolean): Cardinal;
+function TProcessCaller.StopProcess: boolean;
+begin
+  Terminate;
+  SetEvent(FExitEvent);
+  Result := true;
+end;
+
+function CallHideProcess(OutMsgHandle: THandle; App, Param, WorkDir: string; Say, AddExitMsg: boolean): TThread;
 var
   ProcessCaller: TProcessCaller;
 begin
   ProcessCaller := TProcessCaller.Create;
+  ProcessCaller.FAddExitMessage := AddExitMsg;
   ProcessCaller.FOutMsgHandle := OutMsgHandle;
-  ProcessCaller.FBreakHandle := BreakHandle;
   ProcessCaller.App := App;
   ProcessCaller.Param := Param;
   ProcessCaller.WorkDir := WorkDir;
-  ProcessCaller.Say := Say;
+  ProcessCaller.FSay := Say;
   ProcessCaller.FreeOnTerminate := true;
   ProcessCaller.Resume;
+  Result := ProcessCaller;
+end;
+
+function StopHideProcess(ProcessThread: TThread): boolean;
+var
+  idx: integer;
+begin
+  idx := GlobalListOfProcessCaller.IndexOf(ProcessThread);
+  if idx >= 0 then
+    Result := (ProcessThread as TProcessCaller).StopProcess
+  else
+    Result := true;
 end;
 
 
 // ---------------------------------------------------------------------------------------
 
 function FindFileInPath(FileName: string): string;
-
 var
   SL: TStringList;
   i: integer;
@@ -484,7 +530,7 @@ begin
       if FileExists(Path) then
       begin
         Result := Path;
-        Break;
+        break;
       end;
     end;
   finally
@@ -493,7 +539,6 @@ begin
 end;
 
 function ExecBatchFile(BatFileName, WorkDir: string): Cardinal;
-
 var
   Info: TStartupInfo;
   ProcessInfo: TProcessInformation;
@@ -541,5 +586,13 @@ begin
   else
     Result := 2;
 end;
+
+initialization
+
+GlobalListOfProcessCaller := TObjectList.Create(false);
+
+finalization
+
+GlobalListOfProcessCaller.Free;
 
 end.

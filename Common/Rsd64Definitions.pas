@@ -30,6 +30,13 @@ const
   stToBigTerminalNr = 11; //
   stEND_OFF_DIR = 12;
   stDelphiError = 13;
+  stFrmTooLarge = 14;
+  stErrorRecived = 15;
+
+  stReplySumError = 16;
+  stReplyFormatError = 17;
+  stConnectError = 18;
+
   stMdbError = 50;
   stMdbExError = 100;
 
@@ -38,6 +45,8 @@ const
   stNoImpl = stAPL_BASE + 0;
   stError = stAPL_BASE + 1;
   stUndefCommand = stAPL_BASE + 2;
+
+  stGDB_error = 1000;
 
   evWorkOnOff = 0;
   evProgress = 1;
@@ -65,11 +74,11 @@ const
 
   // Driver info
   DRVINFO_TIME = 'Time';
-  DRVINFO_LIST= 'Values';
+  DRVINFO_LIST = 'Values';
 
-  DRVINFO_NAME= 'Name';
-  DRVINFO_DESCR= 'Descr';
-  DRVINFO_VALUE= 'Value';
+  DRVINFO_NAME = 'Name';
+  DRVINFO_DESCR = 'Descr';
+  DRVINFO_VALUE = 'Value';
 
   UartParamTab: TStringArr = [UARTPARAM_COMNR, UARTPARAM_PARITY, UARTPARAM_BAUDRATE, UARTPARAM_BITCNT];
   IpParamTab: TStringArr = [IPPARAM_IP, IPPARAM_PORT];
@@ -117,7 +126,7 @@ type
     function LoadFromTxt(txt: string): boolean;
   end;
 
-function ExtractDriverName(ConnectJson: string; var driverName: string): boolean;
+function ExtractDriverName(ConnectJson: string; var DriverName: string): boolean;
 function ExtractConnInfoStr(ConnectJson: string; var ConnInfoStr: string): boolean;
 
 implementation
@@ -174,7 +183,7 @@ begin
   jBuil.Add('SubGroups', jArr);
   jBuil.Add('ConectionParams', Params.ConnectionParams.getJSonObject);
 
-  Result := jBuil.jobj.ToString;
+  Result := jBuil.jobj.ToJSON;
 end;
 
 function TLibPropertyBuilder.LoadFromTxt(txt: string): boolean;
@@ -217,7 +226,7 @@ begin
 
 end;
 
-function ExtractDriverName(ConnectJson: string; var driverName: string): boolean;
+function ExtractDriverName(ConnectJson: string; var DriverName: string): boolean;
 var
   jVal: TJSONValue;
   jobj: TJsonObject;
@@ -228,7 +237,7 @@ begin
     if Assigned(jVal) then
     begin
       jobj := jVal as TJsonObject;
-      driverName := jobj.Get(CONNECTION_DRIVER_NAME).JSonValue.Value;
+      DriverName := jobj.Get(CONNECTION_DRIVER_NAME).JSonValue.Value;
       Result := true;
     end;
   except

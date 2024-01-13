@@ -14,7 +14,7 @@ uses
   CommonDef,
   CommThreadUnit,
   Rsd64Definitions,
-  AnalogFrameUnit, System.Actions, System.ImageList,
+  System.Actions, System.ImageList,
   System.JSON,
   JSonUtils;
 

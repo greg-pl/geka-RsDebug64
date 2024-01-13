@@ -12,7 +12,8 @@ uses
   RsdDll,
   CommonDef,
   Rsd64Definitions,
-  AnalogFrameUnit, System.Actions, System.ImageList,
+  //AnalogFrameUnit,
+  System.Actions, System.ImageList,
   CommThreadUnit,
   System.JSON,
   JSonUtils;

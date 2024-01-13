@@ -29,7 +29,7 @@ object EditDrvParamsForm: TEditDrvParamsForm
       456
       43)
     object OkBtn: TButton
-      Left = 279
+      Left = 287
       Top = 8
       Width = 75
       Height = 25
@@ -37,7 +37,7 @@ object EditDrvParamsForm: TEditDrvParamsForm
       Caption = '&Ok'
       Default = True
       ModalResult = 1
-      TabOrder = 0
+      TabOrder = 1
       OnClick = OkBtnClick
     end
     object Button2: TButton
@@ -48,7 +48,7 @@ object EditDrvParamsForm: TEditDrvParamsForm
       Anchors = [akRight, akBottom]
       Caption = '&Cancel'
       ModalResult = 2
-      TabOrder = 1
+      TabOrder = 2
     end
     object DefaultBtn: TButton
       Left = 183
@@ -57,7 +57,7 @@ object EditDrvParamsForm: TEditDrvParamsForm
       Height = 25
       Anchors = [akRight, akBottom]
       Caption = '&Default'
-      TabOrder = 2
+      TabOrder = 0
       OnClick = DefaultBtnClick
     end
   end

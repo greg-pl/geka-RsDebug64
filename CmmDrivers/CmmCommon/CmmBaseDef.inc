@@ -1,7 +1,7 @@
 
 function LibIdentify:PGUID; stdcall;
 function  GetLibProperty:PAnsiChar; stdcall;
-procedure SetLoggerHandle (H: THandle); stdcall;
+procedure SetLoggerHandle (H_WideChar, H_AnsiChar: THandle); stdcall;
 procedure SetGetMemFunction(LibID : integer; GetMemFunc : TGetMemFunction); stdcall;
 
 

@@ -6,6 +6,8 @@ inherited SttFrameInt: TSttFrameInt
   inherited BevelAll: TBevel
     Width = 365
     Height = 56
+    ExplicitWidth = 365
+    ExplicitHeight = 56
   end
   object SttIntEdit: TLabeledEdit
     Left = 12

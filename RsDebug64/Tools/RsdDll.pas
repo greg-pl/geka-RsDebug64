@@ -32,7 +32,7 @@ type
     procedure SetProgress(Ev: integer; R: real);
     property Connected: boolean read FConnected;
 
-    function IsDllReady: boolean;
+    function IsDevReady: boolean;
     function getDriverName: string;
 
     function GetDrvParams: String;
@@ -87,7 +87,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure SetLibProperty(txt: string);
-    procedure SetLoggerHandle(H: THandle);
+    procedure SetLoggerHandle(H_WideChar, H_AnsiChar: THandle);
     procedure RegisterMe;
     function LibraryGetMemFunc(size: integer): pointer;
     function FreeLibMemory(ptr: pointer): boolean;
@@ -104,7 +104,7 @@ type
     constructor Create;
     procedure ScanLibrary;
     property Items[Index: integer]: TCmmLibrary read FGetItem;
-    procedure SetLoggerHandle(H: THandle);
+    procedure SetLoggerHandle(H_WideChar, H_AnsiChar: THandle);
     function FindLibraryByName(Name: string): TCmmLibrary;
     function FindLibraryByLibID(LibID: integer): TCmmLibrary;
     function FindLibraryByHandle(CmmHandle: THandle): TCmmLibrary;
@@ -117,7 +117,7 @@ var
   CmmLibraryList: TCmmLibraryList;
   CmmDevList: TCmmDevList;
 
-procedure RsdSetLoggerHandle(H: THandle);
+procedure RsdSetLoggerHandle(H_WideChar, H_AnsiChar: THandle);
 function LoadRsPorts: TStrings;
 
 implementation
@@ -139,7 +139,7 @@ type
   TLibIdentify = function: PGUID; stdcall;
 
   TGetLibProperty = function: pAnsiChar; stdcall;
-  TSetLoggerHandle = procedure(H: THandle); stdcall;
+  TSetLoggerHandle = procedure(H_WideChar, H_AnsiChar: THandle); stdcall;
   TSetGetMemFunction = procedure(LibID: integer; GetMemFunc: TGetMemFunction); stdcall;
 
   TGetErrStr = function(ID: TAccId; Code: TStatus; S: pAnsiChar; Max: integer): boolean; stdcall;
@@ -257,9 +257,9 @@ begin
   Result := FDriverName;
 end;
 
-function TCmmDevice.IsDllReady: boolean;
+function TCmmDevice.IsDevReady: boolean;
 begin
-  Result := (DllHandle <> INVALID_HANDLE_VALUE);
+  Result := (DllHandle <> INVALID_HANDLE_VALUE) and (FID >= 0);
 end;
 
 function TCmmDevice.OpenDev: TStatus;
@@ -267,7 +267,7 @@ var
   _OpenDev: TOpenDev;
 begin
   Result := stNoImpl;
-  if IsDllReady then
+  if IsDevReady then
   begin
     @_OpenDev := GetProcAddress(DllHandle, 'OpenDev');
     if Assigned(_OpenDev) then
@@ -719,15 +719,20 @@ function TCmmLibrary.FreeLibMemory(ptr: pointer): boolean;
 var
   idx: integer;
 begin
-  Result := false;
-  idx := FindMemoryObj(ptr);
-  if idx >= 0 then
+  if Assigned(ptr) then
   begin
-    MemList.Delete(idx);
-    Result := true;
+    Result := false;
+    idx := FindMemoryObj(ptr);
+    if idx >= 0 then
+    begin
+      MemList.Delete(idx);
+      Result := true;
+    end
+    else
+      raise Exception.Create('Memory to release not found');
   end
   else
-    raise Exception.Create('Memory to release not found');
+    Result := true;
 end;
 
 procedure TCmmLibrary.SetLibProperty(txt: string);
@@ -745,14 +750,14 @@ begin
   end;
 end;
 
-procedure TCmmLibrary.SetLoggerHandle(H: THandle);
+procedure TCmmLibrary.SetLoggerHandle(H_WideChar, H_AnsiChar: THandle);
 var
   _SetLoggerHandle: TSetLoggerHandle;
 begin
   @_SetLoggerHandle := GetProcAddress(CmmHandle, 'SetLoggerHandle');
   if Assigned(_SetLoggerHandle) then
   begin
-    _SetLoggerHandle(H);
+    _SetLoggerHandle(H_WideChar, H_AnsiChar);
   end;
 end;
 
@@ -768,12 +773,12 @@ begin
   Result := inherited GetItem(index) as TCmmLibrary;
 end;
 
-procedure TCmmLibraryList.SetLoggerHandle(H: THandle);
+procedure TCmmLibraryList.SetLoggerHandle(H_WideChar, H_AnsiChar: THandle);
 var
   i: integer;
 begin
   for i := 0 to Count - 1 do
-    (Items[i] as TCmmLibrary).SetLoggerHandle(H);
+    (Items[i] as TCmmLibrary).SetLoggerHandle(H_WideChar, H_AnsiChar);
 end;
 
 function TCmmLibraryList.FindLibraryByName(Name: string): TCmmLibrary;
@@ -783,7 +788,7 @@ begin
   Result := nil;
   for i := 0 to Count - 1 do
   begin
-    if (Items[i] as TCmmLibrary).LibParams.DriverName = Name then
+    if (Items[i] as TCmmLibrary).LibParams.driverName = Name then
     begin
       Result := (Items[i] as TCmmLibrary);
       break;
@@ -838,7 +843,7 @@ begin
   LibList.Clear;
   for i := 0 to Count - 1 do
   begin
-    LibList.Add(Items[i].LibParams.DriverName);
+    LibList.Add(Items[i].LibParams.driverName);
   end;
 end;
 
@@ -936,9 +941,9 @@ begin
   end;
 end;
 
-procedure RsdSetLoggerHandle(H: THandle);
+procedure RsdSetLoggerHandle(H_WideChar, H_AnsiChar:  THandle);
 begin
-  CmmLibraryList.SetLoggerHandle(H);
+  CmmLibraryList.SetLoggerHandle(H_WideChar, H_AnsiChar);
 end;
 
 initialization

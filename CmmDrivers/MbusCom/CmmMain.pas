@@ -35,9 +35,10 @@ begin
   Result := PAnsiChar(GlobLibProperty);
 end;
 
-procedure SetLoggerHandle(H: THandle); stdcall;
+procedure SetLoggerHandle (H_WideChar, H_AnsiChar: THandle);
 begin
-  LoggerHandle := H;
+  AnsiChar_LoggerHandle:= H_AnsiChar;
+  WideChar_LoggerHandle:= H_WideChar;
 end;
 
 procedure SetGetMemFunction(LibID: integer; GetMemFunc: TGetMemFunction); stdcall;

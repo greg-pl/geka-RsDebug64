@@ -17,7 +17,6 @@ type
     function GetDev: TCmmDevice;
     function GetCommThread: TCommThread;
     procedure Msg(s: string);
-    function FindIniDrvPrmSection(s: string): string;
   end;
 
   TOnMsg = procedure(s: string) of object;

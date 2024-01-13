@@ -196,7 +196,6 @@ type
     function GetDev: TCmmDevice;
     function GetCommThread: TCommThread;
     procedure Msg(s: string);
-    function FindIniDrvPrmSection(s: string): string;
   private
     function CfgProcWriteToJson: TJSONBuilder;
     procedure CfgProcLoadFromJson(jLoader: TJSonLoader);
@@ -212,11 +211,9 @@ type
     procedure OnReloadedProc(Sender: TObject);
     function GetSName(N: integer): string;
     procedure RestoreClosedWinProc(Sender: TObject);
-    procedure SetDriverParamsFromIni;
-    procedure CloseEditDrvParamsForm;
     procedure SetupWinTabs;
     function isDevConnected: boolean;
-    function isDllReady: boolean;
+    function isDevReady: boolean;
     procedure UpdateStatusBarConnInfoStr;
     procedure AfterConnChanged;
     function CreateChildForm(WinType: string): TChildForm;
@@ -295,7 +292,7 @@ end;
 
 procedure TMainForm.FormShow(Sender: TObject);
 begin
-  RsdSetLoggerHandle(ExtMemo.PipeInHandle);
+  RsdSetLoggerHandle(ExtMemo.PipeInHandle,ExtMemo.AnsiPipeInHandle);
 end;
 
 procedure TMainForm.FormActivate(Sender: TObject);
@@ -327,7 +324,7 @@ begin
     FreeAndNil(Dev);
 
   Dev := TCmmDevice.Create(Handle, ProgCfg.DevString);
-  if Dev.isDllReady then
+  if Dev.isDevReady then
   begin
     txt := ProgCfg.getDriverParams(Dev.getDriverName);
     Dev.SetDrvParams(txt);
@@ -357,11 +354,6 @@ begin
     begin
       st := Dev.OpenDev;
       NL(Format('OpenDev [%s]=%s', [Dev.getDriverName, Dev.GetErrStr(st)]));
-      if st = stOK then
-      begin
-        SetDriverParamsFromIni;
-        CloseEditDrvParamsForm; // todo Poco?
-      end
     end;
     ConnectBtn.Down := isDevConnected;
     if memConnected <> isDevConnected then
@@ -424,81 +416,6 @@ begin
   ProgCfg.ReOpenWorkspaceList.AddToMenuItem(0, ReopenWorkspaceItem, OnReOpenWorkSpaceClickProc);
 end;
 
-function TMainForm.FindIniDrvPrmSection(s: string): string;
-var
-  Ini: TIniFile;
-  SL: TStringList;
-  i: integer;
-  Item: string;
-begin
-  Result := '';
-  {
-    Ini := TIniFile.Create(ProgCfg.MainIniFName);
-    SL := TStringList.Create;
-    try
-    Ini.ReadSections(SL);
-    if s <> '' then
-    begin
-    for i := 0 to SL.Count - 1 do
-    begin
-    Item := Ini.ReadString(SL.Strings[i], INI_PARAM_DEV_STR, '');
-    if Item = s then
-    begin
-    Result := SL.Strings[i];
-    break;
-    end;
-    end;
-    end
-    else
-    begin
-    i := 1;
-    while true do
-    begin
-    Result := Format('DRV_PARAM_%u', [i]);
-    if SL.IndexOf(Result) = -1 then
-    break;
-    inc(i);
-    end;
-    end;
-    finally
-    SL.Free;
-    Ini.Free;
-    end;
-  }
-end;
-
-procedure TMainForm.SetDriverParamsFromIni;
-var
-  SecName: string;
-  SL: TStringList;
-  Ini: TIniFile;
-  i: integer;
-  pName, pVal: string;
-begin
-  SecName := FindIniDrvPrmSection(Dev.getDriverName);
-  if SecName <> '' then
-  begin
-    {
-      Ini := TIniFile.Create(ProgCfg.MainIniFName);
-      SL := TStringList.Create;
-      try
-      Ini.ReadSection(SecName, SL);
-      for i := 1 to SL.Count - 1 do
-      begin
-      pName := SL.Strings[i];
-      if SL.Strings[i] <> INI_PARAM_DEV_STR then
-      begin
-      pVal := Ini.ReadString(SecName, pName, '');
-      Dev.SetDrvParam(pName, pVal);
-      end;
-      end;
-      finally
-      Ini.Free;
-      SL.Free;
-      end;
-    }
-  end;
-end;
 
 procedure TMainForm.AfterConnChanged;
 var
@@ -662,7 +579,7 @@ end;
 
 procedure TMainForm.EditConnectionActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := not(isDllReady);
+  (Sender as TAction).Enabled := not(isDevReady);
 end;
 
 procedure TMainForm.MemoryWinActUpdate(Sender: TObject);
@@ -896,9 +813,9 @@ begin
   Result := Assigned(Dev) and Dev.Connected;
 end;
 
-function TMainForm.isDllReady: boolean;
+function TMainForm.isDevReady: boolean;
 begin
-  Result := Assigned(Dev) and Dev.isDllReady;
+  Result := Assigned(Dev) and Dev.isDevReady;
 end;
 
 procedure TMainForm.OnReOpenMapFileClickProc(Sender: TObject);
@@ -1220,7 +1137,7 @@ end;
 
 procedure TMainForm.GetDrvParamsActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isDllReady
+  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isDevReady
 end;
 
 procedure TMainForm.SetDrvParamsActExecute(Sender: TObject);
@@ -1242,23 +1159,7 @@ end;
 
 procedure TMainForm.SetDrvParamsActUpdate(Sender: TObject);
 begin
-  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isDllReady;
-end;
-
-procedure TMainForm.CloseEditDrvParamsForm;
-var
-  i: integer;
-  Form: TEditDrvParamsForm;
-begin
-  for i := 0 to MDIChildCount - 1 do
-  begin
-    if MDIChildren[i] is TEditDrvParamsForm then
-    begin
-      Form := MDIChildren[i] as TEditDrvParamsForm;
-      if Form.Caption <> Dev.getDriverName then
-        Form.Close;
-    end;
-  end;
+  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isDevReady;
 end;
 
 procedure TMainForm.WinTabControlMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);

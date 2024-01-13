@@ -120,6 +120,7 @@
         <DCCReference Include="Main.pas">
             <Form>MainForm</Form>
         </DCCReference>
+        <DCCReference Include="DComp\ExtG2MemoUnit.pas"/>
         <DCCReference Include="Tools\RsdDll.pas"/>
         <DCCReference Include="Tools\GkStrUtils.pas"/>
         <DCCReference Include="Tools\MapParserUnit.pas"/>
@@ -130,6 +131,10 @@
         <DCCReference Include="Tools\ComTradeUnit.pas"/>
         <DCCReference Include="Tools\CommonDef.pas"/>
         <DCCReference Include="Tools\UpLoadDefUnit.pas"/>
+        <DCCReference Include="Tools\ElfParserUnit.pas"/>
+        <DCCReference Include="Tools\ProgressWindowUnit.pas">
+            <Form>ProgressForm</Form>
+        </DCCReference>
         <DCCReference Include="Dialogs\About.pas">
             <Form>AboutForm</Form>
         </DCCReference>
@@ -147,6 +152,9 @@
         </DCCReference>
         <DCCReference Include="Dialogs\EditSectionsDialog.pas">
             <Form>EditSectionsDlg</Form>
+        </DCCReference>
+        <DCCReference Include="Dialogs\OpenConnectionDlgUnit.pas">
+            <Form>OpenConnectionDlg</Form>
         </DCCReference>
         <DCCReference Include="Frames\MemFrameUnit.pas">
             <Form>MemFrame</Form>
@@ -208,66 +216,47 @@
         <DCCReference Include="..\Wykres3\WykresEngUnit.pas"/>
         <DCCReference Include="..\Common\Rsd64Definitions.pas"/>
         <DCCReference Include="..\Common\CrcUnit.pas"/>
-        <DCCReference Include="Dialogs\OpenConnectionDlgUnit.pas">
-            <Form>OpenConnectionDlg</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
+        <DCCReference Include="..\Common\CallProcessUnit.pas"/>
+        <DCCReference Include="..\Common\JSonUtils.pas"/>
         <DCCReference Include="..\JSonSTT\SttObjectDefUnit.pas"/>
         <DCCReference Include="..\JSonSTT\SttFrameUartUnit.pas">
             <Form>SttFrameUart</Form>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameBaseUnit.pas">
             <Form>SttFrameBase</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameIntUnit.pas">
             <Form>SttFrameInt</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameFloatUnit.pas">
             <Form>SttFrameFloat</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameSelectUnit.pas">
             <Form>SttFrameSelect</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameBoolUnit.pas">
             <Form>SttFrameBool</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameIpUnit.pas">
             <Form>SttFrameIp</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttFrameAddrIpUnit.pas">
             <Form>SttFrameAddrIp</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\JSonSTT\SttScrollBoxUnit.pas"/>
-        <DCCReference Include="DComp\ExtG2MemoUnit.pas"/>
-        <DCCReference Include="..\Common\JSonUtils.pas"/>
-        <DCCReference Include="Tools\ElfParserUnit.pas"/>
-        <DCCReference Include="Tools\CallProcessUnit.pas"/>
-        <DCCReference Include="Tools\ProgressWindowUnit.pas">
-            <Form>ProgressForm</Form>
-            <FormType>dfm</FormType>
+        <DCCReference Include="..\JSonSTT\SttFrameStrUnit.pas">
+            <Form>SttFrameStr</Form>
+            <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="Dialogs\EditDrvParamsUnit.pas">
             <Form>EditDrvParamsForm</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
-        <DCCReference Include="..\JSonSTT\SttFrameStrUnit.pas">
-            <Form>SttFrameStr</Form>
-            <FormType>dfm</FormType>
-            <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>

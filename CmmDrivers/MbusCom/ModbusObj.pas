@@ -224,7 +224,6 @@ type
     function GetParity(BdTxt: String; var Parity: TParity): boolean;
     function GetBitCnt(Txt: String; var BitCnt: TBitCnt): boolean;
     function GetMdbMemAccess(Txt: String; var MemAcc: TMdbMemAccess): boolean;
-    function GetTocken(s: PAnsiChar; var p: integer): String;
     function GetId: TAccId;
   public
     constructor Create;
@@ -1204,8 +1203,9 @@ begin
 end;
 
 const
-  PAR_ITEM_DIVIDE_LEN = 'DIVIDE_LEN';
-  PAR_ITEM_DRIVER_MODE = 'DRIVER_MODE';
+  PAR_ITEM_DIVIDE_LEN = 'MemoryDivLen';
+  PAR_ITEM_STDMDB_DIVIDE_LEN = 'StdModbusDivLen';
+  PAR_ITEM_DRIVER_MODE = 'DriverMode';
   DriverModeName: TStringArr = ['STD', 'SLOW', 'FAST'];
 
 function getDriverMode(Txt: string; default: TDriverMode): TDriverMode;
@@ -1238,6 +1238,11 @@ begin
     sttObj := TSttIntObjectJson.Create(PAR_ITEM_DIVIDE_LEN, 'Read/write memory divide bloks', 40, 240, 128);
     sttObj.SetUniBool(true); //UniBool=true - allow change during open connection
     p.Add(sttObj);
+
+    sttObj := TSttIntObjectJson.Create(PAR_ITEM_STDMDB_DIVIDE_LEN, 'Standard modbus divide bloks', 40, 240, 128);
+    sttObj.SetUniBool(true); //UniBool=true - allow change during open connection
+    p.Add(sttObj);
+
     sttObj := TSttSelectObjectJson.Create(PAR_ITEM_DRIVER_MODE, 'Driver work mode', DriverModeName, 'STD');
     sttObj.SetUniBool(false);
     p.Add(sttObj);
@@ -1249,7 +1254,9 @@ begin
   //value section
   vBuild.Init;
   vBuild.Add(PAR_ITEM_DIVIDE_LEN, FCountDivide);
+  vBuild.Add(PAR_ITEM_STDMDB_DIVIDE_LEN,FMdbStdCndDiv);
   vBuild.Add(PAR_ITEM_DRIVER_MODE, DriverModeName[ord(DriverMode)]);
+
   jBuild.Add(DRVPRAM_VALUES, vBuild.jobj);
   jBuild.Add(DRVPRAM_DRIVER_NAME, DRIVER_NAME);
 
@@ -1268,6 +1275,12 @@ begin
     FCountDivide := vInt
   else
     Result := stBadArguments;
+
+  if jLoader.Load(PAR_ITEM_STDMDB_DIVIDE_LEN, vInt) then
+    FMdbStdCndDiv := vInt
+  else
+    Result := stBadArguments;
+
   if jLoader.Load(PAR_ITEM_DRIVER_MODE, vTxt) then
     DriverMode := getDriverMode(vTxt, DriverMode)
   else
@@ -2521,17 +2534,6 @@ begin
   else
     Result := false;
 
-end;
-
-function TDevList.GetTocken(s: PAnsiChar; var p: integer): String;
-begin
-  Result := '';
-  while (s[p] <> ';') and (s[p] <> #0) and (p <= length(s)) do
-  begin
-    Result := Result + Char(s[p]);
-    inc(p);
-  end;
-  inc(p);
 end;
 
 function TDevList.GetId: TAccId;

@@ -480,7 +480,7 @@ begin
   Result := '';
   drvPar := FindDriver(DriverName);
   if Assigned(drvPar) then
-    Result := drvPar.DrvParams.ToString;
+    Result := drvPar.DrvParams.ToJSON;
 end;
 
 // --------------------- TReopenItem ----------------------------------------
@@ -780,11 +780,10 @@ begin
         jLoader2.Load('MapFile', WorkingMap);
         jVal := jLoader2.GetObject('DevString');
         if Assigned(jVal) then
-          DevString := jVal.ToString;
+          DevString := jVal.ToJSON;
 
         jLoader2.Load('AutoSave', AutoSaveCfg);
         jLoader2.Load('AutoRefresh', AutoRefreshMap);
-
         jLoader2.Load('MergeMemory', ScalMemCnt);
         jLoader2.Load('MaxVarSize', MaxVarSize);
         jLoader2.Load('ObjDumpPath', ObjDumpPath);
@@ -833,8 +832,7 @@ var
 begin
   jBuild.Init;
   jBuild2.Init;
-  jVal := TJSONObject.ParseJSONValue(DevString);
-
+  jVal := TJSONObject.ParseJSONValue(AnsiString(DevString),true);
   jBuild2.Add('DevString', jVal);
   jBuild2.Add('MapFile', WorkingMap);
   jBuild2.Add('AutoSave', ord(AutoSaveCfg));
@@ -862,7 +860,7 @@ begin
 
   // jBuild.Add('ReOpenWorkspaceList', ReOpenWorkspaceList.GetJSONObject);
 
-  txt := jBuild.jObj.ToString;
+  txt := jBuild.jObj.ToJSON;
   MS := TMemoryStream.Create;
   try
     MS.write(txt[1], length(txt) * sizeof(char));

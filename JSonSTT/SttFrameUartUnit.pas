@@ -31,7 +31,7 @@ type
   public
     procedure AddObjectsName(SL: TStrings); override;
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    function getData(obj: TJSONObject): boolean; override;
+    function getSttData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
     procedure LoadDefaultValue; override;
     procedure setActive(active: boolean); override;
@@ -122,7 +122,7 @@ begin
     FOnValueEdited(self, UARTPARAM_BITCNT, BitCntBox.Text);
 end;
 
-function TSttFrameUart.getData(obj: TJSONObject): boolean;
+function TSttFrameUart.getSttData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(UARTPARAM_COMNR, ComNrBox.Text));
   obj.AddPair(TJSONPair.Create(UARTPARAM_BAUDRATE, BoudRateBox.Text));

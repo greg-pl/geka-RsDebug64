@@ -30,6 +30,8 @@ type
     class function InitFloatEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
       : TSttFloatObjectJson;
     class function InitIPEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string): TSttIPObjectJson;
+    class function InitStrEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string): TSttStringObjectJson;
+
   protected
     class function LoadValComboBoxJSon(obj: TJSONObject; Name: String; combo: TComboBox): boolean;
     class function LoadValCheckBoxJSon(obj: TJSONObject; Name: String; Box: TCheckBox): boolean;
@@ -38,10 +40,11 @@ type
     class function LoadValIPEditJSon(obj: TJSONObject; Name: String; Box: TLabeledEdit): boolean;
 
   public
+    Description : string;
     constructor Create(AOwner: TComponent; aItemName: string); virtual;
     procedure AddObjectsName(SL: TStrings); virtual;
     procedure LoadField(ParamList: TSttObjectListJson); virtual; // --
-    function getData(arr: TJSONObject): boolean; virtual;
+    function getSttData(arr: TJSONObject): boolean; virtual;
     procedure setData(arr: TJSONObject); virtual;
     procedure SetOnValueEdited(aOnValueEdited: TOnSttItemValueEdited); virtual;
     procedure LoadDefaultValue; virtual;
@@ -116,6 +119,7 @@ begin
   stt := ParamList.FindSttObject(itemName);
   if Assigned(stt) then
   begin
+    Description := stt.Description;
     if stt.UniBoolValid then
       FActiveWhileOpen := stt.UniBool
     else
@@ -123,7 +127,7 @@ begin
   end;
 end;
 
-function TSttFrameBase.getData(arr: TJSONObject): boolean;
+function TSttFrameBase.getSttData(arr: TJSONObject): boolean;
 begin
 
 end;
@@ -249,6 +253,25 @@ begin
   else
     Box.Enabled := false;
 end;
+
+
+class function TSttFrameBase.InitStrEditItem(Box: TLabeledEdit; ParamList: TSttObjectListJson; SttName: string)
+  : TSttStringObjectJson;
+var
+  stt: TSttObjectJson;
+begin
+  stt := ParamList.FindSttObject(SttName);
+  if Assigned(stt) then
+  begin
+    Result := stt as TSttStringObjectJson;
+    Box.Enabled := true;
+    Box.EditLabel.Caption := stt.Description;
+    Box.Text := '';
+  end
+  else
+    Box.Enabled := false;
+end;
+
 
 class function TSttFrameBase.LoadValComboBoxJSon(obj: TJSONObject; Name: String; combo: TComboBox): boolean;
 var

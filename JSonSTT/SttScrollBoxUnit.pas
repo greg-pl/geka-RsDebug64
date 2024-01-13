@@ -27,8 +27,8 @@ type
     procedure RemoveItems;
     procedure LoadList(List: TSttObjectListJson; SkipArr: TStringArr); overload;
     procedure LoadList(List: TSttObjectListJson); overload;
-    procedure AddFrame(SttClass: TSttFrameBaseClass; aItemName: string; ParamList: TSttObjectListJson);
-    function getValueArray(obj: TJSONObject): boolean;
+    function AddFrame(SttClass: TSttFrameBaseClass; aItemName: string; ParamList: TSttObjectListJson) : TSttFrameBase;
+    function getValueArray(obj: TJSONObject; var errTxt: string): boolean;
     procedure setValueArray(obj: TJSONObject);
     procedure SetOnValueEdited(aOnSttItemValueEdited: TOnSttItemValueEdited);
     procedure LoadDefaultValue;
@@ -53,7 +53,7 @@ begin
   end;
 end;
 
-procedure TSttScrollBox.AddFrame(SttClass: TSttFrameBaseClass; aItemName: string; ParamList: TSttObjectListJson);
+function TSttScrollBox.AddFrame(SttClass: TSttFrameBaseClass; aItemName: string; ParamList: TSttObjectListJson) : TSttFrameBase;
 var
   Frame: TSttFrameBase;
 begin
@@ -62,6 +62,9 @@ begin
   Frame.Align := alTop;
   Frame.LoadField(ParamList);
   SetOnValueEdited(FOnSttItemValueEdited);
+  Frame.TabOrder := 0;
+
+  Result := Frame;
 end;
 
 procedure TSttScrollBox.SetOnValueEdited(aOnSttItemValueEdited: TOnSttItemValueEdited);
@@ -105,16 +108,23 @@ begin
   LoadList(List, []);
 end;
 
-function TSttScrollBox.getValueArray(obj: TJSONObject): boolean;
+function TSttScrollBox.getValueArray(obj: TJSONObject; var errTxt: string): boolean;
 var
   i: integer;
+  frame : TSttFrameBase;
 begin
   Result := true;
   for i := 0 to ComponentCount - 1 do
   begin
     if Components[i] is TSttFrameBase then
     begin
-      Result := Result and (Components[i] as TSttFrameBase).getData(obj);
+      frame := Components[i] as TSttFrameBase;
+      Result := frame.getSttData(obj);
+      if not(Result) then
+      begin
+        errTxt := 'Error data in: '+frame.Description;;
+        break;
+      end;
     end;
   end;
 end;

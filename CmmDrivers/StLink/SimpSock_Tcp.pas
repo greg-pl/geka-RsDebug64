@@ -4,7 +4,8 @@ interface
 
 uses
   Classes, Windows, Messages, Types, SysUtils, Contnrs,
-  WinSock2;
+  WinSock2,
+  Rsd64Definitions;
 
 const
   wm_SocketEvent = wm_user + 100;
@@ -16,9 +17,7 @@ const
 
   wm_UserMax = wm_user + 1200;
 
-type
-  TStatus = integer;
-
+{
 const
   stOk = 0;
   stTimeOut = 1;
@@ -27,9 +26,8 @@ const
   stReplySumError = 4;
   stNotOpen = 12;
   stUserBreak = 15;
-  stFrmTooLarge = 16;
   stError = -1;
-
+}
 type
   TRdEvent = procedure(Sender: TObject; RecBuf: string; RecIp: string; RecPort: word) of object;
   TMsgFlow = procedure(Sender: TObject; R: real) of object;
@@ -732,7 +730,7 @@ function TSimpTcp.Connect: TStatus;
 var
   Addr: TSockAddr;
 begin
-  Result := stError;
+  Result := stConnectError;
   FConnected := false;
   if FillINetStruct(Addr, FIp, FPort) = stOk then
   begin

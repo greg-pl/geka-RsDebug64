@@ -85,6 +85,8 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
+        <Debugger_HostApplication>X:\RsDebug64.exe</Debugger_HostApplication>
+        <Debugger_CWD>X:\</Debugger_CWD>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -106,6 +108,7 @@
         <DCCReference Include="StLinkDriver.pas">
             <Form>$R *.res</Form>
         </DCCReference>
+        <DCCReference Include="..\..\Common\CallProcessUnit.pas"/>
         <None Include="..\CmmCommon\CmmBaseDef.inc"/>
         <None Include="..\CmmCommon\FileAccessDef.inc"/>
         <None Include="..\CmmCommon\MemoryAccessDef.inc"/>
@@ -157,7 +160,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="Win32\Debug\StLinkTcp.dll" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="X:\StLinkTcp.dll" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>StLinkTcp.dll</RemoteName>
                         <Overwrite>true</Overwrite>

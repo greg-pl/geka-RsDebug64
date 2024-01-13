@@ -20,7 +20,6 @@ type
     procedure RefreshBtnClick(Sender: TObject);
   private
     procedure ReloadData;
-    procedure SaveDrvParamToIni;
   public
     MainWinInterf: IMainWinInterf;
     constructor CreateIterf(AMainWinInterf: IMainWinInterf; AOwner: TComponent);
@@ -57,30 +56,32 @@ var
   s: string;
 begin
   s := MainWinInterf.GetDev.GetDrvInfo;
-  jLoader.Init(s);
-
-  if jLoader.Load(DRVINFO_TIME, s) then
-    TimeLabel.Caption := s
-  else
-    TimeLabel.Caption := '???';
-
-  jArr := jLoader.getArray(DRVINFO_LIST);
-  if Assigned(jArr) then
+  if s <> '' then
   begin
-    ParamGrid.RowCount := jArr.Count + 1;
-    for i := 0 to jArr.Count - 1 do
+    jLoader.Init(s);
+
+    if jLoader.Load(DRVINFO_TIME, s) then
+      TimeLabel.Caption := s
+    else
+      TimeLabel.Caption := '???';
+
+    jArr := jLoader.getArray(DRVINFO_LIST);
+    if Assigned(jArr) then
     begin
-      ParamGrid.Rows[i + 1].CommaText := IntToStr(i + 1);
-      jItem.Init(jArr.Items[i]);
-      if jItem.Load(DRVINFO_NAME, s) then
-        ParamGrid.Cells[1, i + 1] := s;
-      if jItem.Load(DRVINFO_DESCR, s) then
-        ParamGrid.Cells[2, i + 1] := s;
-      if jItem.Load(DRVINFO_VALUE, s) then
-        ParamGrid.Cells[3, i + 1] := s;
+      ParamGrid.RowCount := jArr.Count + 1;
+      for i := 0 to jArr.Count - 1 do
+      begin
+        ParamGrid.Rows[i + 1].CommaText := IntToStr(i + 1);
+        jItem.Init(jArr.Items[i]);
+        if jItem.Load(DRVINFO_NAME, s) then
+          ParamGrid.Cells[1, i + 1] := s;
+        if jItem.Load(DRVINFO_DESCR, s) then
+          ParamGrid.Cells[2, i + 1] := s;
+        if jItem.Load(DRVINFO_VALUE, s) then
+          ParamGrid.Cells[3, i + 1] := s;
+      end;
     end;
   end;
-
 end;
 
 procedure TShowDrvInfoForm.RefreshBtnClick(Sender: TObject);
@@ -88,31 +89,5 @@ begin
   ReloadData;
 end;
 
-procedure TShowDrvInfoForm.SaveDrvParamToIni;
-var
-  Ini: TIniFile;
-  SecName: string;
-  i: Integer;
-begin
-  SecName := MainWinInterf.FindIniDrvPrmSection(MainWinInterf.GetDev.getDriverName);
-  if SecName = '' then
-    SecName := MainWinInterf.FindIniDrvPrmSection('');
-  {
-    Ini := TIniFile.Create(ProgCfg.MainIniFName);
-    try
-    Ini.WriteString(SecName,INI_PARAM_DEV_STR,MainWinInterf.GetDev.getDriverShortName);
-    for i:=1 to ParamGrid.RowCount-1 do
-    begin
-    if ParamGrid.Cells[1,i]<>'' then
-    begin
-    Ini.WriteString(SecName,ParamGrid.Cells[1,i],ParamGrid.Cells[2,i]);
-    end;
-    end;
-    finally
-    Ini.UpdateFile;
-    Ini.Free;
-    end;
-  }
-end;
 
 end.

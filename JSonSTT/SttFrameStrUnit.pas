@@ -6,6 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ExtCtrls,
+  JsonUtils,
   System.JSON,
   SttFrameBaseUnit,
   SttObjectDefUnit;
@@ -16,14 +17,13 @@ type
     procedure SttStrEditKeyPress(Sender: TObject; var Key: Char);
     procedure SttStrEditExit(Sender: TObject);
   private
-    defVal : string;
+    defVal: string;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    function getData(obj: TJSONObject): boolean; override;
+    function getSttData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
     procedure LoadDefaultValue; override;
   end;
-
 
 implementation
 
@@ -32,13 +32,13 @@ implementation
 procedure TSttFrameStr.LoadField(ParamList: TSttObjectListJson);
 begin
   inherited;
-  InitIPEditItem(SttStrEdit, ParamList, FItemName);
+  InitStrEditItem(SttStrEdit, ParamList, FItemName);
 end;
 
-function TSttFrameStr.getData(obj: TJSONObject): boolean;
+function TSttFrameStr.getSttData(obj: TJSONObject): boolean;
 begin
-  obj.AddPair(TJSONPair.Create(FItemName, SttStrEdit.Text));
-  Result :=true;
+  obj.AddPair(TJSONPair.Create(FItemName, TJSONStringEx.Create(SttStrEdit.Text)));
+  Result := true;
 end;
 
 procedure TSttFrameStr.setData(obj: TJSONObject);
@@ -68,8 +68,6 @@ begin
   end;
 
 end;
-
-
 
 initialization
 

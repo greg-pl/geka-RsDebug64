@@ -19,7 +19,7 @@ type
     defVal: string;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    function getData(obj: TJSONObject): boolean; override;
+    function getSttData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
     procedure LoadDefaultValue; override;
     procedure setActive(active: boolean); override;
@@ -39,7 +39,7 @@ begin
     defVal := stt.defVal;
 end;
 
-function TSttFrameSelect.getData(obj: TJSONObject): boolean;
+function TSttFrameSelect.getSttData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, SttComboBox.Text));
   Result := true;

@@ -30,8 +30,6 @@ object ShowDrvInfoForm: TShowDrvInfoForm
     RowCount = 20
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing]
     TabOrder = 0
-    ExplicitLeft = 8
-    ExplicitTop = 36
     ColWidths = (
       20
       103
@@ -46,9 +44,6 @@ object ShowDrvInfoForm: TShowDrvInfoForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitLeft = 152
-    ExplicitTop = 80
-    ExplicitWidth = 185
     object RefreshBtn: TSpeedButton
       Left = 16
       Top = 8

@@ -6,7 +6,8 @@ uses
   Classes, Windows, Messages, Types, SysUtils, Contnrs,
   WinSock2,
   ExtCtrls,
-  SimpSock_Tcp;
+  SimpSock_Tcp,
+  Rsd64Definitions;
 
 type
   TStLinkDrv = class;
@@ -27,6 +28,7 @@ type
     function WaitPlusReplay(var txt: AnsiString; time: cardinal): TStatus;
     function WaitReplay(var txt: AnsiString; time: cardinal): TStatus;
     function HexToBytes(var buf: TBytes; txt: AnsiString): boolean;
+    function GetGdbError(repl: string): TStatus;
 
   public
     OnLog: TOnLog;
@@ -34,8 +36,10 @@ type
     destructor Destroy; override;
     function Open(IP: string; Port: integer): TStatus;
     function close: TStatus;
+    function isOpen: boolean;
+
     function ReadMem(adr, cnt: integer; var buf: TBytes): TStatus;
-    function RCommand(rcmd: string; var repl : string; verbose: boolean): TStatus; overload;
+    function RCommand(rcmd: string; var repl: string; verbose: boolean): TStatus; overload;
     function RCommand(rcmd: string): TStatus; overload;
     function WriteMem(adr: cardinal; buf: TBytes): TStatus;
 
@@ -187,6 +191,11 @@ begin
   Result := SimpTcp.close;
 end;
 
+function TStLinkDrv.isOpen: boolean;
+begin
+  Result := SimpTcp.IsConnected;
+end;
+
 function TStLinkDrv.GetCmdSum(cmd: TBytes): byte;
 var
   i, n: integer;
@@ -264,7 +273,7 @@ var
 begin
   tt := GetTickCount;
   rdFlag := false;
-  Result := stTimeOut;
+  Result := stTimeErr;
   while GetTickCount - tt < time do
   begin
     st := SimpTcp.ReadStrPart(txt1);
@@ -335,7 +344,7 @@ var
   sum2: byte;
 begin
   tt := GetTickCount;
-  Result := stTimeOut;
+  Result := stTimeErr;
   while GetTickCount - tt < time do
   begin
     st := SimpTcp.ReadStrPart(txt1);
@@ -369,6 +378,23 @@ begin
   end;
 end;
 
+function TStLinkDrv.GetGdbError(repl: string): TStatus;
+var
+  txt: string;
+  bb: integer;
+begin
+  Result := stBadRepl;
+  if length(repl) >= 3 then
+  begin
+    if repl[1] = 'E' then
+    begin
+      txt := copy(repl, 1, length(repl) - 1);
+      if TryStrToInt('$' + txt, bb) then
+        Result := TStatus(bb + stGDB_error);
+    end;
+  end
+end;
+
 function TStLinkDrv.ReadMem(adr, cnt: integer; var buf: TBytes): TStatus;
 var
   st: TStatus;
@@ -383,19 +409,20 @@ begin
       if not HexToBytes(buf, repl) then
         st := stReplyFormatError;
     end;
+    if length(buf) <> cnt then
+      st := GetGdbError(repl);
   end;
   Result := st;
-
 end;
 
 function TStLinkDrv.RCommand(rcmd: string): TStatus;
 var
-  repl : string;
+  repl: string;
 begin
   Result := RCommand(rcmd, repl, true);
 end;
 
-function TStLinkDrv.RCommand(rcmd: string; var repl : string; verbose: boolean): TStatus;
+function TStLinkDrv.RCommand(rcmd: string; var repl: string; verbose: boolean): TStatus;
 var
   st: TStatus;
   txt: AnsiString;

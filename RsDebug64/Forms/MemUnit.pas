@@ -335,7 +335,7 @@ begin
         if n <> 0 then
         begin
           Adr := BufAdr + i;
-          CommThread.AddToDoItem(TWorkWrMemItem.Create(Handle, wm_WriteMem2, MemFrame.MemBuf.Buf[i], Adr, n));
+          CommThread.AddToDoItemAllowDouble(TWorkWrMemItem.Create(Handle, wm_WriteMem2, MemFrame.MemBuf.Buf[i], Adr, n));
           DoMsg(Format('WriteMem, adr=0x%X, size=%u', [Adr, n]));
 
           for j := 0 to n - 1 do

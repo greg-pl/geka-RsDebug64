@@ -41,7 +41,7 @@
     <File Path="..\..\JSonSTT"/>
     <File Path="..\..\JSonSTT\SttObjectDefUnit.pas"/>
     <File Path="CmmMain.pas"/>
-    <File Path="ModbusObj.pas"/>
     <File Path="ComUnit.pas"/>
+    <File Path="ModbusObj.pas"/>
   </ProjectSortOrder>
 </BorlandProject>

@@ -16,7 +16,6 @@ const
   Spaces: TChars = [' ', #9];
   wm_ProcessEnd = wm_user + 100;
 
-
 type
 
   TMapItem = class(TObject)
@@ -176,7 +175,6 @@ begin
   else
     Result := '';
 end;
-
 
 function TMapItem.ToText: string;
 begin
@@ -913,10 +911,9 @@ begin
   PipeToStrings.SetAsynch(FOwnHandle, wm_ProcessEnd);
 
   Param := '-t ' + FName;
-  MainForm.NL_T('ProcessStart');
-  CallHideProcess( { ExtMemo.AnsiPipeInHandle } PipeToStrings.PipeIn, INVALID_HANDLE_VALUE, ProgCfg.ObjDumpPath, Param,
-    ProgCfg.GetWorkingPath, false);
-  MainForm.NL_T('ProcessDone');
+  MainForm.NL_T('Map/Elf parser start');
+  CallHideProcess(PipeToStrings.PipeIn, ProgCfg.ObjDumpPath, Param, ProgCfg.GetWorkingPath, false,true);
+  MainForm.NL_T('Map/Elf parser stop');
 end;
 
 function TMapParser.LoadMapFile(FName: string): boolean;

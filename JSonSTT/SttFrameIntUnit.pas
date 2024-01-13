@@ -21,7 +21,7 @@ type
     defVal: integer;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    function getData(obj: TJSONObject): boolean; override;
+    function getSttData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
     procedure LoadDefaultValue; override;
     procedure setActive(active: boolean); override;
@@ -42,10 +42,13 @@ begin
     minVal := obj.minVal;
     maxVal := obj.maxVal;
     defVal := obj.defVal;
+    SttIntEdit.Hint := Format('Range %d-%d default=%d',[minVal,MaxVal,defVal]);
+    SttIntEdit.ShowHint := true;
+
   end;
 end;
 
-function TSttFrameInt.getData(obj: TJSONObject): boolean;
+function TSttFrameInt.getSttData(obj: TJSONObject): boolean;
 var
   v: integer;
 begin

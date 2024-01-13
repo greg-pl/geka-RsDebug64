@@ -18,7 +18,7 @@ type
     defVal: boolean;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    function getData(obj: TJSONObject): boolean; override;
+    function getSttData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
     procedure LoadDefaultValue; override;
     procedure setActive(active: boolean); override;
@@ -48,7 +48,7 @@ begin
   SttCheckBox.Enabled := active;
 end;
 
-function TSttFrameBool.getData(obj: TJSONObject): boolean;
+function TSttFrameBool.getSttData(obj: TJSONObject): boolean;
 begin
   obj.AddPair(TJSONPair.Create(FItemName, JSonBoolToStr(SttCheckBox.Checked)));
   Result := true;

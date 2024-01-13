@@ -82,6 +82,7 @@ begin
         SttScrollBox.setActiveFromUniBool
       else
         SttScrollBox.setAllActive;
+      SttScrollBox.SetFocus;
     finally
       List.Free;
     end;
@@ -103,13 +104,20 @@ procedure TEditDrvParamsForm.OkBtnClick(Sender: TObject);
 var
   jObj2: TJsonObject;
   s : string;
+  errorText : string;
 begin
   jObj2 := TJsonObject.Create;
-  if SttScrollBox.getValueArray(jObj2) then
+  if SttScrollBox.getValueArray(jObj2, errorText) then
   begin
-    s := jObj2.ToString;
+    s := jObj2.ToJSON;
     FMainWinInterf.GetDev.SetDrvParams(s);
     ProgCfg.AddDriverSettings(DriverName,jObj2);
+    ModalResult := mrOk;
+  end
+  else
+  begin
+    Application.MessageBox(pchar(errorText), 'Driver parameters',mb_OK or MB_ICONERROR);
+    ModalResult := mrNone;
   end;
 end;
 

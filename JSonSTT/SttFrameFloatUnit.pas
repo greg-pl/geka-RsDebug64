@@ -22,7 +22,7 @@ type
     frmStr: string;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
-    function getData(obj: TJSONObject): boolean; override;
+    function getSttData(obj: TJSONObject): boolean; override;
     procedure setData(obj: TJSONObject); override;
     procedure LoadDefaultValue; override;
     procedure setActive(active: boolean); override;
@@ -44,6 +44,8 @@ begin
     maxVal := obj.maxVal;
     defVal := obj.defVal;
     frmStr := obj.FormatStr;
+    SttFloatEdit.Hint := Format('Range %f-%f default=%f',[minVal,MaxVal,defVal]);
+    SttFloatEdit.ShowHint := true;
   end;
 end;
 
@@ -57,7 +59,7 @@ begin
   SttFloatEdit.Enabled := active;
 end;
 
-function TSttFrameFloat.getData(obj: TJSONObject): boolean;
+function TSttFrameFloat.getSttData(obj: TJSONObject): boolean;
 var
   v: double;
 begin

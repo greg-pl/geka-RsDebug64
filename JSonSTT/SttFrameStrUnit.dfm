@@ -11,9 +11,10 @@ inherited SttFrameStr: TSttFrameStr
   end
   object SttStrEdit: TLabeledEdit
     Left = 12
-    Top = 24
-    Width = 121
+    Top = 20
+    Width = 341
     Height = 21
+    Anchors = [akLeft, akTop, akRight]
     EditLabel.Width = 57
     EditLabel.Height = 18
     EditLabel.Caption = 'SttStrEdit'

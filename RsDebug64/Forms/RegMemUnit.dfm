@@ -233,17 +233,28 @@ inherited RegMemForm: TRegMemForm
     TabOrder = 3
     ExplicitLeft = 212
     ExplicitTop = 205
+    ExplicitWidth = 605
+    ExplicitHeight = 345
     inherited ShowTypePageCtrl: TPageControl
       Width = 605
       Height = 345
       ActivePage = MemFrame.WordSheet
+      ExplicitWidth = 605
+      ExplicitHeight = 345
       inherited ByteSheet: TTabSheet
+        ExplicitLeft = 0
+        ExplicitTop = 0
+        ExplicitWidth = 0
+        ExplicitHeight = 0
         inherited ByteGrid: TStringGrid
           Width = 597
           Height = 286
+          ExplicitWidth = 597
+          ExplicitHeight = 286
         end
         inherited ByteGridPanel: TPanel
           Width = 597
+          ExplicitWidth = 597
           inherited Label4: TLabel
             Width = 58
             ExplicitWidth = 58
@@ -258,9 +269,12 @@ inherited RegMemForm: TRegMemForm
         inherited WordGRid: TStringGrid
           Width = 597
           Height = 286
+          ExplicitWidth = 597
+          ExplicitHeight = 286
         end
         inherited WordGridPanel: TPanel
           Width = 597
+          ExplicitWidth = 597
           inherited Label3: TLabel
             Width = 58
             ExplicitWidth = 58
@@ -289,7 +303,7 @@ inherited RegMemForm: TRegMemForm
         inherited Panel1: TPanel
           inherited Panel2: TPanel
             inherited Label1: TLabel
-              Width = 150
+              Width = 67
               ExplicitWidth = 67
             end
           end
@@ -340,7 +354,7 @@ inherited RegMemForm: TRegMemForm
   inherited TreeImages: TImageList
     Left = 112
     Bitmap = {
-      494C0101040009003C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010104000900400010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -724,7 +738,7 @@ inherited RegMemForm: TRegMemForm
   inherited ToolBarImgList: TImageList
     Left = 32
     Bitmap = {
-      494C0101110013002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010111001300300010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000005000000001002000000000000050
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
