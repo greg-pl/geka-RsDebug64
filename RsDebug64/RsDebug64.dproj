@@ -160,10 +160,6 @@
             <Form>MemFrame</Form>
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
-        <DCCReference Include="Frames\AnalogFrameUnit.pas">
-            <Form>AnalogFrame</Form>
-            <DesignClass>TFrame</DesignClass>
-        </DCCReference>
         <DCCReference Include="Frames\BinaryFrameUnit.pas">
             <Form>BinaryFrame</Form>
             <DesignClass>TFrame</DesignClass>

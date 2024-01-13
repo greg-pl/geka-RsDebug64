@@ -3,9 +3,7 @@ program RsDebug64;
 uses
   Forms,
   Main in 'Main.pas' {MainForm},
-
   ExtG2MemoUnit in 'DComp\ExtG2MemoUnit.pas',
-
   RsdDll in 'Tools\RsdDll.pas',
   GkStrUtils in 'Tools\GkStrUtils.pas',
   MapParserUnit in 'Tools\MapParserUnit.pas',
@@ -18,7 +16,6 @@ uses
   UpLoadDefUnit in 'Tools\UpLoadDefUnit.pas',
   ElfParserUnit in 'Tools\ElfParserUnit.pas',
   ProgressWindowUnit in 'Tools\ProgressWindowUnit.pas' {ProgressForm},
-
   About in 'Dialogs\About.pas' {AboutForm},
   SettingUnit in 'Dialogs\SettingUnit.pas' {SettingForm},
   EditTypeItemUnit in 'Dialogs\EditTypeItemUnit.pas' {EditTypeItemForm},
@@ -26,12 +23,9 @@ uses
   ShowDrvInfoUnit in 'Dialogs\ShowDrvInfoUnit.pas' {ShowDrvInfoForm},
   EditSectionsDialog in 'Dialogs\EditSectionsDialog.pas' {EditSectionsDlg},
   OpenConnectionDlgUnit in 'Dialogs\OpenConnectionDlgUnit.pas' {OpenConnectionDlg},
-
   MemFrameUnit in 'Frames\MemFrameUnit.pas' {MemFrame: TFrame},
-  AnalogFrameUnit in 'Frames\AnalogFrameUnit.pas' {AnalogFrame: TFrame},
   BinaryFrameUnit in 'Frames\BinaryFrameUnit.pas' {BinaryFrame: TFrame},
   SectionsDefUnit in 'Frames\SectionsDefUnit.pas' {SectionsDefFrame: TFrame},
-
   StructShowUnit in 'Forms\StructShowUnit.pas' {StructShowForm},
   RegMemUnit in 'Forms\RegMemUnit.pas' {RegMemForm: TMemForm},
   BinaryMemUnit in 'Forms\BinaryMemUnit.pas' {BinaryMemForm},
@@ -45,16 +39,12 @@ uses
   WavGenUnit in 'Forms\WavGenUnit.pas' {WavGenForm},
   VarListUnit in 'Forms\VarListUnit.pas' {VarListForm},
   UpLoadFileUnit in 'Forms\UpLoadFileUnit.pas' {UpLoadFileForm},
-
   Wykres3Unit in '..\Wykres3\Wykres3Unit.pas',
   WykresEngUnit in '..\Wykres3\WykresEngUnit.pas',
-
   Rsd64Definitions in '..\Common\Rsd64Definitions.pas',
   CrcUnit in '..\Common\CrcUnit.pas',
   CallProcessUnit in '..\Common\CallProcessUnit.pas',
   JSonUtils in '..\Common\JSonUtils.pas',
-
-
   SttObjectDefUnit in '..\JSonSTT\SttObjectDefUnit.pas',
   SttFrameUartUnit in '..\JSonSTT\SttFrameUartUnit.pas' {SttFrameUart},
   SttFrameBaseUnit in '..\JSonSTT\SttFrameBaseUnit.pas' {SttFrameBase: TFrame},
@@ -66,7 +56,6 @@ uses
   SttFrameAddrIpUnit in '..\JSonSTT\SttFrameAddrIpUnit.pas' {SttFrameAddrIp: TFrame},
   SttScrollBoxUnit in '..\JSonSTT\SttScrollBoxUnit.pas',
   SttFrameStrUnit in '..\JSonSTT\SttFrameStrUnit.pas' {SttFrameStr: TFrame},
-
   EditDrvParamsUnit in 'Dialogs\EditDrvParamsUnit.pas' {EditDrvParamsForm};
 
 {$R *.res}
