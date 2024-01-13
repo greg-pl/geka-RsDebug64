@@ -8,7 +8,7 @@ uses
   ExtCtrls,
   SimpSock_Tcp,
   ErrorDefUnit;
-  //Rsd64Definitions;
+// Rsd64Definitions;
 
 type
   TStLinkDrv = class;
@@ -30,6 +30,7 @@ type
     function WaitReplay(var txt: AnsiString; time: cardinal): TStatus;
     function HexToBytes(var buf: TBytes; txt: AnsiString): boolean;
     function GetGdbError(repl: string): TStatus;
+    function EscapeBuf(buf: TBytes): TBytes;
 
   public
     OnLog: TOnLog;
@@ -44,6 +45,8 @@ type
 
     function RCommand(rcmd: string; var repl: string; verbose: boolean): TStatus; overload;
     function RCommand(rcmd: string): TStatus; overload;
+    function RCommand_Stop: TStatus;
+    function RCommand_Continue: TStatus;
 
   end;
 
@@ -52,12 +55,10 @@ function StringToBytes(txt: AnsiString): TBytes;
 
 implementation
 
-
-
 function ParseArray(txt: string): TBytes;
 var
   SL: TStringList;
-  n, i: integer;
+  i: integer;
   b: integer;
 begin
   SL := TStringList.Create;
@@ -111,9 +112,9 @@ begin
 end;
 
 procedure TStLinkDrv.SimpTcpOnMsgReadProc(Sender: TObject);
-var
-  txt: AnsiString;
-  st: TStatus;
+// var
+// txt: AnsiString;
+// st: TStatus;
 begin
   // st := SimpTcp.ReadAnsiStr(txt);
   // Log(Format('OnRead, st=%d [%s]', [st, txt]));
@@ -202,6 +203,7 @@ var
   i, n: integer;
   b: byte;
 begin
+  Result := true;
   n := length(txt) div 2;
   setlength(buf, n);
   for i := 0 to n - 1 do
@@ -363,7 +365,7 @@ begin
         st := stReplyFormatError;
     end;
     if length(buf) <> cnt then
-      st := GetGdbError(repl);
+      st := GetGdbError(String(repl));
   end;
   Result := st;
 end;
@@ -373,6 +375,16 @@ var
   repl: string;
 begin
   Result := RCommand(rcmd, repl, true);
+end;
+
+function TStLinkDrv.RCommand_Stop: TStatus;
+begin
+  Result := RCommand('s');
+end;
+
+function TStLinkDrv.RCommand_Continue: TStatus;
+begin
+  Result := RCommand('c');
 end;
 
 function TStLinkDrv.RCommand(rcmd: string; var repl: string; verbose: boolean): TStatus;
@@ -391,19 +403,73 @@ begin
   Result := st;
 end;
 
+function TStLinkDrv.EscapeBuf(buf: TBytes): TBytes;
+var
+  i, n, k: integer;
+begin
+  n := length(buf);
+  k := 0;
+  for i := 0 to n - 1 do
+  begin
+    if (buf[i] = 35) or (buf[i] = $7D) then
+      inc(k);
+  end;
+  if k <> 0 then
+  begin
+    setlength(Result, n + k);
+    k := 0;
+    for i := 0 to n - 1 do
+    begin
+      if buf[i] = 35 then
+      begin
+        Result[k] := $7D;
+        Result[k + 1] := $03;
+        inc(k, 2);
+      end
+      else if buf[i] = $7d then
+      begin
+        Result[k] := $7D;
+        Result[k + 1] := $5D;
+        inc(k, 2);
+      end
+      else
+      begin
+        Result[k] := buf[i];
+        inc(k);
+      end;
+    end;
+  end
+  else
+    Result := buf;
+
+end;
+
 function TStLinkDrv.WriteMem(adr: cardinal; buf: TBytes): TStatus;
 var
+  buf1: TBytes;
+  n1: integer;
   buf2: TBytes;
   n, n2: integer;
   st: TStatus;
+  repl: AnsiString;
 begin
   n := length(buf);
   buf2 := StringToBytes(AnsiString(Format('X%x,%x:', [adr, n])));
   n2 := length(buf2);
-  setlength(buf2, n2 + n);
-  move(buf[0], buf2[n2], n);
+  buf1 := EscapeBuf(buf);
+  n1 := length(buf1);
+  setlength(buf2, n2 + n1);
+  move(buf1[0], buf2[n2], n1);
   st := WriteCmd(buf2);
-
+  if st = stOk then
+  begin
+    st := WaitPlusReplay(repl, 500);
+    if st = stOk then
+    begin
+      if repl <> 'OK' then
+        st := GetGdbError(repl);
+    end;
+  end;
   Result := st;
 end;
 

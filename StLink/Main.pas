@@ -215,7 +215,7 @@ procedure TForm2.CmdCBtnClick(Sender: TObject);
 var
   st: TStatus;
 begin
-  st := StLinkDrv.RCommand('c');
+  st := StLinkDrv.RCommand_Continue;
   Wr(Format('Continue, st=%d', [st]));
 end;
 
@@ -223,7 +223,7 @@ procedure TForm2.CmdSBtnClick(Sender: TObject);
 var
   st: TStatus;
 begin
-  st := StLinkDrv.RCommand('s');
+  st := StLinkDrv.RCommand_Stop;
   Wr(Format('Stop, st=%d', [st]));
 end;
 

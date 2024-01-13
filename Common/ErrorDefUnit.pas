@@ -27,6 +27,7 @@ const
   stReplySumError = 16;
   stReplyFormatError = 17;
   stConnectError = 18;
+  stNoLogger = 19;
 
   stMdbError = 50;
   stMdbExError = 100;

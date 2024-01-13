@@ -70,10 +70,12 @@ begin
   begin
     st := dev.TerminalSendKey(Handle, Key);
     Key := #0;
+{
     if st = stOK then
     begin
       ReadBtn.Down := true;
     end;
+}
   end;
 end;
 

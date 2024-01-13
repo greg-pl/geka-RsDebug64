@@ -113,8 +113,6 @@ type
   private
     MaxRecBuf: integer;
     MaxSndBuf: integer;
-    mReadStrPart: AnsiString;
-    mReadStrPartSt: TStatus;
   protected
     FNonBlkMode: boolean;
     procedure DoOnConnect; override;

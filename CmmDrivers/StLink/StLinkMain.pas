@@ -174,9 +174,7 @@ end;
 
 function GetErrStr(Id: TAccId; Code: TStatus; s: PAnsiChar; Max: integer): boolean; stdcall;
 var
-  Dev: TDevItem;
   R: string;
-  s1: AnsiString;
 begin
   Result := True;
   case Code of
@@ -268,16 +266,6 @@ begin
     Result := stBadId;
 end;
 
-function TerminalRead(Id: TAccId; Buf: PAnsiChar; var rdcnt: integer): TStatus; stdcall;
-var
-  Dev: TDevItem;
-begin
-  Dev := GlobDevList.FindId(Id);
-  if Dev <> nil then
-    Result := Dev.TerminalRead(Buf, rdcnt)
-  else
-    Result := stBadId;
-end;
 
 function TerminalSetPipe(Id: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
 var
@@ -303,7 +291,6 @@ end;
 
 type
   TModbusLibPropertyBuilder = class(TLibPropertyBuilder)
-  protected
   public
     constructor Create;
   end;
@@ -311,7 +298,6 @@ type
 constructor TModbusLibPropertyBuilder.Create;
 var
   Par : TDevItem.TOpenParams;
-
 begin
   inherited;
   Par.InitDefault;

@@ -146,6 +146,8 @@ type
       MaxLen: integer; var Len: integer): TStatus;
     function SeReadFileHd(SesId: TSesID; FileNr: TFileNr; var Buf; var Cnt: integer): TStatus;
     function SeWriteFileHd(SesId: TSesID; FileNr: TFileNr; const Buf; var Cnt: integer): TStatus;
+    // obsluga terminala
+    function TerminalRead(Buf: PAnsiChar; var rdcnt: integer): TStatus;
   protected
     procedure CallBackFunct(Ev: integer; R: real);
     procedure SetProgress(F: real); overload;
@@ -192,7 +194,6 @@ type
 
     // obsluga terminala
     function TerminalSendKey(key: AnsiChar): TStatus;
-    function TerminalRead(Buf: PAnsiChar; var rdcnt: integer): TStatus;
     function TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
     function TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
 

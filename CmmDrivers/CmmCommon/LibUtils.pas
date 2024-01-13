@@ -19,6 +19,7 @@ var
 function GetUserMem(MemSize: integer): PAnsiChar;
 procedure Logger(LogLevel: integer; Txt: string);
 function DSwap(w: cardinal): cardinal;
+function GetDWord(const b): cardinal;
 
 implementation
 
@@ -44,6 +45,20 @@ function DSwap(w: cardinal): cardinal;
 begin
   Result := ((w and $000000FF) shl 24) or ((w and $0000FF00) shl 8) or ((w and $00FF0000) shr 8) or
     ((w and $FF000000) shr 24);
+end;
+
+function GetDWord(const b): cardinal;
+var
+  p: pByte;
+begin
+  p := @b;
+  Result := p^;
+  inc(p);
+  Result := Result or (p^ shl 8);
+  inc(p);
+  Result := Result or (p^ shl 16);
+  inc(p);
+  Result := Result or (p^ shl 24);
 end;
 
 initialization

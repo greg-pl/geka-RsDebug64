@@ -310,18 +310,6 @@ begin
     Result := stBadId;
 end;
 
-function TerminalRead(Id: TAccId; Buf: PAnsiChar; var rdcnt: integer): TStatus; stdcall;
-
-var
-  Dev: TDevItem;
-begin
-  Dev := GlobDevList.FindId(Id);
-  if Dev <> nil then
-    Result := Dev.TerminalRead(Buf, rdcnt)
-  else
-    Result := stBadId;
-end;
-
 function TerminalSetPipe(Id: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
 var
   Dev: TDevItem;

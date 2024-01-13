@@ -60,7 +60,6 @@ type
     // terminal
     function isTerminalFunctions: boolean;
     function TerminalSendKey(RHan: THandle; key: char): TStatus;
-    function TerminalRead(RHan: THandle; var Buf; var rdcnt: integer): TStatus;
     function TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
     function TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
 
@@ -174,7 +173,6 @@ type
 
   // Terminal
   TTerminalSendKey = function(ID: TAccId; key: char): TStatus; stdcall;
-  TTerminalRead = function(ID: TAccId; var Buffer; var rdcnt: integer): TStatus; stdcall;
   TTerminalSetPipe = function(ID: TAccId; TerminalNr: integer; PipeHandle: THandle): TStatus; stdcall;
   TTerminalSetRunFlag = function(ID: TAccId; TerminalNr: integer; RunFlag: boolean): TStatus; stdcall;
 
@@ -449,19 +447,6 @@ begin
     Result := stNoImpl;
 end;
 
-function TCmmDevice.TerminalRead(RHan: THandle; var Buf; var rdcnt: integer): TStatus;
-var
-  _TerminalRead: TTerminalRead;
-begin
-  ProgressHandle := RHan;
-  @_TerminalRead := GetProcAddress(DllHandle, 'TerminalRead');
-  if Assigned(_TerminalRead) then
-  begin
-    Result := _TerminalRead(FID, Buf, rdcnt);
-  end
-  else
-    Result := stNoImpl;
-end;
 
 function TCmmDevice.TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
 var
