@@ -3,7 +3,8 @@ unit RsdDll;
 interface
 
 uses
-  Classes, Windows, Messages, SysUtils, Contnrs, Registry,
+  Classes, Windows, Messages, SysUtils, Contnrs, Registry,AnsiStrings,
+  System.Types,
   GkStrUtils,
   ProgCfgUnit,
   System.JSON,
@@ -206,8 +207,6 @@ constructor TCmmDevice.Create(AHandle: THandle; ConnectParamJson: string);
 var
   _AddDev: TAddDev;
   _RegBeck: TRegisterCallBackFun;
-  S: string;
-  channel: integer;
   AnsiConnectStr: AnsiString;
   driverName: string;
   CmmLib: TCmmLibrary;
@@ -517,7 +516,7 @@ begin
     setlength(txt, 200);
     if GetErrStr(Code, pAnsiChar(txt), length(txt) - 1) then
     begin
-      setlength(txt, strlen(pAnsiChar(txt)));
+      setlength(txt, AnsiStrings.strlen(pAnsiChar(txt)));
       Result := String(txt);
     end
     else

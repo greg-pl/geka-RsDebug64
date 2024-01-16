@@ -162,7 +162,7 @@ type
     function ReadPipe: boolean;
   public
     CircularBuffer: TCircularBuffer;
-    constructor Create(isAnsiChar: boolean);
+    constructor Create(ThreadName: string; isAnsiChar: boolean);
     destructor Destroy; override;
     procedure Execute; override;
     procedure setHandle(aHandle: THandle);
@@ -265,12 +265,13 @@ begin
   end;
 end;
 
-constructor TPipeRider.Create(isAnsiChar: boolean);
+constructor TPipeRider.Create(ThreadName: string; isAnsiChar: boolean);
 var
   SecurityAttributes: TSecurityAttributes;
 begin
   inherited Create(true);
-  NameThreadForDebugging('ExtG2MemoUnit-TPipeRider');
+  NameThreadForDebugging(ThreadName, ThreadID);
+
   FIsAnsiChar := isAnsiChar;
   FOwnerHandle := INVALID_HANDLE_VALUE;
   FillChar(SecurityAttributes, SizeOf(SecurityAttributes), 0);
@@ -388,7 +389,6 @@ begin
   ScrollBtn.GroupIndex := 2;
   ScrollBtn.Down := true;
 
-
   Menu := TPopUpMenu.Create(self);
 
   MItem := TMenuItem.Create(Menu);
@@ -437,9 +437,9 @@ begin
   LogTimer.Interval := 1000;
   LogTimer.OnTimer := LogTimerProc;
 
-  WideCharPipeRider := TPipeRider.Create(false);
+  WideCharPipeRider := TPipeRider.Create('ExtG2Memo-Wide-PipeRider', false);
   FWideCharPipeIn := (WideCharPipeRider as TPipeRider).PipeIn;
-  AnsiCharPipeRider := TPipeRider.Create(true);
+  AnsiCharPipeRider := TPipeRider.Create('ExtG2Memo-Ansi-PipeRider', true);
   FAnsiPipeIn := (AnsiCharPipeRider as TPipeRider).PipeIn;
 
   ColorScheme := ColorSchemeWhite;

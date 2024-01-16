@@ -62,8 +62,6 @@ procedure TEditDrvParamsForm.FormShow(Sender: TObject);
 var
   s: string;
   jVal: TJSONValue;
-  jObj: TJsonObject;
-  jObj2: TJsonObject;
   List: TSttObjectListJson;
   jLoader: TJSONLoader;
 begin

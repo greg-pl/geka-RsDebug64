@@ -59,7 +59,7 @@ object MainForm: TMainForm
       item
         Control = ButtonBar
         ImageIndex = -1
-        Width = 717
+        Width = 712
       end>
     Color = clBtnFace
     EdgeInner = esNone
@@ -304,30 +304,31 @@ object MainForm: TMainForm
       Category = 'ModbusStd'
       Caption = 'Registers'
       OnExecute = MemRegistersActExecute
-      OnUpdate = MemoryWinActUpdate
+      OnUpdate = MemRegistersActUpdate
     end
     object MemAnalogInputAct: TAction
       Category = 'ModbusStd'
       Caption = 'Analog Inputs'
       OnExecute = MemAnalogInputActExecute
-      OnUpdate = MemoryWinActUpdate
+      OnUpdate = MemRegistersActUpdate
     end
     object MemCoilAct: TAction
       Category = 'ModbusStd'
       Caption = 'Coils'
       OnExecute = MemCoilActExecute
-      OnUpdate = MemoryWinActUpdate
+      OnUpdate = MemRegistersActUpdate
     end
     object MemBinaryInputAct: TAction
       Category = 'ModbusStd'
       Caption = 'Binary Inputs'
       OnExecute = MemBinaryInputActExecute
-      OnUpdate = MemoryWinActUpdate
+      OnUpdate = MemRegistersActUpdate
     end
     object actRZ40EventReader: TAction
       Category = 'ModbusStd'
       Caption = 'Rz40 Event Reader'
       OnExecute = actRZ40EventReaderExecute
+      OnUpdate = MemRegistersActUpdate
     end
     object RfcWinAct: TAction
       Category = 'DebugWin'
@@ -574,7 +575,7 @@ object MainForm: TMainForm
     Left = 169
     Top = 88
     Bitmap = {
-      494C01010D00C800C40010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010D00C800D00010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000004000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

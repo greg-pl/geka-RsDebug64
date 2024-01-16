@@ -28,13 +28,12 @@ type
     TermMemo: TExtG2Memo;
     procedure TerminalKeyPressEventProc(Sender: TObject; var Key: Char);
   protected
-    function GetDefaultCaption: string; override;
 
   public
     function GetJSONObject: TJSONBuilder; override;
     procedure LoadfromJson(jLoader: TJSONLoader); override;
-
     procedure AfterConnChanged; override;
+    function GetDefaultCaption: string; override;
   end;
 
 implementation
@@ -70,12 +69,8 @@ begin
   begin
     st := dev.TerminalSendKey(Handle, Key);
     Key := #0;
-{
-    if st = stOK then
-    begin
-      ReadBtn.Down := true;
-    end;
-}
+    if st <> stOK then
+      DoMsg(Format('TerminalSendKey: %s', [dev.GetErrStr(st)]));
   end;
 end;
 
@@ -142,8 +137,6 @@ begin
 end;
 
 procedure TTerminalForm.ReadBtnClick(Sender: TObject);
-var
-  st: TStatus;
 begin
   inherited;
   AfterConnChanged;

@@ -121,9 +121,12 @@ begin
   if Dev <> nil then
   begin
     n := System.AnsiStrings.strLen(jsonParams);
-    setlength(s1, n);
-    move(jsonParams^, s1[1], n);
-    Result := Dev.SetDrvParams(String(s1));
+    if n>0 then
+    begin
+      setlength(s1, n);
+      move(jsonParams^, s1[1], n);
+      Result := Dev.SetDrvParams(String(s1));
+    end;
   end
   else
     Result := stBadId;

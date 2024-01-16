@@ -1,10 +1,10 @@
 object EditVarItemForm: TEditVarItemForm
   Left = 727
   Top = 356
-  Width = 321
-  Height = 259
   BorderIcons = [biSystemMenu]
   Caption = 'EditVarItemForm'
+  ClientHeight = 220
+  ClientWidth = 305
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -23,11 +23,11 @@ object EditVarItemForm: TEditVarItemForm
     Height = 161
   end
   object Label1: TLabel
-    Left = 32
-    Top = 80
-    Width = 72
+    Left = 25
+    Top = 81
+    Width = 63
     Height = 16
-    Caption = 'Nazwa typu '
+    Caption = 'Type name'
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
     Font.Height = -13
@@ -36,11 +36,11 @@ object EditVarItemForm: TEditVarItemForm
     ParentFont = False
   end
   object Label2: TLabel
-    Left = 40
-    Top = 144
-    Width = 121
+    Left = 25
+    Top = 137
+    Width = 90
     Height = 16
-    Caption = 'Spos'#243'b wy'#347'wietlania'
+    Caption = 'Display method'
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
     Font.Height = -13
@@ -49,11 +49,11 @@ object EditVarItemForm: TEditVarItemForm
     ParentFont = False
   end
   object Label3: TLabel
-    Left = 48
-    Top = 112
-    Width = 94
+    Left = 25
+    Top = 110
+    Width = 105
     Height = 16
-    Caption = 'Ilo'#347#263' powt'#243'rze'#324' '
+    Caption = 'Count of repetition'
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
     Font.Height = -13
@@ -62,11 +62,11 @@ object EditVarItemForm: TEditVarItemForm
     ParentFont = False
   end
   object Label4: TLabel
-    Left = 32
-    Top = 18
-    Width = 39
+    Left = 25
+    Top = 21
+    Width = 34
     Height = 16
-    Caption = 'Nazwa'
+    Caption = 'Name'
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
     Font.Height = -13
@@ -75,11 +75,11 @@ object EditVarItemForm: TEditVarItemForm
     ParentFont = False
   end
   object Label5: TLabel
-    Left = 32
-    Top = 50
-    Width = 67
+    Left = 25
+    Top = 53
+    Width = 81
     Height = 16
-    Caption = 'Adres (hex)'
+    Caption = 'Addreds (hex)'
     Font.Charset = EASTEUROPE_CHARSET
     Font.Color = clWindowText
     Font.Height = -13
@@ -97,7 +97,6 @@ object EditVarItemForm: TEditVarItemForm
     Font.Height = -11
     Font.Name = 'Courier'
     Font.Style = []
-    ItemHeight = 13
     ParentFont = False
     TabOrder = 2
     Text = 'TypeNameBox'
@@ -114,7 +113,6 @@ object EditVarItemForm: TEditVarItemForm
     Font.Height = -11
     Font.Name = 'Courier'
     Font.Style = []
-    ItemHeight = 13
     ParentFont = False
     TabOrder = 4
     OnKeyPress = SelectBoxKeyPress

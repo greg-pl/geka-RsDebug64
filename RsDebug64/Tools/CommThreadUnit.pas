@@ -304,7 +304,7 @@ end;
 constructor TCommThread.Create;
 begin
   inherited Create(true);
-  NameThreadForDebugging('TCommThread');
+  NameThreadForDebugging('RsDebuger2-TCommThread', ThreadID);
   FToDoList := TSafeList.Create;
   FThDev := nil;
   FAsyncMutex := CreateEvent(Nil, true, False, 'FRE_EVENT');
@@ -328,7 +328,6 @@ end;
 function TCommThread.ReadPtr(OwnerH: THandle; ptrAdr: cardinal; var addr: cardinal): TStatus;
 var
   ptrSize: Integer;
-  st: TStatus;
   TabPtr: array [0 .. 3] of byte;
 begin
   if Assigned(FThDev) then
@@ -341,6 +340,7 @@ begin
       ps32:
         ptrSize := 4;
     else
+      ptrSize := 4;
       Result := stError;
     end;
     if Result = stOk then
@@ -442,12 +442,9 @@ end;
 
 procedure TCommThread.Execute;
 var
-  Msg: TMsg;
   st: TStatus;
   obj: TObject;
   item: TCommWorkItem;
-  rd: TWorkRdMemItem;
-  wr: TWorkWrMemItem;
   TT: cardinal;
 begin
   mThreadId := ThreadID;

@@ -231,11 +231,11 @@ end;
 
 function GetHostName: string;
 var
-  s1: string;
+  s1: AnsiString;
 begin
   SetLength(s1, 250);
   WinSock2.GetHostName(PAnsiChar(s1), length(s1));
-  Result := String(PChar(s1));
+  Result := String(PAnsiChar(s1));
 end;
 
 procedure GetLocalAdresses(SL: TStrings);
@@ -246,9 +246,11 @@ var
   i: integer;
   AHost: PHostEnt;
   PAdrPtr: PaPInAddr;
+  hname : ansistring;
 begin
   SL.Clear;
-  AHost := GetHostByName(PAnsiChar(GetHostName));
+  hname := AnsiString(GetHostName);
+  AHost := GetHostByName(PAnsiChar(hname));
   if AHost <> nil then
   begin
     PAdrPtr := PaPInAddr(AHost^.h_addr_list);

@@ -56,7 +56,6 @@ end;
 
 function TComList.GetComAccessHandle(ComNr: integer; var ComHandle: THandle; var SemHandle: THandle): boolean;
 var
-  i: integer;
   it: TComItem;
   s: string;
 begin

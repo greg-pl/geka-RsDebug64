@@ -214,7 +214,6 @@ label
   ErrorLab;
 var
   errTxt: string;
-  st: TStatus;
 begin
   inherited;
   errTxt := '';
@@ -264,7 +263,6 @@ label
   ErrorLab;
 var
   item: TCommWorkItem;
-  errTxt: string;
 begin
   item := TCommWorkItem(Msg.WParam);
   if item.result = stOK then

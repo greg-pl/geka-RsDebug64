@@ -405,7 +405,7 @@ begin
     if A <> UNKNOWN_ADRESS then
       VarAdres := A
     else
-      OnMsg('nie odnaleziono zmiennej: ' + Name);
+      OnMsg('Variable not found: ' + Name);
   end;
 end;
 
@@ -748,26 +748,25 @@ var
 begin
   Item := TWorkRdMemItem(Msg.WParam);
   RdRegion := RdRegionList.FindRegion(Item);
-  if Assigned(RdRegion) = false then
-    raise Exception.Create('RdRegion not found');
-
-  // MainForm.NL(Format('Read AddRegion Adr=0x%8X size=%u', [RdRegion.FAdr, RdRegion.GetSize]));
-
-  for i := 0 to Count - 1 do
+  if Assigned(RdRegion) then
   begin
-    if Items[i].RgIdx = RdRegion.FRgIdx then
+    // MainForm.NL(Format('Read AddRegion Adr=0x%8X size=%u', [RdRegion.FAdr, RdRegion.GetSize]));
+    for i := 0 to Count - 1 do
     begin
-      if Item.Result = stOK then
+      if Items[i].RgIdx = RdRegion.FRgIdx then
       begin
-        Ofs := Items[i].VarAdres - RdRegion.FAdr;
-        System.move(RdRegion.FBuf[Ofs], Items[i].Mem[0], Items[i].Size);
-        Items[i].FillFlag := true;
+        if Item.Result = stOK then
+        begin
+          Ofs := Items[i].VarAdres - RdRegion.FAdr;
+          System.move(RdRegion.FBuf[Ofs], Items[i].Mem[0], Items[i].Size);
+          Items[i].FillFlag := true;
+        end;
       end;
     end;
+    RdRegionList.Delete(RdRegionList.IndexOf(RdRegion));
+    if RdRegionList.Count = 0 then
+      PostMessage(FOwnerHandle, wm_AllDone, 0, Item.Result);
   end;
-  RdRegionList.Delete(RdRegionList.IndexOf(RdRegion));
-  if RdRegionList.Count = 0 then
-    PostMessage(FOwnerHandle, wm_AllDone, 0, 0);
   Item.Free;
 end;
 
@@ -864,8 +863,6 @@ begin
 end;
 
 procedure TVarListForm.LoadfromJson(jParent: TJSONLoader);
-var
-  jParent2: TJSONLoader;
 begin
   inherited;
   SetViewListColumnWidts(VarListView, jParent.getDynIntArray('ListColWidth'));
@@ -1005,6 +1002,7 @@ end;
 procedure TVarListForm.wmAllDone(var Msg: TMessage);
 begin
   ReloadVarList;
+  BufSt := (Msg.LParam = stOK);
 end;
 
 procedure TVarListForm.ReloadVarListNoMove;
@@ -1057,7 +1055,8 @@ begin
   end;
   VarListView.AlphaSort;
   VarListView.Items.EndUpdate;
-  GridVarList.ReloadMapParser(DoMsg);
+  if MapParser.isLoaded then
+    GridVarList.ReloadMapParser(DoMsg);
   FillShowVarGrid;
   StatusBar.Panels[2].Text := Format('N=%u', [VarListView.Items.Count]);
 end;
@@ -1577,7 +1576,6 @@ var
   M: TViewVar;
   i: integer;
   s: string;
-  st: TStatus;
 begin
   inherited;
   n := ShowVarGrid.Row - 1;
@@ -1729,9 +1727,10 @@ procedure TVarListForm.AutoReadActExecute(Sender: TObject);
 begin
   inherited;
   (Sender as TAction).Checked := not((Sender as TAction).Checked);
-  AutoRepTimer.Enabled := (Sender as TAction).Checked;
   try
     AutoRepTimer.Interval := StrToInt(AutoRepTmEdit.Text);
+    AutoRepTimer.Enabled := (Sender as TAction).Checked;
+    BufSt := true;
   except
     ShowMessage('èle wprowadzony czas repetycji');
   end;
@@ -1744,6 +1743,7 @@ begin
   ReadVarActExecute(Sender);
   AutoRepTimer.Enabled := BufSt;
   AutoReadAct.Checked := BufSt;
+  BufSt := true;
 end;
 
 procedure TVarListForm.ShowMemActExecute(Sender: TObject);

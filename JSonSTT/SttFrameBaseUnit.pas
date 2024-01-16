@@ -223,7 +223,6 @@ class function TSttFrameBase.InitFloatEditItem(Box: TLabeledEdit; ParamList: TSt
   : TSttFloatObjectJson;
 var
   stt: TSttObjectJson;
-  f_Stt: TSttFloatObjectJson;
 begin
   stt := ParamList.FindSttObject(SttName);
   if Assigned(stt) then

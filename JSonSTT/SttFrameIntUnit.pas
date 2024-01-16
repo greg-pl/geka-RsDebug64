@@ -19,6 +19,7 @@ type
     minVal: integer;
     maxVal: integer;
     defVal: integer;
+    HexFormat: boolean;
   public
     procedure LoadField(ParamList: TSttObjectListJson); override;
     function getSttData(obj: TJSONObject): boolean; override;
@@ -42,7 +43,15 @@ begin
     minVal := obj.minVal;
     maxVal := obj.maxVal;
     defVal := obj.defVal;
-    SttIntEdit.Hint := Format('Range %d-%d default=%d',[minVal,MaxVal,defVal]);
+    HexFormat := obj.HexFormat;
+    if (minVal <> NAN_INT) and (maxVal <> NAN_INT) then
+    begin
+      if not(HexFormat) then
+        SttIntEdit.Hint := Format('Range %d-%d default=%d', [minVal, maxVal, defVal])
+      else
+        SttIntEdit.Hint := Format('Range 0x%X-0x%X default=0x%X', [minVal, maxVal, defVal])
+    end;
+
     SttIntEdit.ShowHint := true;
 
   end;
@@ -55,22 +64,46 @@ begin
   Result := false;
   if tryStrToInt(SttIntEdit.Text, v) then
   begin
-    Result := (v >= minVal) and (v <= maxVal);
+    Result := true;
+    if minVal <> NAN_INT then
+      Result := Result and (v >= minVal);
+    if maxVal <> NAN_INT then
+      Result := Result and (v <= maxVal);
   end;
   if Result then
-    obj.AddPair(TJSONPair.Create(FItemName, IntToStr(v)))
+  begin
+    obj.AddPair(TJSONPair.Create(FItemName, IntToStr(v)));
+  end
   else
     SttIntEdit.SetFocus;
 end;
 
 procedure TSttFrameInt.setData(obj: TJSONObject);
+var
+  jPair: TJSONPair;
+  addr: cardinal;
 begin
-  LoadValIntEditJSon(obj, FItemName, SttIntEdit);
+  if not(HexFormat) then
+    LoadValIntEditJSon(obj, FItemName, SttIntEdit)
+  else
+  begin
+    jPair := obj.Get(FItemName);
+    if Assigned(jPair) then
+    begin
+      if tryStrToUInt(jPair.JsonValue.value, addr) then
+      begin
+        SttIntEdit.Text := '0x' + IntToHex(addr, 2);
+      end;
+    end;
+  end;
 end;
 
 procedure TSttFrameInt.LoadDefaultValue;
 begin
-  SttIntEdit.Text := IntToStr(defVal);
+  if not(HexFormat) then
+    SttIntEdit.Text := IntToStr(defVal)
+  else
+    SttIntEdit.Text := '0x' + IntToHex(defVal, 2);
 end;
 
 procedure TSttFrameInt.setActive(active: boolean);

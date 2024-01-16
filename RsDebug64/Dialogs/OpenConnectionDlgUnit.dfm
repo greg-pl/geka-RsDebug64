@@ -8,7 +8,9 @@ object OpenConnectionDlg: TOpenConnectionDlg
   ParentFont = True
   OldCreateOrder = True
   Position = poMainFormCenter
+  OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   DesignSize = (
     476

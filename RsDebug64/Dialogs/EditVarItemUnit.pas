@@ -50,7 +50,7 @@ var
   n : TShowMode;
   k : integer;
 begin
-  Caption := 'W³aœciwoœci zmiennej: '+VarName;
+  Caption := 'Variable property: '+VarName;
   DisplayTypeBox.Items.Clear;
   for n := low(TShowMode) to high(TShowMode) do
     DisplayTypeBox.Items.Add(ShowModeTxt[n]);
@@ -82,7 +82,7 @@ begin
   for i:=1 to L do 
   begin
     if not(s[i] in AcceptChar) then
-      raise exception.Create(Format('znak %s nie jest dozwolony',[s[1]]));
+      raise exception.Create(Format('char %s is not allowed',[s[1]]));
   end;
   Result := s;
 end;

@@ -28,19 +28,19 @@ const
   OPEN_VERBOSCALLERMODE = 'ThreadVerbose';
   OPEN_SWDMODE = 'SwdMode';
   OPEN_PATHTOPROGR = 'PathProgrammer';
+  OPEN_LOGGER_START = 'LogerVecAddres';
+
+  COUNT_DIVIDE_MIN = 128;
+  COUNT_DIVIDE_DEFAULT = 1024;
+  LOGGER_ASK_TIME_MIN = 20;
+  LOGGER_ASK_TIME_DEFAULT = 100;
 
 type
 
   TAnsiChars = array of AnsiChar;
-  PByteAr = ^TByteAr;
-  TByteAr = array [0 .. 240 - 1 + 40] of byte;
-  TTabBit = array [0 .. 32768] of boolean;
-  TTabByte = array [0 .. 32768] of byte;
-  TTabWord = array [0 .. 32768] of word;
-
   TDevItem = class;
 
-  TTerminalThread = class(TThread)
+  TLoggerThread = class(TThread)
   private
     FOwner: TDevItem;
     FEventHandle: THandle;
@@ -80,7 +80,7 @@ type
     TTerminalData = record
       PipeHandle: THandle;
       RunFlag: boolean;
-      Thread: TTerminalThread;
+      Thread: TLoggerThread;
     end;
 
   private
@@ -89,9 +89,9 @@ type
     StLinkDrv: TStLinkDrv;
 
     FCountDivide: integer;
-    DriverMode: string;
+    FLoggerReadTime: integer;
 
-    FTermial: TTerminalData;
+    FLogger: TTerminalData;
 
     FCallBackFunc: TCallBackFunc;
     FCmmId: integer;
@@ -105,7 +105,6 @@ type
     SumRecTime: integer;
     SumSendTime: integer;
 
-    TerminalReadTime: integer;
     FClr_ToRdCnt: boolean; // odbiór ramki az do przerwy
     FStLinkThread: TThread;
 
@@ -113,6 +112,8 @@ type
     FLoggerAddr: cardinal;
 
     procedure FindLoggerVector;
+    function HdRdMemory(Show: boolean; var Buf; Adress: cardinal; Count: cardinal): TStatus;
+    function HdWrMemory(Show: boolean; const Buf; Adress: cardinal; Count: cardinal): TStatus;
 
   protected
     procedure CallBackFunct(Ev: integer; R: real);
@@ -188,32 +189,34 @@ type
     InpBuf: LoggerBufferData_t;
   end;
 
-constructor TTerminalThread.Create(aOwner: TDevItem);
+constructor TLoggerThread.Create(aOwner: TDevItem);
 begin
+  inherited Create(true);
+  NameThreadForDebugging('TLoggerThread', ThreadID);
+
   FOwner := aOwner;
   FRunFlag := false;
   FOutPipe := INVALID_HANDLE_VALUE;
   FEventHandle := CreateEvent(nil, false, false, nil);
-
-  inherited Create(false);
+  Resume;
 end;
 
-destructor TTerminalThread.Destroy;
+destructor TLoggerThread.Destroy;
 begin
   inherited;
   CloseHandle(FEventHandle);
 end;
 
-function TTerminalThread.isRun: boolean;
+function TLoggerThread.isRun: boolean;
 begin
   Result := FRunFlag and (FOutPipe <> INVALID_HANDLE_VALUE) and FOwner.isOpen;
 end;
 
-procedure TTerminalThread.Execute;
+procedure TLoggerThread.Execute;
 var
   st: TStatus;
 begin
-  Logger(1, '\wTerminalThread Start' + #10);
+  Logger(1, '\wLoggerThread Start' + #10);
   while not(Terminated) do
   begin
     WaitForSingleObject(FEventHandle, 1000);
@@ -231,22 +234,22 @@ begin
       end;
     end;
   end;
-  Logger(1, '\wTerminalThread Exit' + #10);
+  Logger(1, '\wLoggerThread Exit' + #10);
 end;
 
-function TTerminalThread.ReadOutLogger(vec: cardinal; var Buffer: TAnsiChars): TStatus;
+function TLoggerThread.ReadOutLogger(vec: cardinal; var Buffer: TAnsiChars): TStatus;
 var
   LoggerRec: LoggerRec_t;
-  head: integer;
-  tail: integer;
-  size: integer;
-  Cnt, cnt1: integer;
+  head: cardinal;
+  tail: cardinal;
+  size: cardinal;
+  Cnt, cnt1: cardinal;
   bufAddr: cardinal;
   w: word;
   ofs1: integer;
 
 begin
-  Result := FOwner.RdMemory(LoggerRec, vec, sizeof(LoggerRec));
+  Result := FOwner.HdRdMemory(false, LoggerRec, vec, sizeof(LoggerRec));
   if Result = stOK then
   begin
     head := LoggerRec.OutBuf.HeadPtr;
@@ -259,22 +262,22 @@ begin
       begin
         Cnt := head - tail;
         setLength(Buffer, Cnt);
-        Result := FOwner.RdMemory(Buffer[0], bufAddr + tail, Cnt);
+        Result := FOwner.HdRdMemory(false, Buffer[0], bufAddr + tail, Cnt);
       end
       else
       begin
         cnt1 := size - tail;
         Cnt := cnt1 + head;
         setLength(Buffer, Cnt);
-        Result := FOwner.RdMemory(Buffer[0], bufAddr + tail, cnt1);
+        Result := FOwner.HdRdMemory(false, Buffer[0], bufAddr + tail, cnt1);
         if Result = stOK then
-          Result := FOwner.RdMemory(Buffer[cnt1], bufAddr, Cnt - cnt1);
+          Result := FOwner.HdRdMemory(false, Buffer[cnt1], bufAddr, Cnt - cnt1);
       end;
       if Result = stOK then
       begin
         w := word(head);
         ofs1 := integer(@LoggerRec.OutBuf.TailPtr) - integer(@LoggerRec);
-        Result := FOwner.WrMemory(w, vec + ofs1, 2);
+        Result := FOwner.HdWrMemory(false, w, vec + ofs1, 2);
       end;
       // Logger(1, Format('LoggerRec: %u-%u %u', [LoggerRec.OutBuf.HeadPtr, LoggerRec.OutBuf.TailPtr, Cnt]) + #10);
     end
@@ -285,7 +288,7 @@ begin
     setLength(Buffer, 0);
 end;
 
-function TTerminalThread.ExecuteRunState: TStatus;
+function TLoggerThread.ExecuteRunState: TStatus;
 var
   Buffer: TAnsiChars;
   WideCh: array of Char;
@@ -298,7 +301,7 @@ begin
   begin
     st := ReadOutLogger(FOwner.FLoggerAddr, Buffer);
     rdcnt := length(Buffer);
-    //Logger(1, Format('terminal rd=%u', [rdcnt]) + #10);
+    // Logger(1, Format('terminal rd=%u', [rdcnt]) + #10);
 
     if (st = stOK) and (rdcnt > 0) then
     begin
@@ -311,18 +314,18 @@ begin
       WriteFile(FOutPipe, WideCh[0], rdcnt * sizeof(Char), BytesWritten, nil);
     end
     else
-      WaitForSingleObject(FEventHandle, FOwner.TerminalReadTime);
+      WaitForSingleObject(FEventHandle, FOwner.FLoggerReadTime);
   end;
   Result := stOK;
 end;
 
-procedure TTerminalThread.SetRunFlag(q: boolean);
+procedure TLoggerThread.SetRunFlag(q: boolean);
 begin
   FRunFlag := q;
   SetEvent(FEventHandle);
 end;
 
-procedure TTerminalThread.Terminate;
+procedure TLoggerThread.Terminate;
 begin
   inherited;
   SetEvent(FEventHandle);
@@ -330,36 +333,35 @@ end;
 
 // ---------------------  TDevItem ---------------------------
 constructor TDevItem.Create(AId: TAccId; OpenParams: TOpenParams);
-var
-  i: integer;
 begin
   inherited Create;
   AccId := AId;
   FOpenParams := OpenParams;
 
   FClr_ToRdCnt := false;
-  TerminalReadTime := 500;
+  FLoggerReadTime := 100;
 
   LastFinished := GetTickCount;
 
   StLinkDrv := TStLinkDrv.Create;
 
-  FTermial.PipeHandle := INVALID_HANDLE_VALUE;
-  FTermial.RunFlag := false;
-  FTermial.Thread := TTerminalThread.Create(self);
+  FLogger.PipeHandle := INVALID_HANDLE_VALUE;
+  FLogger.RunFlag := false;
+  FLogger.Thread := TLoggerThread.Create(self);
+  FCountDivide := COUNT_DIVIDE_DEFAULT;
+  FLoggerReadTime := LOGGER_ASK_TIME_DEFAULT;
+
 end;
 
 destructor TDevItem.Destroy;
-var
-  i: integer;
 begin
   inherited Destroy;
   StLinkDrv.Free;
 
-  FTermial.Thread.Terminate;
-  FTermial.Thread.SetRunFlag(false);
-  FTermial.Thread.WaitFor;
-  FTermial.Thread.Free;
+  FLogger.Thread.Terminate;
+  FLogger.Thread.SetRunFlag(false);
+  FLogger.Thread.WaitFor;
+  FLogger.Thread.Free;
 end;
 
 function TDevItem.Open: TStatus;
@@ -382,13 +384,17 @@ begin
       Param := Param + ' -e';
     if FOpenParams.SwdMode then
       Param := Param + ' -d';
+
     Param := Param + ' -cp ' + FOpenParams.PathProgrammer;
+
+    Param := Param + ' --attach --halt';
+
     // C:\ST\STM32CubeIDE_1.11.2\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.0.500.202209151145\tools\bin
 
     FStLinkThread := CallHideProcess(AnsiChar_LoggerHandle, FOpenParams.StLinkPath, Param, WorkingPath,
       FOpenParams.CallerVerbose, false);
 
-    sleep(200);
+    sleep(500);
     SendGo := true
   end;
 
@@ -396,10 +402,9 @@ begin
   if Result = stOK then
   begin
     FOpenParams.SaveToDefault;
-    FindLoggerVector;
     if SendGo then
       StLinkDrv.RCommand_Continue;
-
+    FindLoggerVector;
   end;
 
 end;
@@ -467,7 +472,7 @@ const
 
   function CompareSign(Buf: TAnsiChars; Ofs: cardinal): boolean;
   var
-    i, n: integer;
+    i, n: cardinal;
   begin
     Result := true;
     n := length(LoggerSign);
@@ -487,15 +492,21 @@ var
   Buffer: TAnsiChars;
   i, n: integer;
   st: TStatus;
+  SM: TMemoryStream;
 begin
   FLoggerFnd := false;
   FLoggerAddr := 0;
 
   setLength(Buffer, LOGGER_VIEW_SIZE);
 
-  st := RdMemory(Buffer[0], FOpenParams.LoggerStartAddr, LOGGER_VIEW_SIZE);
+  st := HdRdMemory(false, Buffer[0], FOpenParams.LoggerStartAddr, LOGGER_VIEW_SIZE);
   if st = stOK then
   begin
+    SM := TMemoryStream.Create;
+    SM.Write(Buffer[0], LOGGER_VIEW_SIZE);
+    SM.SaveToFile('start.bin');
+    SM.Free;
+
     n := length(Buffer) div LoggerAllign;
     for i := 0 to n - 1 do
     begin
@@ -543,9 +554,8 @@ begin
 end;
 
 const
-  PAR_ITEM_DIVIDE_LEN = 'DIVIDE_LEN';
-  PAR_ITEM_DRIVER_MODE = 'DRIVER_MODE';
-  DriverModeName: TStringArr = ['STD', 'SLOW', 'FAST'];
+  PAR_ITEM_DIVIDE_LEN = 'DivideLen';
+  PAR_ITEM_LOGGER_ASK_TIME = 'LoggerTime';
 
 function TDevItem.GetDrvParams: String;
 
@@ -559,12 +569,14 @@ begin
   // description section
   p := TSttObjectListJson.Create;
   try
-    sttObj := TSttIntObjectJson.Create(PAR_ITEM_DIVIDE_LEN, 'Read/write memory divide bloks', 128, 4096, 4096);
-    sttObj.SetUniBool(true);
-    // UniBool=true - allow change during open connection
+    sttObj := TSttIntObjectJson.Create(PAR_ITEM_DIVIDE_LEN, 'Read/write memory divide bloks', COUNT_DIVIDE_MIN, 4096,
+      COUNT_DIVIDE_DEFAULT);
+    sttObj.SetUniBool(true); // UniBool=true - allow change during open connection
     p.Add(sttObj);
-    sttObj := TSttSelectObjectJson.Create(PAR_ITEM_DRIVER_MODE, 'Driver work mode', DriverModeName, 'STD');
-    sttObj.SetUniBool(false);
+    sttObj := TSttIntObjectJson.Create(PAR_ITEM_LOGGER_ASK_TIME, 'Logger read time', LOGGER_ASK_TIME_MIN, 2000,
+      LOGGER_ASK_TIME_DEFAULT);
+
+    sttObj.SetUniBool(true);
     p.Add(sttObj);
     jBuild.Add(DRVPRAM_DEFINITION, p.getJSonObject);
   finally
@@ -574,7 +586,7 @@ begin
   // value section
   vBuild.Init;
   vBuild.Add(PAR_ITEM_DIVIDE_LEN, FCountDivide);
-  vBuild.Add(PAR_ITEM_DRIVER_MODE, DriverMode);
+  vBuild.Add(PAR_ITEM_LOGGER_ASK_TIME, FLoggerReadTime);
   jBuild.Add(DRVPRAM_VALUES, vBuild.jobj);
   jBuild.Add(DRVPRAM_DRIVER_NAME, DRIVER_NAME);
 
@@ -585,18 +597,28 @@ function TDevItem.SetDrvParams(const jsonParams: string): TStatus;
 var
   jLoader: TJsonLoader;
   vInt: integer;
-  vTxt: string;
 begin
-  Result := stOK;
-  jLoader.Init(TJSONObject.ParseJSONValue(jsonParams));
-  if jLoader.Load(PAR_ITEM_DIVIDE_LEN, vInt) then
-    FCountDivide := vInt
-  else
-    Result := stBadArguments;
-  if jLoader.Load(PAR_ITEM_DRIVER_MODE, vTxt) then
-    DriverMode := vTxt
-  else
-    Result := stBadArguments;
+  Result := stBadArguments;
+  if jsonParams <> '' then
+  begin
+    jLoader.Init(TJSONObject.ParseJSONValue(jsonParams));
+    if jLoader.Load(PAR_ITEM_DIVIDE_LEN, vInt) then
+    begin
+      FCountDivide := vInt;
+      if FCountDivide < COUNT_DIVIDE_MIN then
+        FCountDivide := COUNT_DIVIDE_MIN;
+      Result := stOK;
+    end;
+
+    if jLoader.Load(PAR_ITEM_LOGGER_ASK_TIME, vInt) then
+    begin
+      FLoggerReadTime := vInt;
+      if FLoggerReadTime < LOGGER_ASK_TIME_MIN then
+        FLoggerReadTime := LOGGER_ASK_TIME_MIN;
+    end
+    else
+      Result := stBadArguments;
+  end;
 end;
 
 procedure TDevItem.RegisterCallBackFun(ACallBackFunc: TCallBackFunc; CmmId: integer);
@@ -610,16 +632,19 @@ end;
 
 {$Q-}
 
-function TDevItem.RdMemory(var Buf; Adress: cardinal; Count: cardinal): TStatus;
+function TDevItem.HdRdMemory(Show: boolean; var Buf; Adress: cardinal; Count: cardinal): TStatus;
 var
   bBuf: TBytes;
   p: pByte;
   SCnt: cardinal;
   cnt1: cardinal;
 begin
-  SetProgress(0);
-  MsgFlowSize(0);
-  SetWorkFlag(true);
+  if Show then
+  begin
+    SetProgress(0);
+    MsgFlowSize(0);
+    SetWorkFlag(true);
+  end;
 
   Result := stOK;
   p := pByte(@Buf);
@@ -636,27 +661,43 @@ begin
 
     inc(Adress, cnt1);
     inc(SCnt, cnt1);
-    SetProgress(SCnt, Count);
-    MsgFlowSize(SCnt);
+    inc(p, cnt1);
+    if Show then
+    begin
+      SetProgress(SCnt, Count);
+      MsgFlowSize(SCnt);
+    end;
   end;
 
-  SetProgress(100);
-  MsgFlowSize(Count);
-  SetWorkFlag(false);
+  if Show then
+  begin
+    SetProgress(100);
+    MsgFlowSize(Count);
+    SetWorkFlag(false);
+  end;
 end;
 {$Q+}
+
+function TDevItem.RdMemory(var Buf; Adress: cardinal; Count: cardinal): TStatus;
+begin
+  Result := HdRdMemory(true, Buf, Adress, Count);
+end;
+
 {$Q-}
 
-function TDevItem.WrMemory(const Buf; Adress: cardinal; Count: cardinal): TStatus;
+function TDevItem.HdWrMemory(Show: boolean; const Buf; Adress: cardinal; Count: cardinal): TStatus;
 var
   bBuf: TBytes;
   p: pByte;
   SCnt: cardinal;
   cnt1: cardinal;
 begin
-  SetProgress(0);
-  MsgFlowSize(0);
-  SetWorkFlag(true);
+  if Show then
+  begin
+    SetProgress(0);
+    MsgFlowSize(0);
+    SetWorkFlag(true);
+  end;
 
   Result := stOK;
   p := pByte(@Buf);
@@ -675,35 +716,46 @@ begin
 
     inc(Adress, cnt1);
     inc(SCnt, cnt1);
-    SetProgress(SCnt, Count);
-    MsgFlowSize(SCnt);
+    inc(p, cnt1);
+    if Show then
+    begin
+      SetProgress(SCnt, Count);
+      MsgFlowSize(SCnt);
+    end;
   end;
 
-  SetProgress(100);
-  MsgFlowSize(Count);
-  SetWorkFlag(false);
+  if Show then
+  begin
+    SetProgress(100);
+    MsgFlowSize(Count);
+    SetWorkFlag(false);
+  end;
 end;
 {$Q+}
+
+function TDevItem.WrMemory(const Buf; Adress: cardinal; Count: cardinal): TStatus;
+begin
+  Result := HdWrMemory(true, Buf, Adress, Count);
+end;
 
 function TDevItem.TerminalSendKey(key: AnsiChar): TStatus;
 var
   LoggerRec: LoggerRec_t;
-  head: integer;
-  head1: integer;
-  tail: integer;
-  size: integer;
-  Cnt, cnt1: integer;
+  head: cardinal;
+  head1: cardinal;
+  tail: cardinal;
+  size: cardinal;
   bufAddr: cardinal;
   w: word;
-  ofs1: integer;
+  ofs1: cardinal;
 
 begin
   if FLoggerFnd then
   begin
-    Result := RdMemory(LoggerRec, FLoggerAddr, sizeof(LoggerRec));
+    Result := HdRdMemory(false, LoggerRec, FLoggerAddr, sizeof(LoggerRec));
     if Result = stOK then
     begin
-      //Logger(1, Format('LoggerRec: %u-%u', [LoggerRec.InpBuf.HeadPtr, LoggerRec.InpBuf.TailPtr]) + #10);
+      // Logger(1, Format('LoggerRec: %u-%u', [LoggerRec.InpBuf.HeadPtr, LoggerRec.InpBuf.TailPtr]) + #10);
       head := LoggerRec.InpBuf.HeadPtr;
       tail := LoggerRec.InpBuf.TailPtr;
       size := LoggerRec.InpBuf.BufferSize;
@@ -713,18 +765,18 @@ begin
         head1 := 0;
       if head1 <> tail then
       begin
-        Result := WrMemory(key, bufAddr + head, 1);
+        Result := HdWrMemory(false, key, bufAddr + head, 1);
         if Result = stOK then
         begin
           // zapis do LoggerRec.InpBuf.HeadPtr
           w := head1;
           ofs1 := integer(@LoggerRec.InpBuf.HeadPtr) - integer(@LoggerRec);
-          Result := WrMemory(w, FLoggerAddr + ofs1, 2);
+          Result := HdWrMemory(false, w, FLoggerAddr + ofs1, 2);
         end;
       end;
     end;
     if Result = stOK then
-      SetEvent(FTermial.Thread.FEventHandle);
+      SetEvent(FLogger.Thread.FEventHandle);
   end
   else
     Result := stNoLogger;
@@ -733,16 +785,16 @@ end;
 
 function TDevItem.TerminalSetPipe(TerminalNr: integer; PipeHandle: THandle): TStatus;
 begin
-  FTermial.PipeHandle := PipeHandle;
-  FTermial.RunFlag := false;
-  FTermial.Thread.FOutPipe := PipeHandle;
+  FLogger.PipeHandle := PipeHandle;
+  FLogger.RunFlag := false;
+  FLogger.Thread.FOutPipe := PipeHandle;
   Result := stOK;
 end;
 
 function TDevItem.TerminalSetRunFlag(TerminalNr: integer; RunFlag: boolean): TStatus;
 begin
-  FTermial.RunFlag := RunFlag;
-  FTermial.Thread.SetRunFlag(RunFlag);
+  FLogger.RunFlag := RunFlag;
+  FLogger.Thread.SetRunFlag(RunFlag);
   Result := stOK;
 end;
 
@@ -792,7 +844,7 @@ begin
   end;
 end;
 
-// ---------------------  TDevAcces ---------------------------
+// ---------------------  TDevList ---------------------------
 constructor TDevList.Create;
 begin
   inherited Create;
@@ -843,6 +895,7 @@ begin
         jParams.Load(OPEN_VERBOSCALLERMODE, OpenParams.CallerVerbose);
         jParams.Load(OPEN_SWDMODE, OpenParams.SwdMode);
         jParams.Load(OPEN_PATHTOPROGR, OpenParams.PathProgrammer);
+        jParams.Load(OPEN_LOGGER_START, OpenParams.LoggerStartAddr);
 
       end;
     end;

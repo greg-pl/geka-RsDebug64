@@ -310,7 +310,7 @@ var
   // idx: integer;
   i: integer;
 begin
-  Logger(1, '\wTerminalThread Start' + #10);
+  Logger(1, '\wLoggerThread Start' + #10);
   setLength(Buffer, 512);
   // idx := 0;
   while not(Terminated) do
@@ -339,7 +339,7 @@ begin
       // inc(idx);
     end;
   end;
-  Logger(1, '\wTerminalThread Exit' + #10);
+  Logger(1, '\wLoggerThread Exit' + #10);
 
 end;
 
@@ -1021,11 +1021,9 @@ label
   end;
 
 var
-  w: word;
   Rep: byte;
   q: boolean;
   BufToSnd: TBytes;
-  CntToSnd: integer;
   Cmd: byte;
   CmdRep: byte;
   ToReadCnt: integer;
@@ -1184,8 +1182,6 @@ function TDevItem.GetDrvInfo: String;
   end;
 
 var
-  s: String;
-  ParamName: String;
   jBuild: TJSONBuilder;
   jArr: TJSONArray;
 begin

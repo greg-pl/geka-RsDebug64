@@ -36,7 +36,7 @@ type
     procedure AddToSL(const Buf: TRdBuffer; Len: integer); overload;
 
   public
-    constructor Create(isAnsiChar: boolean);
+    constructor Create(PipeName: string; isAnsiChar: boolean);
     destructor Destroy; override;
     procedure SetAsynch(aOwnerHandle: THandle; MsgId: integer);
     property PipeIn: THandle read FPipeIn;
@@ -58,17 +58,18 @@ type
     PipeIn: THandle; // handle do zapisu otwartej rurki
     function ReadPipe(var Buf: TRdBuffer): integer;
   public
-    constructor Create(aOwner: TPipeToStrings; isAnsiChar: boolean);
+    constructor Create(PipeName: string; aOwner: TPipeToStrings; isAnsiChar: boolean);
     destructor Destroy; override;
     procedure Execute; override;
   end;
 
-constructor TPipeRider.Create(aOwner: TPipeToStrings; isAnsiChar: boolean);
+constructor TPipeRider.Create(PipeName: string; aOwner: TPipeToStrings; isAnsiChar: boolean);
 var
   SecurityAttributes: TSecurityAttributes;
 begin
   inherited Create(true);
-  NameThreadForDebugging('CallProcessUnit-TPipeRider');
+  NameThreadForDebugging(PipeName+'-TPipeRider',ThreadID);
+
   FOwner := aOwner;
   FIsAnsiChar := isAnsiChar;
 
@@ -151,11 +152,11 @@ end;
 
 // ------------------------------------------------------------------------------
 
-constructor TPipeToStrings.Create(isAnsiChar: boolean);
+constructor TPipeToStrings.Create(PipeName: string; isAnsiChar: boolean);
 begin
   inherited Create;
   FOwnerHandle := INVALID_HANDLE_VALUE;
-  PipeRider := TPipeRider.Create(Self, isAnsiChar);
+  PipeRider := TPipeRider.Create(PipeName, Self, isAnsiChar);
   FPipeIn := (PipeRider as TPipeRider).PipeIn;
   SL := TStringList.Create;
   InitializeCriticalSection(CriSection);
@@ -312,6 +313,8 @@ var
   SecurityAttributes: TSecurityAttributes;
 begin
   inherited Create(true);
+  NameThreadForDebugging('ProcessCaller', ThreadID);
+
   FExitEvent := CreateEvent(Nil, false, false, 'EXIT_EVENT');
 
   FillChar(SecurityAttributes, SizeOf(SecurityAttributes), 0);
@@ -367,9 +370,7 @@ var
   tm: real;
   ErrorCode: integer;
   ProcessCaller: TProcessCaller;
-  msgCnt: integer;
   UserBrak: boolean;
-
 begin
   ifSay('');
 
@@ -407,8 +408,6 @@ begin
   begin
     CloseHandle(ProcessInfo.hThread); { Nie odwo³ujemy siê do Handle w¹tku g³ównego }
     try
-
-      msgCnt := 0;
       UserBrak := false;
 
       while not Terminated do
@@ -420,13 +419,6 @@ begin
         begin
           UserBrak := true;
           break;
-        end;
-
-        inc(msgCnt);
-        if msgCnt = 20 then
-        begin
-          ifSay('CallerTask run');
-          msgCnt := 0;
         end;
       end;
 

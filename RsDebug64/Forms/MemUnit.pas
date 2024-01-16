@@ -317,7 +317,6 @@ end;
 procedure TMemForm.SaveBufActExecute(Sender: TObject);
 var
   i, j, n: cardinal;
-  st: TStatus;
   Adr: cardinal;
   BufAdr: cardinal;
 begin
@@ -495,7 +494,6 @@ procedure TMemForm.SaveMemActExecute(Sender: TObject);
 var
   Dlg: TSaveDialog;
   Fname: string;
-  Strm: TmemoryStream;
 begin
   inherited;
   Fname := '';
@@ -519,7 +517,6 @@ procedure TMemForm.LoadMemActExecute(Sender: TObject);
 var
   Dlg: TOpenDialog;
   Fname: string;
-  Strm: TmemoryStream;
 begin
   inherited;
   Fname := '';

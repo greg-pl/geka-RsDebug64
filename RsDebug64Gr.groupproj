@@ -3,7 +3,7 @@
         <ProjectGuid>{5AA5F398-48FE-4575-A9B6-328608AA6E4F}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
-        <Projects Include="RsDebug64\RsDebug64.dproj">
+        <Projects Include="RsDebug64\RsDebug2.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="StLink\StLink.dproj">
@@ -23,14 +23,14 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
-    <Target Name="RsDebug64">
-        <MSBuild Projects="RsDebug64\RsDebug64.dproj"/>
+    <Target Name="RsDebug2">
+        <MSBuild Projects="RsDebug64\RsDebug2.dproj"/>
     </Target>
-    <Target Name="RsDebug64:Clean">
-        <MSBuild Projects="RsDebug64\RsDebug64.dproj" Targets="Clean"/>
+    <Target Name="RsDebug2:Clean">
+        <MSBuild Projects="RsDebug64\RsDebug2.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="RsDebug64:Make">
-        <MSBuild Projects="RsDebug64\RsDebug64.dproj" Targets="Make"/>
+    <Target Name="RsDebug2:Make">
+        <MSBuild Projects="RsDebug64\RsDebug2.dproj" Targets="Make"/>
     </Target>
     <Target Name="StLink">
         <MSBuild Projects="StLink\StLink.dproj"/>
@@ -60,13 +60,13 @@
         <MSBuild Projects="CmmDrivers\StLink\StLinkTcp.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="RsDebug64;StLink;MBusCom;StLinkTcp"/>
+        <CallTarget Targets="RsDebug2;StLink;MBusCom;StLinkTcp"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="RsDebug64:Clean;StLink:Clean;MBusCom:Clean;StLinkTcp:Clean"/>
+        <CallTarget Targets="RsDebug2:Clean;StLink:Clean;MBusCom:Clean;StLinkTcp:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="RsDebug64:Make;StLink:Make;MBusCom:Make;StLinkTcp:Make"/>
+        <CallTarget Targets="RsDebug2:Make;StLink:Make;MBusCom:Make;StLinkTcp:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -39,9 +39,12 @@ type
     class function LoadJsonBool(jobj: TJsonObject; valName: string; defVal: boolean): boolean;
   end;
 
-  TSttObjectListJson = class(TList<TSttObjectJson>)
+  TSttObjectListJson = class(TObjectList)
+  private
+    function FGetItem(Index: integer): TSttObjectJson;
   protected
   public
+    property Items[Index: integer]: TSttObjectJson read FGetItem;
     function FindSttObject(aName: string): TSttObjectJson;
     function getJSonObject: TJsonValue;
     procedure LoadfromArr(jVal: TJsonValue);
@@ -70,6 +73,7 @@ type
     MaxVal: integer;
     defVal: integer;
     Value: integer;
+    HexFormat: boolean;
     constructor Create; overload;
     constructor Create(aName, aDescription: string; aMin, aMax, adef: integer); overload;
     function getJSonObject: TJSONBuilder; override;
@@ -110,7 +114,7 @@ type
 
   end;
 
-function FindStringInArray(item: string; tab: TStringArr; defValue: integer): integer;
+function FindStringInArray(Item: string; tab: TStringArr; defValue: integer): integer;
 function JSonStrToBool(txt: string; var q: boolean): boolean;
 function JSonBoolToStr(q: boolean): string;
 
@@ -144,14 +148,14 @@ begin
     Result := false
 end;
 
-function FindStringInArray(item: string; tab: TStringArr; defValue: integer): integer;
+function FindStringInArray(Item: string; tab: TStringArr; defValue: integer): integer;
 var
   i: integer;
 begin
   Result := defValue;
   for i := 0 to length(tab) - 1 do
   begin
-    if item = tab[i] then
+    if Item = tab[i] then
     begin
       Result := i;
       break;
@@ -286,8 +290,11 @@ begin
   end;
 end;
 
-
 // ----- TSttObjectListJson ---------------------------------------------------
+function TSttObjectListJson.FGetItem(Index: integer): TSttObjectJson;
+begin
+  Result := inherited GetItem(Index) as TSttObjectJson;
+end;
 
 function TSttObjectListJson.FindSttObject(aName: string): TSttObjectJson;
 var
@@ -311,7 +318,6 @@ var
   i: integer;
   nm: string;
   sttObj: TSttObjectJson;
-  jobj: TJsonObject;
   jLoader: TJSONLoader;
   arr: TJSONArray;
 begin
@@ -431,6 +437,7 @@ begin
   Result.Add('DefVal', defVal);
   if ValueValid then
     Result.Add('DefVal', Value);
+  Result.Add('HexFormat', HexFormat);
 end;
 
 procedure TSttIntObjectJson.LoadFromJSonObj(jLoader: TJSONLoader);
@@ -440,6 +447,7 @@ begin
   MaxVal := jLoader.LoadDef('MaxVal', NAN_INT);
   defVal := jLoader.LoadDef('DefVal', 0);
   ValueValid := jLoader.Load('Value', Value);
+  HexFormat := jLoader.LoadDef('HexFormat', false);
 end;
 
 // ----- TSettFloatObjectJson ---------------------------------------------------
@@ -523,14 +531,10 @@ begin
 end;
 
 procedure TSttSelectObjectJson.LoadFromJSonObj(jLoader: TJSONLoader);
-var
-  jsonArray: TJSONArray;
-  i: integer;
 begin
   inherited LoadFromJSonObj(jLoader);
   defVal := jLoader.LoadDef('DefVal', '');
   jLoader.Load('Items', items);
-
 end;
 
 function TSttSelectObjectJson.GetItemsAsStrings: TStrings;

@@ -193,6 +193,7 @@ type
     procedure SaveWorkSpaceAsActExecute(Sender: TObject);
     procedure Fiel1Click(Sender: TObject);
     procedure SetDrvParamsActUpdate(Sender: TObject);
+    procedure MemRegistersActUpdate(Sender: TObject);
   private
     function GetDev: TCmmDevice;
     function GetCommThread: TCommThread;
@@ -203,14 +204,12 @@ type
   private
     FirstTime: boolean;
     ExtMemo: TExtG2Memo;
-    PipeToStrings: TPipeToStrings;
     StatrtTick: cardinal;
     procedure ProgCfgOnActivateAplic(Sender: TObject);
     procedure OnReOpenMapFileClickProc(Sender: TObject);
     procedure OnReOpenWorkSpaceClickProc(Sender: TObject);
 
     procedure OnReloadedProc(Sender: TObject);
-    function GetSName(N: integer): string;
     procedure RestoreClosedWinProc(Sender: TObject);
     procedure SetupWinTabs;
     function isDevConnected: boolean;
@@ -280,13 +279,10 @@ begin
   ExtMemo.Name := 'BottomExtMemo';
   ExtMemo.Parent := BottomPanel;
   ExtMemo.Align := alClient;
-
-  PipeToStrings := TPipeToStrings.Create(true);
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
-  PipeToStrings.Free;
   if Assigned(Dev) then
     Dev.Free;
 end;
@@ -680,11 +676,6 @@ begin
   CreateChildWindow(TUpLoadFileForm);
 end;
 
-function TMainForm.GetSName(N: integer): string;
-begin
-  Result := Format('Win_%u', [N]);
-end;
-
 function getChildClass(WinType: string): TChildFormClass;
 begin
   if WinType = 'TMemForm' then
@@ -728,8 +719,6 @@ var
   jChild: TJSonLoader;
   WinType: string;
   Dlg: TChildForm;
-  Win: TClosedWin;
-
 begin
   if Assigned(Dev) then
   begin
@@ -1115,11 +1104,9 @@ end;
 procedure TMainForm.GetDrvParamsActExecute(Sender: TObject);
 var
   Dlg: TShowDrvInfoForm;
-  s: string;
-  ParValue: string;
-  SL: TStringList;
   i: integer;
 begin
+  Dlg := nil;
   for i := 0 to MDIChildCount - 1 do
   begin
     if MDIChildren[i] is TShowDrvInfoForm then
@@ -1143,7 +1130,6 @@ end;
 
 procedure TMainForm.SetDrvParamsActExecute(Sender: TObject);
 var
-  i: integer;
   Dlg: TEditDrvParamsForm;
 begin
   if Assigned(Dev) then
@@ -1230,6 +1216,11 @@ var
 begin
   Win := CreateChildWindow(TRegMemForm) as TRegMemForm;
   Win.SetMemType(rmREGISTERS);
+end;
+
+procedure TMainForm.MemRegistersActUpdate(Sender: TObject);
+begin
+  (Sender as TAction).Enabled := Assigned(Dev) and Dev.isStdModbus;
 end;
 
 procedure TMainForm.actRZ40EventReaderExecute(Sender: TObject);

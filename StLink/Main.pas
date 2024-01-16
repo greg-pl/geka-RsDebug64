@@ -271,9 +271,8 @@ end;
 procedure TForm2.WriteMemBtnClick(Sender: TObject);
 var
   buf: TBytes;
-  adr, cnt: integer;
+  adr: integer;
   st: TStatus;
-  SL: TStringList;
 begin
   adr := StrToInt('$' + WriteMemAdrEdit.Text);
   buf := ParseArray(WriteMemValueEdit.Text);

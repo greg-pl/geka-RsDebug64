@@ -90,7 +90,7 @@ type
     MemType: TRegMemType;
     procedure ReadMem;
     procedure WriteMem;
-    function ExchangeMem: TStatus;
+    procedure ExchangeMem;
     procedure GetFromText(var Adr: cardinal; var ShowAdr: cardinal; var Size: cardinal);
     procedure wmReadMem1(var Msg: TMessage); message wm_ReadMem1;
     procedure wmWriteMem1(var Msg: TMessage); message wm_WriteMem1;
@@ -252,7 +252,7 @@ begin
   MemFrame.SetNewData;
 end;
 
-function TRegMemForm.ExchangeMem: TStatus;
+procedure TRegMemForm.ExchangeMem;
 var
   Adr: cardinal;
   WrAdr: cardinal;
@@ -365,14 +365,12 @@ end;
 procedure TRegMemForm.SaveBufActExecute(Sender: TObject);
 var
   i: cardinal;
-  st: TStatus;
   Adr: cardinal;
   BufAdr: cardinal;
   RegCnt: integer;
 begin
   BufAdr := MapParser.StrToAdr(AdresBox.Text);
   try
-    i := 0;
     RegCnt := MemFrame.MemSize div 2;
     for i := 0 to RegCnt - 1 do
     begin
@@ -545,7 +543,6 @@ procedure TRegMemForm.LoadMemActExecute(Sender: TObject);
 var
   Dlg: TOpenDialog;
   Fname: string;
-  Strm: TmemoryStream;
 begin
   inherited;
   Fname := '';

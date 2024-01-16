@@ -6,10 +6,16 @@ uses Winapi.Windows, System.SysUtils, System.Classes, Vcl.Graphics, Vcl.Forms,
   Vcl.Controls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Vcl.ComCtrls,
   System.JSON,
   JSonUtils,
+  System.Contnrs,
   SttScrollBoxUnit,
   SttObjectDefUnit;
 
 type
+  TMemObj = class(TObject)
+    DrvName: string;
+    DrvStr: string;
+  end;
+
   TOpenConnectionDlg = class(TForm)
     OKBtn: TButton;
     CancelBtn: TButton;
@@ -23,13 +29,18 @@ type
     procedure OKBtnClick(Sender: TObject);
     procedure TabControlChanging(Sender: TObject; var AllowChange: Boolean);
     procedure DefaultBtnClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormDestroy(Sender: TObject);
   private
     SttScrollBox: TSttScrollBox;
-    MemConfig: string;
-    memDevStr: array of string;
+    MemDriverName: string;
+    MemDrvList: TObjectList;
+
+    procedure SaveDriver(driverName: string; DrvStr: string);
+    function LoadDriver(driverName: string; var DrvStr: string): Boolean;
     procedure SetDevStr(aDevStr: string);
   public
-    procedure SetConfig(config: string);
+    procedure SetConfig(devStr: string);
     function GetConfig(var devStr: string): Boolean;
   end;
 
@@ -42,42 +53,90 @@ uses
   SttFrameBaseUnit,
   SttFrameUartUnit,
   SttFrameAddrIpUnit,
-  RsdDll, Main;
-
-procedure TOpenConnectionDlg.DefaultBtnClick(Sender: TObject);
-begin
-  SttScrollBox.LoadDefaultValue;
-end;
+  RsdDll,
+  ProgCfgUnit,
+  Main;
 
 procedure TOpenConnectionDlg.FormCreate(Sender: TObject);
 begin
   SttScrollBox := TSttScrollBox.Create(TabControl);
   SttScrollBox.Parent := TabControl;
   SttScrollBox.Align := alClient;
+  MemDrvList := TObjectList.Create;
+end;
+
+procedure TOpenConnectionDlg.FormDestroy(Sender: TObject);
+begin
+  MemDrvList.Clear;
+end;
+
+procedure TOpenConnectionDlg.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  ProgCfg.OpenDialogRect.Save_TLWH(self);
 end;
 
 procedure TOpenConnectionDlg.FormShow(Sender: TObject);
 var
-  driverName: string;
   idx: integer;
 begin
+  ProgCfg.OpenDialogRect.Load_TLWH(self);
   RsdDll.CmmLibraryList.LoadDriverList(TabControl.Tabs);
-  setlength(memDevStr, TabControl.Tabs.Count);
-  if ExtractDriverName(MemConfig, driverName) then
+  idx := TabControl.Tabs.IndexOf(MemDriverName);
+  if idx >= 0 then
   begin
-    idx := TabControl.Tabs.IndexOf(driverName);
-    if idx >= 0 then
+    TabControl.TabIndex := idx;
+    TabControlChange(nil);
+  end;
+end;
+
+procedure TOpenConnectionDlg.SetConfig(devStr: string);
+begin
+  MemDriverName := '';
+  if ExtractDriverName(devStr, MemDriverName) then
+    SaveDriver(MemDriverName, devStr);
+end;
+
+function TOpenConnectionDlg.LoadDriver(driverName: string; var DrvStr: string): Boolean;
+var
+  i: integer;
+  item: TMemObj;
+begin
+  Result := false;
+  for i := 0 to MemDrvList.Count - 1 do
+  begin
+    item := (MemDrvList.Items[i]) as TMemObj;
+    if item.DrvName = driverName then
     begin
-      memDevStr[idx] := MemConfig;
-      TabControl.TabIndex := idx;
-      TabControlChange(nil);
+      Result := true;
+      DrvStr := item.DrvStr
     end;
   end;
 end;
 
-procedure TOpenConnectionDlg.SetConfig(config: string);
+procedure TOpenConnectionDlg.SaveDriver(driverName: string; DrvStr: string);
+var
+  i: integer;
+  item: TMemObj;
+  Fnd: Boolean;
 begin
-  MemConfig := config;
+  Fnd := false;
+  item := nil;
+  for i := 0 to MemDrvList.Count - 1 do
+  begin
+    item := (MemDrvList.Items[i]) as TMemObj;
+    if item.DrvName = driverName then
+    begin
+      Fnd := true;
+      break;
+    end;
+  end;
+  if not(Fnd) then
+  begin
+    item := TMemObj.Create;
+    MemDrvList.Add(item);
+    item.DrvName := driverName;
+  end;
+  item.DrvStr := DrvStr;
 end;
 
 procedure TOpenConnectionDlg.TabControlChange(Sender: TObject);
@@ -85,6 +144,9 @@ var
   Params: PLibParams;
   ConnFrameClass: TSttFrameBaseClass;
   RmArr: TStringArr;
+  DrvName: string;
+  DrvStr: string;
+  q: Boolean;
 begin
   Params := @RsdDll.CmmLibraryList.Items[TabControl.TabIndex].LibParams;
   LibDescrLabel.Caption := Params.Description;
@@ -109,16 +171,28 @@ begin
   // Add ConnFrameClass
   if Assigned(ConnFrameClass) then
     SttScrollBox.AddFrame(ConnFrameClass, ConnFrameClass.ClassName, Params.ConnectionParams);
-  SetDevStr(memDevStr[TabControl.TabIndex]);
+  DrvName := TabControl.Tabs[TabControl.TabIndex];
+
+  q := LoadDriver(DrvName, DrvStr);
+  if not(q) then
+    q := ProgCfg.GetDrvSettings(DrvName, DrvStr);
+  if q then
+    SetDevStr(DrvStr)
+  else
+    SttScrollBox.LoadDefaultValue;
 end;
 
 procedure TOpenConnectionDlg.TabControlChanging(Sender: TObject; var AllowChange: Boolean);
 var
-  dStr: string;
+  driverName: string;
+  DrvStr: string;
 begin
-  AllowChange := GetConfig(dStr);
+  AllowChange := GetConfig(DrvStr);
   if AllowChange then
-    memDevStr[TabControl.TabIndex] := dStr
+  begin
+    driverName := TabControl.Tabs[TabControl.TabIndex];
+    SaveDriver(driverName, DrvStr);
+  end
   else
     Application.MessageBox('Data error.Correct.', 'Checking', mb_ok);
 
@@ -164,15 +238,25 @@ end;
 
 procedure TOpenConnectionDlg.OKBtnClick(Sender: TObject);
 var
-  dStr: string;
+  DrvStr: string;
+  driverName: string;
 begin
-  if GetConfig(dStr) then
-    ModalResult := mrOK
+  if GetConfig(DrvStr) then
+  begin
+    ModalResult := mrOK;
+    driverName := TabControl.Tabs[TabControl.TabIndex];
+    ProgCfg.AddDrvSettings(driverName, DrvStr);
+  end
   else
   begin
     Application.MessageBox('Data error', 'Checking', mb_ok);
     ModalResult := mrNone;
   end;
+end;
+
+procedure TOpenConnectionDlg.DefaultBtnClick(Sender: TObject);
+begin
+  SttScrollBox.LoadDefaultValue;
 end;
 
 end.

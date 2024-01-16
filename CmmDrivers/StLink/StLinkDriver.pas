@@ -18,6 +18,7 @@ type
 
   private
     SimpTcp: TSimpTcp;
+    FCriSection: TRTLCriticalSection;
 
     procedure SimpTcpOnMsgReadProc(Sender: TObject);
     procedure SimpTcpOnConnectProc(Sender: TObject);
@@ -94,6 +95,7 @@ end;
 constructor TStLinkDrv.Create;
 begin
   inherited;
+  InitializeCriticalSection(FCriSection);
   SimpTcp := TSimpTcp.Create;
   SimpTcp.OnMsgRead := SimpTcpOnMsgReadProc;
   SimpTcp.OnConnect := SimpTcpOnConnectProc;
@@ -103,6 +105,7 @@ destructor TStLinkDrv.Destroy;
 begin
   inherited;
   SimpTcp.Free;
+  DeleteCriticalSection(FCriSection);
 end;
 
 procedure TStLinkDrv.Log(s: string);
@@ -195,7 +198,7 @@ function TStLinkDrv.HexToBytes(var buf: TBytes; txt: AnsiString): boolean;
   var
     bb: integer;
   begin
-    Result := TryStrToInt('$' + txt, bb);
+    Result := TryStrToInt('$' + String(txt), bb);
     b := byte(bb);
   end;
 
@@ -232,7 +235,7 @@ begin
   while GetTickCount - tt < time do
   begin
     st := SimpTcp.ReadStrPart(txt1);
-    if length(txt1) > 0 then
+    if (st=stOK) and (length(txt1) > 0) then
     begin
       if rdFlag = false then
       begin
@@ -249,7 +252,7 @@ begin
       begin
         if (txt1[1] = '$') and (txt1[n - 2] = '#') then
         begin
-          sum2 := StrToInt('$' + copy(txt1, n - 1, 2));
+          sum2 := StrToInt('$' + copy(String(txt1), n - 1, 2));
           sum := 0;
           if n > 4 then
           begin
@@ -304,11 +307,11 @@ begin
   begin
     st := SimpTcp.ReadStrPart(txt1);
     n := length(txt1);
-    if n >= 4 then
+    if (st=stOK) and (n >= 4) then
     begin
       if (txt1[1] = '$') and (txt1[n - 2] = '#') then
       begin
-        sum2 := StrToInt('$' + copy(txt1, n - 1, 2));
+        sum2 := StrToInt('$' + copy(String(txt1), n - 1, 2));
         sum := 0;
         if n > 4 then
         begin
@@ -355,19 +358,24 @@ var
   st: TStatus;
   repl: AnsiString;
 begin
-  st := WriteCmd(AnsiString(Format('m%x,%x', [adr, cnt])));
-  if st = stOk then
-  begin
-    st := WaitPlusReplay(repl, 500);
+  EnterCriticalSection(FCriSection);
+  try
+    st := WriteCmd(AnsiString(Format('m%x,%x', [adr, cnt])));
     if st = stOk then
     begin
-      if not HexToBytes(buf, repl) then
-        st := stReplyFormatError;
+      st := WaitPlusReplay(repl, 500);
+      if st = stOk then
+      begin
+        if not HexToBytes(buf, repl) then
+          st := stReplyFormatError;
+      end;
+      if length(buf) <> cnt then
+        st := GetGdbError(String(repl));
     end;
-    if length(buf) <> cnt then
-      st := GetGdbError(String(repl));
+    Result := st;
+  finally
+    LeaveCriticalSection(FCriSection);
   end;
-  Result := st;
 end;
 
 function TStLinkDrv.RCommand(rcmd: string): TStatus;
@@ -392,15 +400,20 @@ var
   st: TStatus;
   txt: AnsiString;
 begin
-  st := WriteCmd(AnsiString(rcmd));
-  if st = stOk then
-  begin
-    st := WaitPlusReplay(txt, 500);
-    if verbose then
-      Log(Format('RCmd [%s]', [txt]));
-    repl := String(txt);
+  EnterCriticalSection(FCriSection);
+  try
+    st := WriteCmd(AnsiString(rcmd));
+    if st = stOk then
+    begin
+      st := WaitPlusReplay(txt, 500);
+      if verbose then
+        Log(Format('RCmd [%s]', [txt]));
+      repl := String(txt);
+    end;
+    Result := st;
+  finally
+    LeaveCriticalSection(FCriSection);
   end;
-  Result := st;
 end;
 
 function TStLinkDrv.EscapeBuf(buf: TBytes): TBytes;
@@ -426,7 +439,7 @@ begin
         Result[k + 1] := $03;
         inc(k, 2);
       end
-      else if buf[i] = $7d then
+      else if buf[i] = $7D then
       begin
         Result[k] := $7D;
         Result[k + 1] := $5D;
@@ -441,7 +454,6 @@ begin
   end
   else
     Result := buf;
-
 end;
 
 function TStLinkDrv.WriteMem(adr: cardinal; buf: TBytes): TStatus;
@@ -452,6 +464,7 @@ var
   n, n2: integer;
   st: TStatus;
   repl: AnsiString;
+  Wrepl : string;
 begin
   n := length(buf);
   buf2 := StringToBytes(AnsiString(Format('X%x,%x:', [adr, n])));
@@ -460,17 +473,26 @@ begin
   n1 := length(buf1);
   setlength(buf2, n2 + n1);
   move(buf1[0], buf2[n2], n1);
-  st := WriteCmd(buf2);
-  if st = stOk then
-  begin
-    st := WaitPlusReplay(repl, 500);
+
+  EnterCriticalSection(FCriSection);
+  try
+    st := WriteCmd(buf2);
     if st = stOk then
     begin
-      if repl <> 'OK' then
-        st := GetGdbError(repl);
+      st := WaitPlusReplay(repl, 500);
+      if st = stOk then
+      begin
+        if repl <> 'OK' then
+        begin
+          st := GetGdbError(Wrepl);
+          repl := AnsiString(Wrepl);
+        end;
+      end;
     end;
+    Result := st;
+  finally
+    LeaveCriticalSection(FCriSection);
   end;
-  Result := st;
 end;
 
 end.

@@ -88,16 +88,18 @@ procedure TSttScrollBox.LoadList(List: TSttObjectListJson; SkipArr: TStringArr);
 var
   i: integer;
   SttClass: TSttFrameBaseClass;
+  item : TSttObjectJson;
 begin
   RemoveItems;
   for i := List.Count - 1 downto 0 do
   begin
-    if FindStringInArray(List.Items[i].Name, SkipArr, -1) = -1 then
+    item := List.Items[i];
+    if FindStringInArray(Item.Name, SkipArr, -1) = -1 then
     begin
-      SttClass := GetSttFrameClass(List.Items[i].SettType);
+      SttClass := GetSttFrameClass(Item.SettType);
       if Assigned(SttClass) then
       begin
-        AddFrame(SttClass, List.Items[i].Name, List);
+        AddFrame(SttClass, Item.Name, List);
       end;
     end;
   end;

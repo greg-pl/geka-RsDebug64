@@ -9,6 +9,8 @@ uses
   Dialogs, IniFiles, RsdDll, CommThreadUnit, ImgList, ComCtrls, ActnList, ToolWin, ExtCtrls,
   ProgCfgUnit, System.ImageList, System.Actions,
   System.JSON,
+  System.Contnrs,
+
   JSonUtils;
 
 type

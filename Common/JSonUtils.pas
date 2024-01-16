@@ -49,6 +49,7 @@ type
 {$IFDEF UsingVCL}
     procedure Add(valName: string; Box: TComboBox); overload;
     procedure Add_TLWH(aVal: TWinControl);
+    procedure Add_ChildTLWH(ChildName: string; aVal: TWinControl);
     procedure AddColor(valName: string; aVal: TColor);
 {$ENDIF}
   end;
@@ -68,6 +69,7 @@ type
 
     function Load(valName: string; var vVal: string): boolean; overload;
     function Load(valName: string; var vVal: integer): boolean; overload;
+    function Load(valName: string; var vVal: cardinal): boolean; overload;
     function Load(valName: string; var vVal: double): boolean; overload;
     function Load(valName: string; var vVal: boolean): boolean; overload;
     function Load(valName: string; var vVal: TYesNoAsk): boolean; overload;
@@ -94,6 +96,7 @@ type
 
     function Load_WH(ctrl: TControl): boolean;
     function Load_TLWH(ctrl: TControl): boolean;
+    function LoadChild_TLWH(ChildName: string; ctrl: TControl): boolean;
     function LoadBtnDown(valName: string; btn: TToolButton): boolean;
     function LoadColor(valName: string; var Color: TColor): boolean;
     function LoadColorDef(valName: string; vDefault: TColor): TColor; overload;
@@ -241,6 +244,15 @@ begin
   Add('Height', aVal.Height);
 end;
 
+procedure TJSONBuilder.Add_ChildTLWH(ChildName: string; aVal: TWinControl);
+var
+  jChild: TJSONBuilder;
+begin
+  jChild.Init;
+  jChild.Add_TLWH(aVal);
+  jobj.AddPair(ChildName, jChild.jobj);
+end;
+
 procedure TJSONBuilder.Add(valName: string; Box: TComboBox);
 begin
   if Box.Style = csDropDownList then
@@ -349,6 +361,16 @@ begin
   Result := Assigned(jVal);
   if Result then
     Result := TRyStrToInt(jVal.Value, vVal);
+end;
+
+function TJSONLoader.Load(valName: string; var vVal: cardinal): boolean;
+var
+  jVal: TJSONValue;
+begin
+  jVal := jobj.GetValue(valName);
+  Result := Assigned(jVal);
+  if Result then
+    Result := TRyStrToUInt(jVal.Value, vVal);
 end;
 
 function TJSONLoader.Load(valName: string; var vVal: double): boolean;
@@ -546,6 +568,15 @@ begin
     ctrl.Width := w;
     ctrl.Height := h;
   end;
+end;
+
+function TJSONLoader.LoadChild_TLWH(ChildName: string; ctrl: TControl): boolean;
+var
+  jChild: TJSONLoader;
+begin
+  Result := jChild.Init(self,ChildName);
+  if Result  then
+    Result := jChild.Load_TLWH(ctrl);
 end;
 
 function TJSONLoader.LoadBtnDown(valName: string; btn: TToolButton): boolean;

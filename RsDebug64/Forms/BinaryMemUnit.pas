@@ -354,17 +354,14 @@ var
   i: cardinal;
   Adr: cardinal;
   BufAdr: cardinal;
-  k: integer;
 begin
   BufAdr := MapParser.StrToAdr(AdresBox.Text);
-  k := 0;
   for i := 0 to MemFrame.MemSize - 1 do
   begin
     if MemFrame.MemState[i] = csModify then
     begin
       Adr := BufAdr + i;
       CommThread.AddToDoItem(TWorkWrMdbOutputTableItem.Create(Handle, wm_WriteMem2, Adr, MemFrame.MemBuf[i]));
-      inc(k);
     end;
   end;
 end;

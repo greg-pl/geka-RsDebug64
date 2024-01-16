@@ -405,7 +405,7 @@ begin
   inherited;
   MapItemList := TMapItemList.Create;
   TextInp := TTextInp.Create;
-  PipeToStrings := TPipeToStrings.Create(true);
+  PipeToStrings := TPipeToStrings.Create('MapParser',true);
   FOwnHandle := Classes.AllocateHWnd(WndProc);
 end;
 
@@ -852,9 +852,8 @@ procedure TMapParser.wmProcessEnd(var AMessage: TMessage); // message ;
 var
   SL: TStrings;
   Fnd: boolean;
-  s1, s2, sx: string;
+  s1, s2: string;
   Mapitem: TMapItem;
-  x: integer;
 begin
   if AMessage.LParam = -1 then
   begin
@@ -914,6 +913,7 @@ begin
   MainForm.NL_T('Map/Elf parser start');
   CallHideProcess(PipeToStrings.PipeIn, ProgCfg.ObjDumpPath, Param, ProgCfg.GetWorkingPath, false,true);
   MainForm.NL_T('Map/Elf parser stop');
+  Result := true;
 end;
 
 function TMapParser.LoadMapFile(FName: string): boolean;

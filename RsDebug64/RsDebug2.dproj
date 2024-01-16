@@ -1,9 +1,9 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{79CD070D-EEF0-4686-962F-549451A7996A}</ProjectGuid>
-        <MainSource>RsDebug64.dpr</MainSource>
+        <MainSource>RsDebug2.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
@@ -63,7 +63,7 @@
         <DCC_DcuOutput>DCU</DCC_DcuOutput>
         <DCC_UnitSearchPath>Y:\dcompGK\DelphiWykres;Y:\dcompGK;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_UsePackage>vcl;rtl;visualclx;corbaide;proide;vclx;dsnapcrba;dsnap;dbrtl;inet;inetdb;bdertl;vcldb;adortl;dclaxserver;vcldbx;bdecds;cds;dbexpress;dbxcds;dss;ibxpress;vclie;indy;dsnapcon;xmlrtl;inetdbbde;inetdbxpress;nmfast;qrpt;vclshlctrls;VclSmp;teeui;teedb;tee;teeqr;webdsnap;websnap;delphiclxide;delphicorba;direct;stride;xmlide;$(DCC_UsePackage)</DCC_UsePackage>
-        <SanitizedProjectName>RsDebug64</SanitizedProjectName>
+        <SanitizedProjectName>RsDebug2</SanitizedProjectName>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;FireDAC.VCLUI;System.Win;VCLTee;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_AutoGenVersion>true</VerInfo_AutoGenVersion>
@@ -98,6 +98,11 @@
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppEnableHighDPI>true</AppEnableHighDPI>
+        <DCC_Define>UsingVCL;$(DCC_Define)</DCC_Define>
+        <VerInfo_Release>0</VerInfo_Release>
+        <VerInfo_Build>0</VerInfo_Build>
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName)</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -274,7 +279,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">RsDebug64.dpr</Source>
+                    <Source Name="MainSource">RsDebug2.dpr</Source>
                 </Source>
                 <Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k250.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
@@ -286,9 +291,9 @@
                 <Platform value="Win64">False</Platform>
             </Platforms>
             <Deployment Version="3">
-                <DeployFile LocalName="X:\RsDebug64.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="X:\RsDebug2.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>RsDebug64.exe</RemoteName>
+                        <RemoteName>RsDebug2.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

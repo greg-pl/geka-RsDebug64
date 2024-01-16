@@ -3,7 +3,7 @@ unit ElfParserUnit;
 interface
 
 uses
-  SysUtils, Classes, Winapi.Windows;
+  SysUtils, Classes, Winapi.Windows,AnsiStrings;
 
 type
   TMsg = procedure(txt: string) of object;
@@ -64,7 +64,7 @@ begin
 end;
 
 type
-  TGetSysString = function(StrOfs: integer): string of object;
+  TGetSysString = function(StrOfs: cardinal): string of object;
 
   TSectionHeader = packed record
     sh_name: cardinal;
@@ -156,8 +156,8 @@ type
     procedure LoadStringTab;
     procedure LoadStringSection(SHeader: TSectionHeader; SL: TStrings);
     function GetStringAt(adr: cardinal): string; overload;
-    function GetStringAt(SHeader: TSectionHeader; var ofs: integer): string; overload;
-    function GetSectionName(StrOfs: integer): string;
+    function GetStringAt(SHeader: TSectionHeader; var ofs: cardinal): string; overload;
+    function GetSectionName(StrOfs: cardinal): string;
     function GetSecHeaderByName(var Header: TSectionHeader; Name: string): boolean;
 
   private
@@ -169,8 +169,6 @@ type
   end;
 
 constructor TElfParser.Create(Msg: TMsg);
-var
-  i: integer;
 begin
   inherited Create;
   FMsg := Msg;
@@ -179,8 +177,6 @@ begin
 end;
 
 destructor TElfParser.Destroy;
-var
-  i: integer;
 begin
   inherited;
   SecNamesSL.Free;
@@ -208,7 +204,7 @@ var
   L1: integer;
   txt: AnsiString;
 begin
-  L1 := StrLen(PAnsiChar(@Mem[adr]));
+  L1 := AnsiStrings.StrLen(PAnsiChar(@Mem[adr]));
   if L1 > 0 then
   begin
     SetLength(txt, L1);
@@ -219,15 +215,13 @@ begin
   Result := String(txt);
 end;
 
-function TElfParser.GetStringAt(SHeader: TSectionHeader; var ofs: integer): string;
-var
-  L1: integer;
+function TElfParser.GetStringAt(SHeader: TSectionHeader; var ofs: cardinal): string;
 begin
   Result := GetStringAt(SHeader.sh_offset + ofs);
-  ofs := ofs + Length(Result) + 1;
+  ofs := ofs + cardinal(Length(Result)) + 1;
 end;
 
-function TElfParser.GetSectionName(StrOfs: integer): string;
+function TElfParser.GetSectionName(StrOfs: cardinal): string;
 begin
   Result := GetStringAt(SectionNameOffset + StrOfs);
 end;
@@ -258,20 +252,16 @@ end;
 procedure TElfParser.LoadStringSection(SHeader: TSectionHeader; SL: TStrings);
 var
   Size: cardinal;
-  txt: AnsiString;
-  ofs: integer;
-  i: integer;
+  txt: String;
+  ofs: cardinal;
 begin
   Size := SHeader.sh_size;
   ofs := 0;
-  i := 0;
-  while ofs < Size do
+  while cardinal(ofs) < Size do
   begin
     txt := GetStringAt(SHeader, ofs);
-    // FMsg(Format('%u. %u %s', [i, ofs, txt]));
     if Assigned(SL) then
       SL.Add(txt);
-    inc(i);
   end;
 end;
 
@@ -332,9 +322,6 @@ begin
 end;
 
 function TElfParser.Parse(FName: string): boolean;
-var
-  Header: TSectionHeader;
-  SL: TStringList;
 begin
   if LoadFile(FName) then
   begin
@@ -342,20 +329,9 @@ begin
     StartSectionNames;
 
     ELFHeader.dump(FMsg);
-    // LoadStringTab;
     DumpSections;
-
-    SL := TStringList.Create;
-    try
-      if GetSecHeaderByName(Header, '.debug_str') then
-      begin
-        LoadStringSection(Header, SL);
-        SL.SaveToFile('Sections/debug_str.txt');
-      end;
-    finally
-      SL.Free;
-    end;
   end;
+  Result := true;
 end;
 
 function ElfParse(Msg: TMsg; FName: string): boolean;
@@ -368,6 +344,7 @@ begin
   finally
     ElfParser.Free;
   end;
+  Result := true;
 end;
 
 end.

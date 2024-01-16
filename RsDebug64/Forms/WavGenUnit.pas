@@ -232,7 +232,6 @@ end;
 function TWavGenForm.GetJSONObject: TJSONBuilder;
 var
   i, j: integer;
-  s, sn: string;
   jArr: TJSONArray;
   jArr2: TJSONArray;
   jItem: TJSONBuilder;
@@ -289,7 +288,6 @@ end;
 procedure TWavGenForm.LoadfromJson(jParent: TJSONLoader);
 var
   i, j: integer;
-  s, sn: string;
   jArr: TJSONArray;
   jArr2: TJSONArray;
   jItem: TJSONLoader;
@@ -685,7 +683,6 @@ end;
 
 procedure TWavGenForm.RdMemActExecute(Sender: TObject);
 var
-  st: TStatus;
   PhAdr: integer;
 begin
   inherited;
