@@ -2,20 +2,24 @@ inherited TypeDefEditForm: TTypeDefEditForm
   Left = 625
   Top = 458
   Caption = 'TypeDefEditForm'
+  ClientHeight = 502
+  ClientWidth = 597
   OldCreateOrder = True
+  ExplicitWidth = 613
+  ExplicitHeight = 541
   PixelsPerInch = 96
   TextHeight = 13
   object Splitter1: TSplitter [0]
     Left = 249
     Top = 70
-    Height = 171
+    Height = 372
     ExplicitHeight = 397
   end
   object TypeDefTree: TTreeView [1]
     Left = 0
     Top = 70
     Width = 249
-    Height = 171
+    Height = 372
     Align = alLeft
     DragMode = dmAutomatic
     Font.Charset = EASTEUROPE_CHARSET
@@ -39,15 +43,19 @@ inherited TypeDefEditForm: TTypeDefEditForm
     OnEditing = TypeDefTreeEditing
     OnGetImageIndex = TypeDefTreeGetImageIndex
     OnGetSelectedIndex = TypeDefTreeGetSelectedIndex
+    ExplicitLeft = -3
+    ExplicitTop = 76
   end
   object Panel1: TPanel [2]
     Left = 0
-    Top = 241
-    Width = 419
+    Top = 461
+    Width = 597
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 4
+    ExplicitTop = 260
+    ExplicitWidth = 419
     object SaveBtn: TButton
       Left = 8
       Top = 8
@@ -62,15 +70,17 @@ inherited TypeDefEditForm: TTypeDefEditForm
   object Panel2: TPanel [3]
     Left = 252
     Top = 70
-    Width = 167
-    Height = 171
+    Width = 345
+    Height = 372
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 5
+    ExplicitWidth = 167
+    ExplicitHeight = 171
     object Splitter2: TSplitter
       Left = 0
-      Top = 0
-      Width = 167
+      Top = 201
+      Width = 345
       Height = 8
       Cursor = crVSplit
       Align = alBottom
@@ -79,8 +89,8 @@ inherited TypeDefEditForm: TTypeDefEditForm
     end
     object InfoMemo: TMemo
       Left = 0
-      Top = 8
-      Width = 167
+      Top = 209
+      Width = 345
       Height = 163
       TabStop = False
       Align = alBottom
@@ -92,12 +102,14 @@ inherited TypeDefEditForm: TTypeDefEditForm
       ParentFont = False
       ReadOnly = True
       TabOrder = 0
+      ExplicitTop = 8
+      ExplicitWidth = 167
     end
     object ExpandTreeView: TTreeView
       Left = 0
       Top = 0
-      Width = 167
-      Height = 0
+      Width = 345
+      Height = 201
       Align = alClient
       Images = TreeImages
       Indent = 19
@@ -107,14 +119,25 @@ inherited TypeDefEditForm: TTypeDefEditForm
       OnDeletion = TypeDefTreeDeletion
       OnGetImageIndex = TypeDefTreeGetImageIndex
       OnGetSelectedIndex = TypeDefTreeGetSelectedIndex
+      ExplicitWidth = 167
+      ExplicitHeight = 0
     end
   end
   inherited StatusBar: TStatusBar
+    Top = 442
+    Width = 597
     Visible = False
+    ExplicitTop = 241
+  end
+  inherited ToolBar1: TToolBar
+    Width = 597
+  end
+  inherited ParamPanel: TPanel
+    Width = 597
   end
   inherited TreeImages: TImageList
     Bitmap = {
-      494C0101040009001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010104000900200010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000002000000001002000000000000020
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -423,7 +446,7 @@ inherited TypeDefEditForm: TTypeDefEditForm
   end
   inherited ToolBarImgList: TImageList
     Bitmap = {
-      494C01010E0013001C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C01010E001300200010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000004000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

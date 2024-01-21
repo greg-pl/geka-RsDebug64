@@ -1,25 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
 	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.146,D:\!!Work\RsDebug64\CmmDrivers\StLink\StLinkTcp.dproj=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.665,=D:\!!Work\RsDebug64\Common\Rsd64Definitions.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.351,=D:\!!Work\RsDebug64\Common\ErrorDefUnit.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.516,=C:\Users\Grzegorz\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.649,=D:\!!Work\RsDebug64\JSonSTT\SttObjectDefUnit.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.516,=C:\Users\Grzegorz\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.884,=C:\Users\Grzegorz\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.508,=D:\!!Work\RsDebug64\CmmDrivers\StLink\CmmMain.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.617,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\TerminalDef.inc</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.111,=D:\!!Work\RsDebug64\CmmDrivers\StLink\StLinkObjUnit.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.546,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\FileAccessDef.inc</Transaction>
     <Transaction>1899.12.30 00:00:00.000.570,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\MemoryAccessDef.inc</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.594,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\StdModbusDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.546,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\FileAccessDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.111,=D:\!!Work\RsDebug64\CmmDrivers\StLink\StLinkObjUnit.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.617,=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.048,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\LibUtils.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.640,=D:\!!Work\RsDebug64\Common\CallProcessUnit.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.019,=D:\!!Work\RsDebug64\CmmDrivers\StLink\StLinkMain.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.617,=C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.594,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\StdModbusDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.519,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\CmmBaseDef.inc</Transaction>
     <Transaction>1899.12.30 00:00:00.000.495,=D:\!!Work\RsDebug64\CmmDrivers\StLink\StLinkDriver.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.665,=D:\!!Work\RsDebug64\Common\Rsd64Definitions.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.239,=D:\!!Work\RsDebug64\CmmDrivers\StLink\SimpSock_Tcp.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.647,=D:\!!Work\RsDebug64\Common\JSonUtils.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.519,=D:\!!Work\RsDebug64\CmmDrivers\CmmCommon\CmmBaseDef.inc</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.146,C:\Users\Grzegorz\OneDrive\Dokumenty\Embarcadero\Studio\Projects\Project1.dproj=D:\!!Work\RsDebug64\CmmDrivers\StLink\StLinkTcp.dproj</Transaction>
   </Transactions>
 </BorlandProject>

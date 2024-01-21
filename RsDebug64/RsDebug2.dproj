@@ -3,7 +3,7 @@
         <ProjectGuid>{79CD070D-EEF0-4686-962F-549451A7996A}</ProjectGuid>
         <MainSource>RsDebug2.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>

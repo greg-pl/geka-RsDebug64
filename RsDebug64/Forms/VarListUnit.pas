@@ -1243,24 +1243,28 @@ begin
       MN := TViewVar.Create(GridVarList);
       MN.Name := M.Name;
       MN.VarAdres := M.Adres;
+
       if M.Size = 1 then
       begin
-        MN.TypName := 'char';
+        MN.TypName := 'int8';
+        MN.Rep := 1;
         MN.TxMode := LastCharTxMode;
       end
       else if M.Size = 2 then
       begin
-        MN.TypName := 'int';
+        MN.TypName := 'int16';
         MN.TxMode := LastIntTxMode;
+        MN.Rep := 1;
       end
       else if M.Size = 4 then
       begin
-        MN.TypName := 'long';
+        MN.TypName := 'int32';
         MN.TxMode := LastLongTxMode;
+        MN.Rep := 1;
       end
       else if M.Size > 0 then
       begin
-        MN.TypName := 'char';
+        MN.TypName := 'int8';
         MN.Rep := M.Size;
         MN.TxMode := smCHAR;
       end;
